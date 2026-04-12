@@ -1,0 +1,2 @@
+# PostgreSQL migrations will be generated here by:
+# backbone schema generate {{MODULE_NAME}} --target sql
