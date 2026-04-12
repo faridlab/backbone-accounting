@@ -1,0 +1,93 @@
+server:
+  host: 0.0.0.0
+  port: 3000
+  grpc_port: 50051
+database:
+  url: postgresql://root:password@localhost:5432/backbonedb
+  max_connections: 20
+  min_connections: 5
+  connect_timeout: 30
+  idle_timeout: 600
+module:
+  name: accounting
+  enabled: true
+features:
+  soft_delete: true
+  state_machines: true
+  workflows: true
+logging:
+  level: info
+  format: json
+  file: logs/accounting.log
+tracing:
+  enabled: true
+  exporter: otlp
+  endpoint: http://localhost:4317
+metrics:
+  enabled: true
+  endpoint: /metrics
+  port: 9090
+entities:
+  account:
+    collection: accounts
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  accounting_post:
+    collection: accounting_posts
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  financial_statement:
+    collection: financial_statements
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  fiscal_period:
+    collection: fiscal_periods
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  journal:
+    collection: journals
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  journal_line:
+    collection: journal_lines
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  ledger:
+    collection: ledgers
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  reconciliation:
+    collection: reconciliations
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  reconciliation_item:
+    collection: reconciliation_items
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100

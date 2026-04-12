@@ -1,0 +1,78 @@
+[package]
+name = "backbone-accounting"
+version = "0.1.0"
+edition = "2021"
+description = "GL, journals, ledger, reconciliation (extracted from bersihir)"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Backbone Framework CORE dependencies
+backbone-core = { git = "https://github.com/faridlab/backbone-framework", branch = "main", features = ["postgres"] }
+backbone-orm = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
+backbone-auth = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
+backbone-messaging = { git = "https://github.com/faridlab/backbone-framework", branch = "main" }
+
+# Core dependencies
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1.36", features = ["serde"] }
+
+# Database (PostgreSQL Primary)
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "rust_decimal"] }
+
+# Protocol Buffers (Generated from Schema-First YAML)
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
+pbjson = "0.7"
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Validation helpers
+regex = "1.0"
+
+# HTTP Framework (Axum)
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Configuration
+config = "0.14"
+serde_yaml = "0.9"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[features]
+default = []
+events = []
+auth = []
+grpc = []
+openapi = []
+validation = []
+
+[build-dependencies]
+tonic-build = "0.12"
+
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+mockall = "0.12"
+pretty_assertions = "1.0"
+
+# Integration testing framework
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+jsonwebtoken = "9.3"
+rand = "0.8"
