@@ -1,0 +1,343 @@
+# =============================================================================
+# Domain: Accounting
+# Entity: FiscalPeriod
+# Description: Fiscal periods for accounting
+# =============================================================================
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Period Type
+  # ---------------------------------------------------------------------------
+  - name: PeriodType
+    description: "Type of fiscal period"
+    variants:
+      - name: monthly
+        description: "Monthly period"
+        default: true
+      - name: quarterly
+        description: "Quarterly period"
+      - name: yearly
+        description: "Yearly period"
+      - name: custom
+        description: "Custom period"
+
+  # ---------------------------------------------------------------------------
+  # Period Status
+  # ---------------------------------------------------------------------------
+  - name: PeriodStatus
+    description: "Fiscal period status"
+    variants:
+      - name: open
+        description: "Open for transactions"
+        default: true
+      - name: closing
+        description: "Closing in progress"
+      - name: closed
+        description: "Closed - no new transactions"
+      - name: locked
+        description: "Locked - no changes allowed"
+      - name: adjusting
+        description: "Allowing adjustments only"
+
+# =============================================================================
+# Models
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # FiscalPeriod - Accounting period (monthly/quarterly/yearly)
+  # ---------------------------------------------------------------------------
+  - name: FiscalPeriod
+    collection: fiscal_periods
+    description: "Fiscal/Accounting period for financial reporting"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique period identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider who owns this period (null = platform) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Period Identification
+      # =======================================================================
+      period_code:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Period code (e.g., 2024-01, 2024-Q1, 2024)"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(50)"]
+        description: "Period name (e.g., January 2024)"
+
+      period_type:
+        type: PeriodType
+        attributes: ["@default(monthly)"]
+        description: "Type of period"
+
+      # =======================================================================
+      # Date Range
+      # =======================================================================
+      start_date:
+        type: date
+        attributes: ["@required"]
+        description: "Period start date"
+
+      end_date:
+        type: date
+        attributes: ["@required"]
+        description: "Period end date"
+
+      # =======================================================================
+      # Calendar Reference
+      # =======================================================================
+      fiscal_year:
+        type: int
+        attributes: ["@required", "@min(2020)", "@max(2100)"]
+        description: "Fiscal year"
+
+      fiscal_quarter:
+        type: int?
+        attributes: ["@min(1)", "@max(4)"]
+        description: "Quarter number (1-4)"
+
+      fiscal_month:
+        type: int?
+        attributes: ["@min(1)", "@max(12)"]
+        description: "Month number (1-12)"
+
+      # =======================================================================
+      # Hierarchy
+      # =======================================================================
+      parent_id:
+        type: uuid?
+        attributes: ["@foreign_key(FiscalPeriod.id)"]
+        description: "Parent period (e.g., year for month)"
+
+      level:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Hierarchy level (0=year, 1=quarter, 2=month)"
+
+      # =======================================================================
+      # Status
+      # =======================================================================
+      status:
+        type: PeriodStatus
+        attributes: ["@default(open)"]
+        description: "Period status"
+
+      is_current:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Current active period"
+
+      # =======================================================================
+      # Opening Balance
+      # =======================================================================
+      opening_balance_set:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Opening balances have been set"
+
+      opening_balance_date:
+        type: datetime?
+        description: "When opening balances were set"
+
+      opening_balance_by:
+        type: uuid?
+        description: "Who set opening balances"
+
+      # =======================================================================
+      # Closing Process
+      # =======================================================================
+      closing_started_at:
+        type: datetime?
+        description: "Closing process started"
+
+      closing_started_by:
+        type: uuid?
+        description: "Who started closing"
+
+      closed_at:
+        type: datetime?
+        description: "Period closed timestamp"
+
+      closed_by:
+        type: uuid?
+        description: "Who closed the period"
+
+      # =======================================================================
+      # Lock
+      # =======================================================================
+      locked_at:
+        type: datetime?
+        description: "Period locked timestamp"
+
+      locked_by:
+        type: uuid?
+        description: "Who locked the period"
+
+      lock_reason:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Reason for locking"
+
+      # =======================================================================
+      # Adjustments
+      # =======================================================================
+      allow_adjustments:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Allow adjusting entries after close"
+
+      adjustment_deadline:
+        type: date?
+        description: "Deadline for adjustments"
+
+      # =======================================================================
+      # Summary Balances (cached for quick access)
+      # =======================================================================
+      total_debits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total debits in period"
+
+      total_credits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total credits in period"
+
+      journal_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of journal entries"
+
+      # =======================================================================
+      # Financial Summary (cached)
+      # =======================================================================
+      total_revenue:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Total revenue for period"
+
+      total_expenses:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Total expenses for period"
+
+      net_income:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Net income (revenue - expenses)"
+
+      total_assets:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Total assets at period end"
+
+      total_liabilities:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Total liabilities at period end"
+
+      total_equity:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Total equity at period end"
+
+      # =======================================================================
+      # Statements
+      # =======================================================================
+      balance_sheet_generated:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Balance sheet generated"
+
+      income_statement_generated:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Income statement generated"
+
+      statements_generated_at:
+        type: datetime?
+        description: "When statements were generated"
+
+      notes:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Period notes"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      parent:
+        type: FiscalPeriod?
+        attributes: ["@one", "@foreign_key(parent_id)"]
+        description: "Parent period"
+        inverse: children
+
+      children:
+        type: FiscalPeriod[]
+        attributes: ["@one_to_many"]
+        description: "Child periods"
+
+      journals:
+        type: Journal[]
+        attributes: ["@one_to_many"]
+        description: "Journal entries in this period"
+        inverse: fiscal_period
+
+      statements:
+        type: FinancialStatement[]
+        attributes: ["@one_to_many"]
+        description: "Financial statements"
+        inverse: fiscal_period
+
+      opening_balance_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(opening_balance_by)"]
+        description: "Opening balance user"
+
+      closed_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(closed_by)"]
+        description: "Closed by user"
+
+      locked_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(locked_by)"]
+        description: "Locked by user"
+
+    indexes:
+      - type: unique
+        fields: [provider_id, period_code]
+        where: "deleted_at IS NULL"
+      - type: unique
+        fields: [provider_id, fiscal_year, fiscal_month]
+        where: "deleted_at IS NULL AND fiscal_month IS NOT NULL"
+      - type: index
+        fields: [provider_id, fiscal_year]
+      - type: index
+        fields: [provider_id, status]
+      - type: index
+        fields: [provider_id, start_date, end_date]
+      - type: index
+        fields: [provider_id, is_current]
+      - type: index
+        fields: [parent_id]

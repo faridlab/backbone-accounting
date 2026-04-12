@@ -1,0 +1,700 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: Journal, JournalLine
+# Description: Journal entries - the core of double-entry bookkeeping
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # Journal - Journal entry header
+  # ---------------------------------------------------------------------------
+  - name: Journal
+    collection: journals
+    description: "Journal entry header for financial transactions"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique journal identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider who owns this journal (null = platform template) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Reference
+      # =======================================================================
+      journal_number:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Journal entry number (JV-YYYYMMDD-XXXX)"
+
+      reference_number:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "External reference number"
+
+      # =======================================================================
+      # Classification
+      # =======================================================================
+      journal_type:
+        type: JournalType
+        attributes: ["@default(general)"]
+        description: "Type of journal entry"
+
+      # =======================================================================
+      # Outlet Reference
+      # =======================================================================
+      outlet_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Outlet for this journal (null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+
+      # =======================================================================
+      # Transaction Date
+      # =======================================================================
+      transaction_date:
+        type: date
+        attributes: ["@required"]
+        description: "Transaction date (for accounting period)"
+
+      posting_date:
+        type: date?
+        description: "Date posted to ledger"
+
+      # =======================================================================
+      # Fiscal Period
+      # =======================================================================
+      fiscal_period_id:
+        type: uuid?
+        attributes: ["@foreign_key(FiscalPeriod.id)"]
+        description: "Fiscal period"
+
+      fiscal_year:
+        type: int?
+        attributes: ["@min(2020)", "@max(2100)"]
+        description: "Fiscal year"
+
+      fiscal_month:
+        type: int?
+        attributes: ["@min(1)", "@max(12)"]
+        description: "Fiscal month"
+
+      # =======================================================================
+      # Description
+      # =======================================================================
+      description:
+        type: string
+        attributes: ["@required", "@max(500)"]
+        description: "Transaction description/memo"
+
+      notes:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Additional notes"
+
+      # =======================================================================
+      # Amounts (Computed from lines, stored for quick access)
+      # =======================================================================
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Transaction currency"
+
+      total_debit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total debit amount (must equal total_credit)"
+
+      total_credit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total credit amount (must equal total_debit)"
+
+      line_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of journal lines"
+
+      # =======================================================================
+      # Source Traceability
+      # =======================================================================
+      source:
+        type: JournalSource
+        attributes: ["@default(manual)"]
+        description: "Source of this journal entry"
+
+      source_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Source entity type (order, payment, settlement)"
+
+      source_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Source entity ID"
+
+      source_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Source reference number"
+
+      # =======================================================================
+      # Reversal
+      # =======================================================================
+      is_reversed:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has been reversed"
+
+      reversed_by_id:
+        type: uuid?
+        attributes: ["@foreign_key(Journal.id)"]
+        description: "Reversing journal entry"
+
+      reversed_at:
+        type: datetime?
+        description: "Reversal timestamp"
+
+      reversal_reason:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Reason for reversal"
+
+      reverses_id:
+        type: uuid?
+        attributes: ["@foreign_key(Journal.id)"]
+        description: "Original entry being reversed"
+
+      is_reversing:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "This is a reversing entry"
+
+      # =======================================================================
+      # Auto-Reversal (for accruals)
+      # =======================================================================
+      auto_reverse:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Automatically reverse in next period"
+
+      auto_reverse_date:
+        type: date?
+        description: "Date to auto-reverse"
+
+      # =======================================================================
+      # Approval Workflow
+      # =======================================================================
+      status:
+        type: JournalStatus
+        attributes: ["@default(draft)"]
+        description: "Journal entry status"
+
+      requires_approval:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Requires approval before posting"
+
+      approval_threshold:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Amount threshold for approval"
+
+      submitted_at:
+        type: datetime?
+        description: "Submission timestamp"
+
+      submitted_by:
+        type: uuid?
+        description: "Submitted by user"
+
+      approved_at:
+        type: datetime?
+        description: "Approval timestamp"
+
+      approved_by:
+        type: uuid?
+        description: "Approved by user"
+
+      rejected_at:
+        type: datetime?
+        description: "Rejection timestamp"
+
+      rejected_by:
+        type: uuid?
+        description: "Rejected by user"
+
+      rejection_reason:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Rejection reason"
+
+      posted_at:
+        type: datetime?
+        description: "Posted timestamp"
+
+      posted_by:
+        type: uuid?
+        description: "Posted by user"
+
+      # =======================================================================
+      # Void
+      # =======================================================================
+      is_voided:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Entry has been voided"
+
+      voided_at:
+        type: datetime?
+        description: "Void timestamp"
+
+      voided_by:
+        type: uuid?
+        description: "Voided by user"
+
+      void_reason:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Reason for voiding"
+
+      # =======================================================================
+      # Attachments
+      # =======================================================================
+      attachments:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "Supporting documents (receipts, invoices)"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      fiscal_period:
+        type: FiscalPeriod?
+        attributes: ["@one", "@foreign_key(fiscal_period_id)"]
+        description: "Fiscal period"
+        inverse: journals
+
+      lines:
+        type: JournalLine[]
+        attributes: ["@one_to_many", "@on_delete(cascade)", "@on_update(cascade)"]
+        description: "Journal lines (debit/credit entries)"
+        inverse: journal
+
+      reversed_by:
+        type: Journal?
+        attributes: ["@one", "@foreign_key(reversed_by_id)"]
+        description: "Reversing journal entry"
+        inverse: reverses
+
+      reverses:
+        type: Journal?
+        attributes: ["@one", "@foreign_key(reverses_id)"]
+        description: "Original entry being reversed"
+        inverse: reversed_by
+
+      submitted_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(submitted_by)"]
+        description: "Submitted by user"
+
+      approved_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(approved_by)"]
+        description: "Approved by user"
+
+      posted_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(posted_by)"]
+        description: "Posted by user"
+
+      voided_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(voided_by)"]
+        description: "Voided by user"
+
+    indexes:
+      - type: unique
+        fields: [provider_id, journal_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, transaction_date]
+      - type: index
+        fields: [provider_id, journal_type, status]
+      - type: index
+        fields: [provider_id, fiscal_year, fiscal_month]
+      - type: index
+        fields: [provider_id, status, transaction_date]
+      - type: index
+        fields: [source, source_id]
+      - type: index
+        fields: [provider_id, is_reversed]
+      - type: index
+        fields: [provider_id, outlet_id, transaction_date]
+      - type: index
+        fields: [outlet_id, status]
+        where: "outlet_id IS NOT NULL"
+
+  # ---------------------------------------------------------------------------
+  # JournalLine - Individual debit/credit line in journal entry
+  # ---------------------------------------------------------------------------
+  - name: JournalLine
+    collection: journal_lines
+    description: "Journal entry line (debit or credit)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique line identifier"
+
+      # =======================================================================
+      # Journal Reference
+      # =======================================================================
+      journal_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Journal.id)"]
+        description: "Parent journal entry"
+
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider (denormalized for performance, null = platform) # logical FK to bersihir.Provider.id"
+
+      outlet_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Outlet (denormalized, null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+
+      # =======================================================================
+      # Line Number
+      # =======================================================================
+      line_number:
+        type: int
+        attributes: ["@required", "@positive"]
+        description: "Line sequence number"
+
+      # =======================================================================
+      # Account
+      # =======================================================================
+      account_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Account.id)"]
+        description: "Account to debit/credit"
+
+      account_number:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Account number (denormalized for reports)"
+
+      account_name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Account name (denormalized for reports)"
+
+      # =======================================================================
+      # Debit/Credit Amount
+      # =======================================================================
+      debit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Debit amount (if this line is a debit)"
+
+      credit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Credit amount (if this line is a credit)"
+
+      # For foreign currency transactions
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Line currency"
+
+      exchange_rate:
+        type: decimal
+        attributes: ["@default(1)", "@precision(18,6)", "@positive"]
+        description: "Exchange rate to base currency"
+
+      base_debit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Debit in base currency"
+
+      base_credit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Credit in base currency"
+
+      # =======================================================================
+      # Description
+      # =======================================================================
+      description:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Line description/memo"
+
+      # =======================================================================
+      # Cost Center / Project (Optional)
+      # =======================================================================
+      cost_center:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Cost center code"
+
+      project:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Project code"
+
+      department:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Department code"
+
+      # =======================================================================
+      # Source Traceability
+      # =======================================================================
+      source_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Source entity type (e.g., order_item, payment)"
+
+      source_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Source entity ID"
+
+      source_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Source reference"
+
+      # =======================================================================
+      # Tax Information
+      # =======================================================================
+      is_tax_line:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "This is a tax line"
+
+      tax_rate:
+        type: decimal?
+        attributes: ["@precision(5,2)", "@range(0, 100)"]
+        description: "Tax rate applied"
+
+      tax_base_amount:
+        type: decimal?
+        attributes: ["@precision(18,2)", "@non_negative"]
+        description: "Base amount for tax calculation"
+
+      related_line_id:
+        type: uuid?
+        attributes: ["@foreign_key(JournalLine.id)"]
+        description: "Related line (for tax lines, points to base line)"
+
+      # =======================================================================
+      # Quantity (for inventory/tracking)
+      # =======================================================================
+      has_quantity:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has quantity tracking"
+
+      quantity:
+        type: decimal?
+        attributes: ["@precision(12,4)"]
+        description: "Quantity"
+
+      unit:
+        type: string?
+        attributes: ["@max(20)"]
+        description: "Unit of measure"
+
+      unit_price:
+        type: decimal?
+        attributes: ["@precision(18,4)"]
+        description: "Price per unit"
+
+      # =======================================================================
+      # Reconciliation
+      # =======================================================================
+      is_reconciled:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has been reconciled"
+
+      reconciliation_id:
+        type: uuid?
+        attributes: ["@foreign_key(Reconciliation.id)"]
+        description: "Reconciliation record"
+
+      reconciled_at:
+        type: datetime?
+        description: "Reconciliation timestamp"
+
+      # =======================================================================
+      # Ledger Posting
+      # =======================================================================
+      is_posted:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Posted to general ledger"
+
+      ledger_id:
+        type: uuid?
+        attributes: ["@foreign_key(Ledger.id)"]
+        description: "Ledger entry created"
+
+      posted_at:
+        type: datetime?
+        description: "Posting timestamp"
+
+      tags:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "Tags for categorization"
+
+      data:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Additional metadata"
+
+    relations:
+      journal:
+        type: Journal
+        attributes: ["@one", "@foreign_key(journal_id)"]
+        description: "Parent journal"
+        inverse: lines
+
+      account:
+        type: Account
+        attributes: ["@one", "@foreign_key(account_id)"]
+        description: "Account"
+        inverse: journal_lines
+
+      related_line:
+        type: JournalLine?
+        attributes: ["@one", "@foreign_key(related_line_id)"]
+        description: "Related line (for tax lines)"
+
+      reconciliation:
+        type: Reconciliation?
+        attributes: ["@one", "@foreign_key(reconciliation_id)"]
+        description: "Reconciliation"
+
+      ledger:
+        type: Ledger?
+        attributes: ["@one", "@foreign_key(ledger_id)"]
+        description: "Ledger entry"
+        inverse: journal_line
+
+    indexes:
+      - type: unique
+        fields: [journal_id, line_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, account_id]
+      - type: index
+        fields: [journal_id, account_id]
+      - type: index
+        fields: [account_id, is_posted]
+      - type: index
+        fields: [provider_id, is_reconciled]
+      - type: index
+        fields: [source_type, source_id]
+      - type: index
+        fields: [cost_center]
+        where: "cost_center IS NOT NULL"
+      - type: index
+        fields: [project]
+        where: "project IS NOT NULL"
+      - type: index
+        fields: [outlet_id, account_id]
+        where: "outlet_id IS NOT NULL"
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Journal Type
+  # ---------------------------------------------------------------------------
+  - name: JournalType
+    description: "Type of journal entry"
+    variants:
+      - name: general
+        description: "General journal entry"
+        default: true
+      - name: sales
+        description: "Sales journal"
+      - name: purchase
+        description: "Purchase journal"
+      - name: cash_receipt
+        description: "Cash receipt journal"
+      - name: cash_disbursement
+        description: "Cash disbursement journal"
+      - name: payroll
+        description: "Payroll journal"
+      - name: adjusting
+        description: "Adjusting entry"
+      - name: closing
+        description: "Closing entry"
+      - name: reversing
+        description: "Reversing entry"
+      - name: opening
+        description: "Opening balance entry"
+
+  # ---------------------------------------------------------------------------
+  # Journal Source
+  # ---------------------------------------------------------------------------
+  - name: JournalSource
+    description: "Source of journal entry"
+    variants:
+      - name: manual
+        description: "Manual entry"
+        default: true
+      - name: order
+        description: "From order"
+      - name: payment
+        description: "From payment"
+      - name: settlement
+        description: "From settlement"
+      - name: adjustment
+        description: "Adjustment"
+      - name: import
+        description: "Imported"
+      - name: system
+        description: "System generated"
+      - name: recurring
+        description: "Recurring entry"
+
+  # ---------------------------------------------------------------------------
+  # Journal Status
+  # ---------------------------------------------------------------------------
+  - name: JournalStatus
+    description: "Journal entry status"
+    variants:
+      - name: draft
+        description: "Draft - not submitted"
+        default: true
+      - name: pending_approval
+        description: "Pending approval"
+      - name: approved
+        description: "Approved - ready to post"
+      - name: rejected
+        description: "Rejected"
+      - name: posted
+        description: "Posted to ledger"
+      - name: voided
+        description: "Voided"

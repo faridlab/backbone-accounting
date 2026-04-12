@@ -1,0 +1,266 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: AccountingPost
+# Description: Bridge table connecting business transactions to journal entries
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # AccountingPost - Transaction-to-Accounting bridge
+  # ---------------------------------------------------------------------------
+  - name: AccountingPost
+    collection: accounting_posts
+    description: "Bridge linking business transactions (orders, payments, settlements) to their journal entries"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique posting identifier"
+
+      # =======================================================================
+      # Provider / Outlet
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider (null = platform-level) # logical FK to bersihir.Provider.id"
+
+      outlet_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Outlet (null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+
+      # =======================================================================
+      # Source Transaction (polymorphic)
+      # =======================================================================
+      source_type:
+        type: PostingSourceType
+        attributes: ["@required"]
+        description: "Type of source transaction"
+
+      source_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Source transaction ID"
+
+      source_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Source reference number (e.g., ORD-20260301-0001)"
+
+      # =======================================================================
+      # Journal Reference
+      # =======================================================================
+      journal_id:
+        type: uuid?
+        attributes: ["@foreign_key(Journal.id)"]
+        description: "Resulting journal entry (null if pending/failed)"
+
+      # =======================================================================
+      # Posting Classification
+      # =======================================================================
+      posting_type:
+        type: PostingType
+        attributes: ["@default(original)"]
+        description: "Type of posting"
+
+      # =======================================================================
+      # Status
+      # =======================================================================
+      posting_status:
+        type: PostingStatus
+        attributes: ["@default(pending)"]
+        description: "Current posting status"
+
+      # =======================================================================
+      # Amounts (denormalized for quick access)
+      # =======================================================================
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Transaction currency"
+
+      total_debit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total debit amount"
+
+      total_credit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total credit amount"
+
+      # =======================================================================
+      # Timing
+      # =======================================================================
+      scheduled_at:
+        type: datetime?
+        description: "When this posting is scheduled"
+
+      posted_at:
+        type: datetime?
+        description: "When journal was actually posted"
+
+      failed_at:
+        type: datetime?
+        description: "Last failure timestamp"
+
+      # =======================================================================
+      # Retry
+      # =======================================================================
+      retry_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of posting attempts"
+
+      max_retries:
+        type: int
+        attributes: ["@default(3)", "@non_negative"]
+        description: "Maximum retry attempts"
+
+      next_retry_at:
+        type: datetime?
+        description: "Next retry scheduled time"
+
+      # =======================================================================
+      # Error Handling
+      # =======================================================================
+      error_code:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Error code if failed"
+
+      error_message:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Error details if failed"
+
+      # =======================================================================
+      # Reversal Reference
+      # =======================================================================
+      reverses_post_id:
+        type: uuid?
+        attributes: ["@foreign_key(AccountingPost.id)"]
+        description: "Original posting being reversed"
+
+      reversed_by_post_id:
+        type: uuid?
+        attributes: ["@foreign_key(AccountingPost.id)"]
+        description: "Posting that reversed this one"
+
+      # =======================================================================
+      # Audit
+      # =======================================================================
+      posted_by:
+        type: uuid?
+        description: "User who triggered posting"
+
+      notes:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Posting notes"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      journal:
+        type: Journal?
+        attributes: ["@one", "@foreign_key(journal_id)"]
+        description: "Resulting journal entry"
+        inverse: accounting_post
+
+      reverses_post:
+        type: AccountingPost?
+        attributes: ["@one", "@foreign_key(reverses_post_id)"]
+        description: "Original posting being reversed"
+
+      reversed_by_post:
+        type: AccountingPost?
+        attributes: ["@one", "@foreign_key(reversed_by_post_id)"]
+        description: "Posting that reversed this one"
+
+    indexes:
+      - type: unique
+        fields: [source_type, source_id, posting_type, journal_id]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, source_type, posting_status]
+      - type: index
+        fields: [source_type, source_id]
+      - type: index
+        fields: [journal_id]
+      - type: index
+        fields: [posting_status, scheduled_at]
+      - type: index
+        fields: [posting_status, next_retry_at]
+        where: "posting_status = 'failed' AND next_retry_at IS NOT NULL"
+      - type: index
+        fields: [provider_id, outlet_id, posting_status]
+      - type: index
+        fields: [provider_id, posted_at]
+        where: "posted_at IS NOT NULL"
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Posting Source Type
+  # ---------------------------------------------------------------------------
+  - name: PostingSourceType
+    description: "Type of business transaction being posted to accounting"
+    variants:
+      - name: order
+        description: "Order transaction"
+        default: true
+      - name: payment
+        description: "Payment transaction"
+      - name: settlement
+        description: "Provider settlement"
+      - name: refund
+        description: "Refund transaction"
+      - name: expense
+        description: "Expense record"
+      - name: inventory
+        description: "Inventory movement"
+      - name: manual
+        description: "Manual posting"
+
+  # ---------------------------------------------------------------------------
+  # Posting Type
+  # ---------------------------------------------------------------------------
+  - name: PostingType
+    description: "Classification of the posting event"
+    variants:
+      - name: original
+        description: "Original posting"
+        default: true
+      - name: reversal
+        description: "Reversal of a previous posting"
+      - name: adjustment
+        description: "Adjustment to a previous posting"
+      - name: correction
+        description: "Correction entry"
+
+  # ---------------------------------------------------------------------------
+  # Posting Status
+  # ---------------------------------------------------------------------------
+  - name: PostingStatus
+    description: "Current status of the posting"
+    variants:
+      - name: pending
+        description: "Queued, waiting to be processed"
+        default: true
+      - name: processing
+        description: "Currently being posted"
+      - name: posted
+        description: "Successfully posted to journal"
+      - name: failed
+        description: "Posting failed (may retry)"
+      - name: cancelled
+        description: "Posting cancelled"

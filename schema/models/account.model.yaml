@@ -1,0 +1,420 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: Account
+# Description: Chart of Accounts (COA) - Master account list
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # Account - Chart of Accounts entry
+  # ---------------------------------------------------------------------------
+  - name: Account
+    collection: accounts
+    description: "Chart of Accounts entry for double-entry bookkeeping"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique account identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider who owns this COA (null = platform template) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Account Identification
+      # =======================================================================
+      account_number:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Account number (e.g., 1100, 1110, 2100)"
+
+      account_code:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Short code (e.g., CASH, BANK_BCA, AR)"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Account name"
+
+      name_en:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "English name"
+
+      description:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Account description"
+
+      # =======================================================================
+      # Classification
+      # =======================================================================
+      account_type:
+        type: AccountType
+        attributes: ["@required"]
+        description: "Main classification (Asset, Liability, Equity, Revenue, Expense)"
+
+      account_subtype:
+        type: AccountSubtype
+        attributes: ["@required"]
+        description: "Detailed classification"
+
+      normal_balance:
+        type: NormalBalance
+        attributes: ["@required"]
+        description: "Normal balance side (Debit or Credit)"
+
+      # =======================================================================
+      # Hierarchy
+      # =======================================================================
+      parent_id:
+        type: uuid?
+        attributes: ["@foreign_key(Account.id)"]
+        description: "Parent account for hierarchy"
+
+      level:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Hierarchy level (0 = top level)"
+
+      path:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Full path (account_number/account_number/...)"
+
+      is_header:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Header account (cannot post transactions directly)"
+
+      is_detail:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Detail account (can post transactions)"
+
+      # =======================================================================
+      # Balance Information
+      # =======================================================================
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Account currency"
+
+      opening_balance:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Opening balance"
+
+      opening_balance_date:
+        type: date?
+        description: "Opening balance date"
+
+      current_balance:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Current balance (updated by ledger)"
+
+      # =======================================================================
+      # Bank Account Details (for bank type accounts)
+      # =======================================================================
+      bank_name:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Bank name (if bank account)"
+
+      bank_account_number:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Bank account number"
+
+      bank_account_name:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Bank account holder name"
+
+      bank_branch:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Bank branch"
+
+      # =======================================================================
+      # Tax Settings
+      # =======================================================================
+      is_taxable:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Subject to tax"
+
+      tax_rate:
+        type: decimal?
+        attributes: ["@precision(5,2)", "@range(0, 100)"]
+        description: "Default tax rate %"
+
+      tax_account_id:
+        type: uuid?
+        attributes: ["@foreign_key(Account.id)"]
+        description: "Related tax account"
+
+      # =======================================================================
+      # Reconciliation Settings
+      # =======================================================================
+      is_reconcilable:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Requires reconciliation (e.g., bank accounts)"
+
+      last_reconciled_at:
+        type: datetime?
+        description: "Last reconciliation date"
+
+      last_reconciled_balance:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Balance at last reconciliation"
+
+      # =======================================================================
+      # Budget
+      # =======================================================================
+      has_budget:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has budget tracking"
+
+      budget_amount:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Budget amount (monthly)"
+
+      # =======================================================================
+      # Settings
+      # =======================================================================
+      allow_manual_entry:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Allow manual journal entries"
+
+      require_cost_center:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Require cost center for transactions"
+
+      require_project:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Require project for transactions"
+
+      # =======================================================================
+      # Display
+      # =======================================================================
+      sort_order:
+        type: int
+        attributes: ["@default(0)"]
+        description: "Display order"
+
+      show_in_reports:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Show in financial reports"
+
+      # =======================================================================
+      # Status
+      # =======================================================================
+      status:
+        type: AccountStatus
+        attributes: ["@default(active)"]
+        description: "Account status"
+
+      is_system:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "System-generated account (cannot be deleted)"
+
+      notes:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Internal notes"
+
+      # =======================================================================
+      # Clone Tracking
+      # =======================================================================
+      source_id:
+        type: uuid?
+        attributes: ["@foreign_key(Account.id)"]
+        description: "Original template ID when cloned from platform"
+
+      is_cloned:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "True if this is a cloned copy from a platform template"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+
+    relations:
+      parent:
+        type: Account?
+        attributes: ["@one", "@foreign_key(parent_id)"]
+        description: "Parent account"
+        inverse: children
+
+      children:
+        type: Account[]
+        attributes: ["@one_to_many"]
+        description: "Child accounts"
+        inverse: parent
+
+      source:
+        type: Account?
+        attributes: ["@one", "@foreign_key(source_id)"]
+        description: "Original template account"
+        inverse: clones
+
+      clones:
+        type: Account[]
+        attributes: ["@one_to_many"]
+        description: "Cloned copies of this template"
+        inverse: source
+
+      tax_account:
+        type: Account?
+        attributes: ["@one", "@foreign_key(tax_account_id)"]
+        description: "Related tax account"
+        inverse: tax_accounts
+
+      journal_lines:
+        type: JournalLine[]
+        attributes: ["@one_to_many"]
+        description: "Journal entries for this account"
+        inverse: account
+
+      ledger_entries:
+        type: Ledger[]
+        attributes: ["@one_to_many"]
+        description: "Ledger entries"
+        inverse: account
+
+    indexes:
+      - type: unique
+        fields: [provider_id, account_number]
+        where: "deleted_at IS NULL"
+      - type: unique
+        fields: [provider_id, account_code]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, account_type, status]
+      - type: index
+        fields: [provider_id, parent_id, sort_order]
+      - type: index
+        fields: [provider_id, account_subtype]
+      - type: index
+        fields: [provider_id, is_reconcilable]
+      - type: index
+        fields: [source_id, is_cloned]
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Account Type
+  # ---------------------------------------------------------------------------
+  - name: AccountType
+    description: "Main account classification"
+    variants:
+      - name: asset
+        description: "Assets (Aset)"
+        default: true
+      - name: liability
+        description: "Liabilities (Kewajiban)"
+      - name: equity
+        description: "Equity (Modal)"
+      - name: revenue
+        description: "Revenue (Pendapatan)"
+      - name: expense
+        description: "Expenses (Beban)"
+      - name: cogs
+        description: "Cost of Goods Sold (HPP)"
+      - name: other_income
+        description: "Other Income (Pendapatan Lain)"
+      - name: other_expense
+        description: "Other Expenses (Beban Lain)"
+
+  # ---------------------------------------------------------------------------
+  # Account Subtype
+  # ---------------------------------------------------------------------------
+  - name: AccountSubtype
+    description: "Detailed account classification"
+    variants:
+      - name: current_asset
+        description: "Current Assets (Aset Lancar)"
+        default: true
+      - name: non_current_asset
+        description: "Non-Current Assets (Aset Tidak Lancar)"
+      - name: fixed_asset
+        description: "Fixed Assets (Aset Tetap)"
+      - name: accumulated_depreciation
+        description: "Accumulated Depreciation"
+      - name: current_liability
+        description: "Current Liabilities (Kewajiban Lancar)"
+      - name: non_current_liability
+        description: "Non-Current Liabilities (Kewajiban Jangka Panjang)"
+      - name: paid_in_capital
+        description: "Paid-in Capital"
+      - name: retained_earnings
+        description: "Retained Earnings (Laba Ditahan)"
+      - name: operating_revenue
+        description: "Operating Revenue"
+      - name: operating_expense
+        description: "Operating Expense"
+      - name: direct_cost
+        description: "Direct Cost (Biaya Langsung)"
+      - name: bank
+        description: "Bank Account"
+      - name: cash
+        description: "Cash"
+      - name: accounts_receivable
+        description: "Accounts Receivable (Piutang)"
+      - name: accounts_payable
+        description: "Accounts Payable (Hutang)"
+      - name: tax
+        description: "Tax Account"
+      - name: inventory
+        description: "Inventory"
+
+  # ---------------------------------------------------------------------------
+  # Normal Balance
+  # ---------------------------------------------------------------------------
+  - name: NormalBalance
+    description: "Normal balance side for account"
+    variants:
+      - name: debit
+        description: "Normal debit balance"
+        default: true
+      - name: credit
+        description: "Normal credit balance"
+
+  # ---------------------------------------------------------------------------
+  # Account Status
+  # ---------------------------------------------------------------------------
+  - name: AccountStatus
+    description: "Account status"
+    variants:
+      - name: active
+        description: "Active and usable"
+        default: true
+      - name: inactive
+        description: "Inactive (no new transactions)"
+      - name: archived
+        description: "Archived (historical only)"

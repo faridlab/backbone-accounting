@@ -1,0 +1,329 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: Ledger
+# Description: General Ledger - running balance for each account
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # Ledger - General ledger entry with running balance
+  # ---------------------------------------------------------------------------
+  - name: Ledger
+    collection: ledgers
+    description: "General ledger entry showing running balance"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique ledger entry identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider who owns this ledger (null = platform) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Account Reference
+      # =======================================================================
+      account_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Account.id)"]
+        description: "Account"
+
+      account_number:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Account number (denormalized)"
+
+      account_name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Account name (denormalized)"
+
+      account_type:
+        type: AccountType
+        attributes: ["@required"]
+        description: "Account type (denormalized)"
+
+      normal_balance:
+        type: NormalBalance
+        attributes: ["@required"]
+        description: "Normal balance side (denormalized)"
+
+      # =======================================================================
+      # Journal Reference
+      # =======================================================================
+      journal_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Journal.id)"]
+        description: "Source journal entry"
+
+      journal_number:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Journal number (denormalized)"
+
+      journal_line_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(JournalLine.id)"]
+        description: "Source journal line"
+
+      # =======================================================================
+      # Transaction Date
+      # =======================================================================
+      transaction_date:
+        type: date
+        attributes: ["@required"]
+        description: "Transaction date"
+
+      posting_date:
+        type: date
+        attributes: ["@required"]
+        description: "Posting date"
+
+      # =======================================================================
+      # Fiscal Period
+      # =======================================================================
+      fiscal_period_id:
+        type: uuid?
+        attributes: ["@foreign_key(FiscalPeriod.id)"]
+        description: "Fiscal period"
+
+      fiscal_year:
+        type: int
+        attributes: ["@required", "@min(2020)", "@max(2100)"]
+        description: "Fiscal year"
+
+      fiscal_month:
+        type: int
+        attributes: ["@required", "@min(1)", "@max(12)"]
+        description: "Fiscal month"
+
+      # =======================================================================
+      # Description
+      # =======================================================================
+      description:
+        type: string
+        attributes: ["@required", "@max(500)"]
+        description: "Transaction description"
+
+      reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "External reference"
+
+      # =======================================================================
+      # Amounts
+      # =======================================================================
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Transaction currency"
+
+      debit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Debit amount"
+
+      credit_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Credit amount"
+
+      # =======================================================================
+      # Running Balance
+      # =======================================================================
+      balance_before:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Balance before this transaction"
+
+      balance_after:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Balance after this transaction"
+
+      balance_change:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Net change in balance"
+
+      # =======================================================================
+      # Sequence
+      # =======================================================================
+      sequence_number:
+        type: int
+        attributes: ["@required", "@positive"]
+        description: "Sequence within account for ordering"
+
+      # =======================================================================
+      # Outlet Reference
+      # =======================================================================
+      outlet_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Outlet (denormalized from journal, null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+
+      # =======================================================================
+      # Cost Center / Project
+      # =======================================================================
+      cost_center:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Cost center"
+
+      project:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Project"
+
+      department:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Department"
+
+      # =======================================================================
+      # Source Traceability
+      # =======================================================================
+      source_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Original source type"
+
+      source_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Original source ID"
+
+      source_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Original source reference"
+
+      # =======================================================================
+      # Reconciliation
+      # =======================================================================
+      is_reconciled:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has been reconciled"
+
+      reconciliation_id:
+        type: uuid?
+        attributes: ["@foreign_key(Reconciliation.id)"]
+        description: "Reconciliation record"
+
+      reconciled_at:
+        type: datetime?
+        description: "Reconciliation timestamp"
+
+      # =======================================================================
+      # Period Status
+      # =======================================================================
+      is_opening_balance:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Is opening balance entry"
+
+      is_closing_entry:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Is closing entry"
+
+      is_adjustment:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Is adjustment entry"
+
+      # =======================================================================
+      # Reversal
+      # =======================================================================
+      is_reversed:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has been reversed"
+
+      reversed_by_id:
+        type: uuid?
+        attributes: ["@foreign_key(Ledger.id)"]
+        description: "Reversing ledger entry"
+
+      reverses_id:
+        type: uuid?
+        attributes: ["@foreign_key(Ledger.id)"]
+        description: "Entry being reversed"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      account:
+        type: Account
+        attributes: ["@one", "@foreign_key(account_id)"]
+        description: "Account"
+        inverse: ledgers
+
+      journal:
+        type: Journal
+        attributes: ["@one", "@foreign_key(journal_id)"]
+        description: "Source journal"
+        inverse: ledgers
+
+      journal_line:
+        type: JournalLine
+        attributes: ["@one", "@foreign_key(journal_line_id)"]
+        description: "Source journal line"
+        inverse: ledgers
+
+      fiscal_period:
+        type: FiscalPeriod?
+        attributes: ["@one", "@foreign_key(fiscal_period_id)"]
+        description: "Fiscal period"
+        inverse: ledgers
+
+      reconciliation:
+        type: Reconciliation?
+        attributes: ["@one", "@foreign_key(reconciliation_id)"]
+        description: "Reconciliation"
+        inverse: ledgers
+
+      reversed_by:
+        type: Ledger?
+        attributes: ["@one", "@foreign_key(reversed_by_id)"]
+        description: "Reversing entry"
+
+      reverses:
+        type: Ledger?
+        attributes: ["@one", "@foreign_key(reverses_id)"]
+        description: "Entry being reversed"
+
+    indexes:
+      - type: index
+        fields: [provider_id, account_id, transaction_date]
+      - type: index
+        fields: [provider_id, account_id, sequence_number]
+      - type: index
+        fields: [provider_id, fiscal_year, fiscal_month]
+      - type: index
+        fields: [provider_id, transaction_date]
+      - type: index
+        fields: [journal_id]
+      - type: index
+        fields: [journal_line_id]
+      - type: index
+        fields: [provider_id, account_id, is_reconciled]
+      - type: index
+        fields: [provider_id, is_opening_balance]
+      - type: index
+        fields: [provider_id, is_closing_entry]
+      - type: index
+        fields: [provider_id, outlet_id, account_id, transaction_date]
+      - type: index
+        fields: [outlet_id, transaction_date]
+        where: "outlet_id IS NOT NULL"

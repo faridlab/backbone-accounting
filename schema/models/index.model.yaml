@@ -1,0 +1,71 @@
+# =============================================================================
+# Accounting Module - Schema Index
+# =============================================================================
+# Version: 2.0
+# Description: GL, journals, ledger, reconciliation
+#
+# Run `backbone schema generate accounting --target all` to generate code.
+# =============================================================================
+
+module: accounting
+version: 2
+description: "GL, journals, ledger, reconciliation (extracted from bersihir)"
+
+# Module-level configuration
+config:
+  database: postgresql
+  soft_delete: true
+  audit: true
+  default_timestamps: true
+  generators:
+    disabled:
+      - graphql
+      - grpc
+      - proto
+      - openapi
+
+# External imports - reuse sapiens for user identity (same pattern as bersihir)
+external_imports:
+  - module: sapiens
+    types: [User]
+
+# Shared types available to all models in this module
+shared_types:
+  Timestamps:
+    created_at:
+      type: datetime
+      attributes: ["@default(now)"]
+      description: "Record creation timestamp"
+    updated_at:
+      type: datetime
+      attributes: ["@updated_at"]
+      description: "Last update timestamp"
+    deleted_at:
+      type: datetime?
+      description: "Soft delete timestamp"
+
+  Actors:
+    created_by:
+      type: uuid?
+      attributes: ["@foreign_key(sapiens.User.id)"]
+      description: "User who created this record"
+    updated_by:
+      type: uuid?
+      attributes: ["@foreign_key(sapiens.User.id)"]
+      description: "User who last updated this record"
+    deleted_by:
+      type: uuid?
+      attributes: ["@foreign_key(sapiens.User.id)"]
+      description: "User who deleted this record"
+
+  Metadata: [Timestamps, Actors]
+
+# Import all model files
+imports:
+  - account.model.yaml
+  - journal.model.yaml
+  - ledger.model.yaml
+  - fiscal.model.yaml
+  - reconciliation.model.yaml
+  - accounting_post.model.yaml
+  - financial_statement.model.yaml

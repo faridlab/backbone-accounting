@@ -1,0 +1,463 @@
+# =============================================================================
+# Module: Accounting
+# Entity: FinancialStatement
+# Description: Generated financial statements (Balance Sheet, Income Statement)
+# =============================================================================
+# Financial statements provide a summary of the financial position and
+# performance for a given period.
+#
+# Main Statements:
+# 1. Balance Sheet (Neraca) - Assets = Liabilities + Equity
+# 2. Income Statement (Laba Rugi) - Revenue - Expenses = Net Income
+# 3. Cash Flow Statement - Operating, Investing, Financing activities
+# 4. Trial Balance - Verify debits = credits
+# =============================================================================
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  - name: StatementType
+    description: "Type of financial statement"
+    variants:
+      - name: balance_sheet
+        description: "Balance Sheet (Neraca)"
+        default: true
+      - name: income_statement
+        description: "Income Statement (Laba Rugi)"
+      - name: cash_flow
+        description: "Cash Flow Statement"
+      - name: trial_balance
+        description: "Trial Balance"
+      - name: equity_statement
+        description: "Statement of Changes in Equity"
+
+  - name: StatementStatus
+    description: "Statement status"
+    variants:
+      - name: draft
+        description: "Draft"
+        default: true
+      - name: generated
+        description: "Generated"
+      - name: reviewed
+        description: "Reviewed"
+      - name: approved
+        description: "Approved"
+      - name: published
+        description: "Published"
+      - name: archived
+        description: "Archived"
+
+# =============================================================================
+# Models
+# =============================================================================
+
+models:
+  - name: FinancialStatement
+    collection: financial_statements
+    description: "Generated financial statement"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique statement identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Provider who owns this statement # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Statement Identification
+      # =======================================================================
+      statement_number:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Statement number (FS-TYPE-YYYYMMDD)"
+
+      statement_type:
+        type: StatementType
+        attributes: ["@required"]
+        description: "Type of financial statement"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Statement name"
+
+      # =======================================================================
+      # Period Reference
+      # =======================================================================
+      fiscal_period_id:
+        type: uuid?
+        attributes: ["@foreign_key(FiscalPeriod.id)"]
+        description: "Fiscal period"
+
+      fiscal_year:
+        type: int
+        attributes: ["@required", "@range(2020, 2100)"]
+        description: "Fiscal year"
+
+      fiscal_month:
+        type: int?
+        attributes: ["@range(1, 12)"]
+        description: "Fiscal month"
+
+      # =======================================================================
+      # Date Range
+      # =======================================================================
+      as_of_date:
+        type: date
+        attributes: ["@required"]
+        description: "Statement as of date"
+
+      period_start:
+        type: date?
+        description: "Period start (for income statement)"
+
+      period_end:
+        type: date?
+        description: "Period end (for income statement)"
+
+      # =======================================================================
+      # Comparative
+      # =======================================================================
+      is_comparative:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Includes comparative period"
+
+      comparative_period_id:
+        type: uuid?
+        attributes: ["@foreign_key(FiscalPeriod.id)"]
+        description: "Comparative period"
+
+      comparative_as_of_date:
+        type: date?
+        description: "Comparative as of date"
+
+      # =======================================================================
+      # Status
+      # =======================================================================
+      status:
+        type: StatementStatus
+        attributes: ["@default(draft)"]
+        description: "Statement status"
+
+      # =======================================================================
+      # Balance Sheet Fields
+      # =======================================================================
+      # Current Assets
+      total_current_assets:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total current assets"
+
+      # Non-Current Assets
+      total_non_current_assets:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total non-current assets"
+
+      # Total Assets
+      total_assets:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total assets"
+
+      # Current Liabilities
+      total_current_liabilities:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total current liabilities"
+
+      # Non-Current Liabilities
+      total_non_current_liabilities:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total non-current liabilities"
+
+      # Total Liabilities
+      total_liabilities:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total liabilities"
+
+      # Equity
+      total_equity:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total equity"
+
+      # Verification: Assets = Liabilities + Equity
+      balance_check:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Balance sheet balances (A = L + E)"
+
+      balance_difference:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Difference if not balanced"
+
+      # =======================================================================
+      # Income Statement Fields
+      # =======================================================================
+      # Revenue
+      total_revenue:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total revenue"
+
+      # Cost of Goods Sold
+      total_cogs:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total COGS/HPP"
+
+      # Gross Profit
+      gross_profit:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Gross profit (Revenue - COGS)"
+
+      gross_profit_margin:
+        type: decimal?
+        attributes: ["@precision(5,2)"]
+        description: "Gross profit margin %"
+
+      # Operating Expenses
+      total_operating_expenses:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total operating expenses"
+
+      # Operating Income
+      operating_income:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Operating income (Gross profit - Op expenses)"
+
+      operating_margin:
+        type: decimal?
+        attributes: ["@precision(5,2)"]
+        description: "Operating margin %"
+
+      # Other Income/Expenses
+      total_other_income:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total other income"
+
+      total_other_expenses:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total other expenses"
+
+      # Income Before Tax
+      income_before_tax:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Income before tax"
+
+      # Tax Expense
+      tax_expense:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Tax expense"
+
+      # Net Income
+      net_income:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Net income"
+
+      net_profit_margin:
+        type: decimal?
+        attributes: ["@precision(5,2)"]
+        description: "Net profit margin %"
+
+      # =======================================================================
+      # Cash Flow Statement Fields
+      # =======================================================================
+      cash_from_operations:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Cash from operating activities"
+
+      cash_from_investing:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Cash from investing activities"
+
+      cash_from_financing:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Cash from financing activities"
+
+      net_cash_change:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Net change in cash"
+
+      beginning_cash:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Beginning cash balance"
+
+      ending_cash:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Ending cash balance"
+
+      # =======================================================================
+      # Trial Balance Fields
+      # =======================================================================
+      total_debits:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total debits (trial balance)"
+
+      total_credits:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Total credits (trial balance)"
+
+      trial_balance_check:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Trial balance balances"
+
+      # =======================================================================
+      # Detailed Line Items
+      # =======================================================================
+      line_items:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "Detailed line items by account"
+
+      # =======================================================================
+      # Comparative Data
+      # =======================================================================
+      comparative_data:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Comparative period data"
+
+      variance_data:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Variance analysis"
+
+      # =======================================================================
+      # Notes
+      # =======================================================================
+      notes:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "Statement notes/footnotes"
+
+      management_notes:
+        type: string?
+        attributes: ["@max(2000)"]
+        description: "Management discussion"
+
+      # =======================================================================
+      # Generation
+      # =======================================================================
+      generated_at:
+        type: datetime?
+        description: "Generation timestamp"
+
+      generated_by:
+        type: uuid?
+        description: "Generated by user"
+
+      generation_parameters:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Parameters used for generation"
+
+      # =======================================================================
+      # Review/Approval
+      # =======================================================================
+      reviewed_at:
+        type: datetime?
+        description: "Review timestamp"
+
+      reviewed_by:
+        type: uuid?
+        description: "Reviewed by user"
+
+      approved_at:
+        type: datetime?
+        description: "Approval timestamp"
+
+      approved_by:
+        type: uuid?
+        description: "Approved by user"
+
+      published_at:
+        type: datetime?
+        description: "Published timestamp"
+
+      # =======================================================================
+      # Export
+      # =======================================================================
+      pdf_url:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "PDF export URL"
+
+      excel_url:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Excel export URL"
+
+      # =======================================================================
+      # Metadata
+      # =======================================================================
+      currency:
+        type: string
+        attributes: ["@default('IDR')", "@length(3)"]
+        description: "Statement currency"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      generated_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(generated_by)"]
+        description: "Generated by user"
+
+      reviewed_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(reviewed_by)"]
+        description: "Reviewed by user"
+
+      approved_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(approved_by)"]
+        description: "Approved by user"
+
+    indexes:
+      - type: unique
+        fields: [provider_id, statement_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, statement_type, fiscal_year]
+      - type: index
+        fields: [provider_id, fiscal_period_id]
+      - type: index
+        fields: [provider_id, status]
+      - type: index
+        fields: [provider_id, as_of_date]

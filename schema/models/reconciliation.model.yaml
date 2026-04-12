@@ -1,0 +1,674 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: Reconciliation, ReconciliationItem
+# Description: Bank and account reconciliation
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # Reconciliation - Account reconciliation header
+  # ---------------------------------------------------------------------------
+  - name: Reconciliation
+    collection: reconciliations
+    description: "Account reconciliation for bank and other accounts"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique reconciliation identifier"
+
+      # =======================================================================
+      # Provider Association (Multi-tenant)
+      # =======================================================================
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider who owns this reconciliation (null = platform) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Reference
+      # =======================================================================
+      reconciliation_number:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Reconciliation reference (REC-YYYYMMDD-XXXX)"
+
+      # =======================================================================
+      # Account
+      # =======================================================================
+      account_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Account.id)"]
+        description: "Account being reconciled"
+
+      account_number:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Account number (denormalized)"
+
+      account_name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Account name (denormalized)"
+
+      # =======================================================================
+      # Type
+      # =======================================================================
+      reconciliation_type:
+        type: ReconciliationType
+        attributes: ["@default(bank)"]
+        description: "Type of reconciliation"
+
+      # =======================================================================
+      # Period
+      # =======================================================================
+      period_start:
+        type: date
+        attributes: ["@required"]
+        description: "Reconciliation period start"
+
+      period_end:
+        type: date
+        attributes: ["@required"]
+        description: "Reconciliation period end"
+
+      statement_date:
+        type: date
+        attributes: ["@required"]
+        description: "Statement date (bank statement date)"
+
+      # =======================================================================
+      # Opening Balances
+      # =======================================================================
+      opening_book_balance:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Opening balance per books"
+
+      opening_statement_balance:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Opening balance per statement"
+
+      previous_reconciliation_id:
+        type: uuid?
+        attributes: ["@foreign_key(Reconciliation.id)"]
+        description: "Previous reconciliation"
+
+      # =======================================================================
+      # Closing Balances
+      # =======================================================================
+      closing_book_balance:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Closing balance per books"
+
+      closing_statement_balance:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)"]
+        description: "Closing balance per statement"
+
+      # =======================================================================
+      # Reconciled Amounts
+      # =======================================================================
+      total_matched_debits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total matched debit transactions"
+
+      total_matched_credits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Total matched credit transactions"
+
+      matched_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of matched items"
+
+      total_unmatched_book_debits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Unmatched book debits"
+
+      total_unmatched_book_credits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Unmatched book credits"
+
+      unmatched_book_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of unmatched book items"
+
+      total_unmatched_statement_debits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Unmatched statement debits"
+
+      total_unmatched_statement_credits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Unmatched statement credits"
+
+      unmatched_statement_count:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Number of unmatched statement items"
+
+      # =======================================================================
+      # Reconciliation Summary
+      # =======================================================================
+      outstanding_deposits:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Deposits recorded but not in statement"
+
+      outstanding_checks:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Checks/payments not cleared"
+
+      deposits_in_transit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Deposits in statement not in books"
+
+      bank_charges:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Bank charges not recorded"
+
+      bank_interest:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Bank interest not recorded"
+
+      nsf_checks:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "NSF (bounced) checks"
+
+      other_adjustments:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Other adjustments"
+
+      adjusted_book_balance:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Adjusted book balance"
+
+      adjusted_statement_balance:
+        type: decimal?
+        attributes: ["@precision(18,2)"]
+        description: "Adjusted statement balance"
+
+      # =======================================================================
+      # Difference
+      # =======================================================================
+      difference:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Unexplained difference"
+
+      is_balanced:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Reconciliation is balanced"
+
+      # =======================================================================
+      # Status
+      # =======================================================================
+      status:
+        type: ReconciliationStatus
+        attributes: ["@default(in_progress)"]
+        description: "Reconciliation status"
+
+      # =======================================================================
+      # Workflow
+      # =======================================================================
+      started_at:
+        type: datetime?
+        description: "When reconciliation started"
+
+      started_by:
+        type: uuid?
+        description: "Started by user"
+
+      completed_at:
+        type: datetime?
+        description: "When reconciliation completed"
+
+      completed_by:
+        type: uuid?
+        description: "Completed by user"
+
+      reviewed_at:
+        type: datetime?
+        description: "When reviewed"
+
+      reviewed_by:
+        type: uuid?
+        description: "Reviewed by user"
+
+      # =======================================================================
+      # Adjusting Entries
+      # =======================================================================
+      has_adjusting_entries:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Created adjusting entries"
+
+      adjusting_journal_ids:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "Related adjusting journal IDs"
+
+      # =======================================================================
+      # Statement Import
+      # =======================================================================
+      statement_source:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Statement source (manual, import, api)"
+
+      statement_file_url:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Imported statement file"
+
+      import_date:
+        type: datetime?
+        description: "Statement import date"
+
+      notes:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Reconciliation notes"
+
+      discrepancy_notes:
+        type: string?
+        attributes: ["@max(1000)"]
+        description: "Notes on discrepancies"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      account:
+        type: Account
+        attributes: ["@one", "@foreign_key(account_id)"]
+        description: "Account"
+        inverse: reconciliations
+
+      previous_reconciliation:
+        type: Reconciliation?
+        attributes: ["@one", "@foreign_key(previous_reconciliation_id)"]
+        description: "Previous reconciliation"
+        inverse: next_reconciliations
+
+      items:
+        type: ReconciliationItem[]
+        attributes: ["@one_to_many", "@on_delete(cascade)", "@on_update(cascade)"]
+        description: "Reconciliation items"
+        inverse: reconciliation
+
+      started_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(started_by)"]
+        description: "Started by user"
+
+      completed_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(completed_by)"]
+        description: "Completed by user"
+
+      reviewed_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(reviewed_by)"]
+        description: "Reviewed by user"
+
+    indexes:
+      - type: unique
+        fields: [provider_id, reconciliation_number]
+        where: "deleted_at IS NULL"
+      - type: unique
+        fields: [provider_id, account_id, statement_date]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [provider_id, account_id, period_start]
+      - type: index
+        fields: [provider_id, status]
+      - type: index
+        fields: [provider_id, is_balanced]
+
+  # ---------------------------------------------------------------------------
+  # ReconciliationItem - Individual items in reconciliation
+  # ---------------------------------------------------------------------------
+  - name: ReconciliationItem
+    collection: reconciliation_items
+    description: "Reconciliation line item (book or statement side)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique item identifier"
+
+      # =======================================================================
+      # Reconciliation Reference
+      # =======================================================================
+      reconciliation_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(Reconciliation.id)"]
+        description: "Parent reconciliation"
+
+      provider_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Provider (denormalized, null = platform) # logical FK to bersihir.Provider.id"
+
+      # =======================================================================
+      # Item Number
+      # =======================================================================
+      item_number:
+        type: int
+        attributes: ["@required", "@positive"]
+        description: "Line number"
+
+      # =======================================================================
+      # Source Type
+      # =======================================================================
+      source:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "Source: book, statement, or both"
+
+      # =======================================================================
+      # Book Side (Ledger Entry)
+      # =======================================================================
+      ledger_id:
+        type: uuid?
+        attributes: ["@foreign_key(Ledger.id)"]
+        description: "Ledger entry (book side)"
+
+      journal_id:
+        type: uuid?
+        attributes: ["@foreign_key(Journal.id)"]
+        description: "Journal entry (book side)"
+
+      book_date:
+        type: date?
+        description: "Book transaction date"
+
+      book_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Book reference number"
+
+      book_description:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Book description"
+
+      book_debit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Book debit amount"
+
+      book_credit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Book credit amount"
+
+      # =======================================================================
+      # Statement Side (Bank Transaction)
+      # =======================================================================
+      statement_date:
+        type: date?
+        description: "Statement transaction date"
+
+      statement_reference:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Statement reference (check number, etc.)"
+
+      statement_description:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Statement description"
+
+      statement_debit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Statement debit (withdrawal)"
+
+      statement_credit:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        description: "Statement credit (deposit)"
+
+      # =======================================================================
+      # Matching
+      # =======================================================================
+      status:
+        type: ReconciliationItemStatus
+        attributes: ["@default(unmatched)"]
+        description: "Item status"
+
+      matched_with_id:
+        type: uuid?
+        attributes: ["@foreign_key(ReconciliationItem.id)"]
+        description: "Matched with another item"
+
+      match_date:
+        type: datetime?
+        description: "When matched"
+
+      match_method:
+        type: string?
+        attributes: ["@max(30)"]
+        description: "Match method: auto, manual, rule"
+
+      match_confidence:
+        type: decimal?
+        attributes: ["@precision(5,2)", "@range(0, 100)"]
+        description: "Auto-match confidence %"
+
+      # =======================================================================
+      # Difference
+      # =======================================================================
+      has_difference:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Has amount difference"
+
+      difference_amount:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Difference amount"
+
+      difference_reason:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Reason for difference"
+
+      # =======================================================================
+      # Adjustment
+      # =======================================================================
+      requires_adjustment:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Requires adjusting entry"
+
+      adjustment_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Type: bank_charge, interest, nsf, error, other"
+
+      adjustment_journal_id:
+        type: uuid?
+        attributes: ["@foreign_key(Journal.id)"]
+        description: "Created adjusting entry"
+
+      adjusted_at:
+        type: datetime?
+        description: "Adjustment timestamp"
+
+      # =======================================================================
+      # Write-off
+      # =======================================================================
+      is_written_off:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Written off as immaterial"
+
+      write_off_reason:
+        type: string?
+        attributes: ["@max(255)"]
+        description: "Write-off reason"
+
+      write_off_approved_by:
+        type: uuid?
+        description: "Write-off approved by"
+
+      # =======================================================================
+      # Outstanding Item Classification
+      # =======================================================================
+      is_outstanding:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Outstanding (timing difference)"
+
+      outstanding_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Type: deposit_in_transit, outstanding_check, etc."
+
+      expected_clear_date:
+        type: date?
+        description: "Expected clearing date"
+
+      notes:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Item notes"
+
+      data:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Additional metadata"
+
+    relations:
+      reconciliation:
+        type: Reconciliation
+        attributes: ["@one", "@foreign_key(reconciliation_id)"]
+        description: "Parent reconciliation"
+
+      ledger:
+        type: Ledger?
+        attributes: ["@one", "@foreign_key(ledger_id)"]
+        description: "Ledger entry"
+
+      journal:
+        type: Journal?
+        attributes: ["@one", "@foreign_key(journal_id)"]
+        description: "Journal entry"
+        inverse: reconciliation_items
+
+      matched_with:
+        type: ReconciliationItem?
+        attributes: ["@one", "@foreign_key(matched_with_id)"]
+        description: "Matched item"
+
+      adjustment_journal:
+        type: Journal?
+        attributes: ["@one", "@foreign_key(adjustment_journal_id)"]
+        description: "Adjusting journal"
+
+      write_off_approved_by_user:
+        type: sapiens.User?
+        attributes: ["@one", "@foreign_key(write_off_approved_by)"]
+        description: "Write-off approved by user"
+
+    indexes:
+      - type: unique
+        fields: [reconciliation_id, item_number]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [reconciliation_id, status]
+      - type: index
+        fields: [ledger_id]
+        where: "ledger_id IS NOT NULL"
+      - type: index
+        fields: [provider_id, is_outstanding]
+      - type: index
+        fields: [reconciliation_id, source]
+      - type: index
+        fields: [matched_with_id]
+        where: "matched_with_id IS NOT NULL"
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Reconciliation Type
+  # ---------------------------------------------------------------------------
+  - name: ReconciliationType
+    description: "Type of reconciliation"
+    variants:
+      - name: bank
+        description: "Bank reconciliation"
+        default: true
+      - name: accounts_receivable
+        description: "Accounts receivable reconciliation"
+      - name: accounts_payable
+        description: "Accounts payable reconciliation"
+      - name: intercompany
+        description: "Intercompany reconciliation"
+      - name: other
+        description: "Other account reconciliation"
+
+  # ---------------------------------------------------------------------------
+  # Reconciliation Status
+  # ---------------------------------------------------------------------------
+  - name: ReconciliationStatus
+    description: "Reconciliation status"
+    variants:
+      - name: in_progress
+        description: "In progress"
+        default: true
+      - name: pending_review
+        description: "Pending review"
+      - name: reviewed
+        description: "Reviewed"
+      - name: completed
+        description: "Completed"
+      - name: cancelled
+        description: "Cancelled"
+
+  # ---------------------------------------------------------------------------
+  # Reconciliation Item Status
+  # ---------------------------------------------------------------------------
+  - name: ReconciliationItemStatus
+    description: "Reconciliation item status"
+    variants:
+      - name: unmatched
+        description: "Unmatched"
+        default: true
+      - name: matched
+        description: "Matched"
+      - name: partial_match
+        description: "Partially matched"
+      - name: adjusted
+        description: "Adjusted"
+      - name: written_off
+        description: "Written off"
+      - name: outstanding
+        description: "Outstanding (timing difference)"
