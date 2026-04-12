@@ -1,0 +1,18 @@
+# Seed Execution Order Configuration
+# Seeds are executed in the order defined in this file.
+# This ensures foreign key dependencies are satisfied.
+
+# Format: seed_name_seed (without .sql extension)
+#
+# Note: You can manually edit this file to customize the order.
+# Seeds not listed here will be executed after in alphabetical order.
+
+- accounting_post_seed
+- financial_statement_seed
+- journal_seed
+- journal_line_seed
+- ledger_seed
+- reconciliation_seed
+- reconciliation_item_seed
+- account_seed
+- fiscal_period_seed
