@@ -22,7 +22,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this cost center # logical FK to corporate.Company.id"
+        description: "Legal entity that owns this cost center # logical FK to organization.Company.id"
 
       code:
         type: string
@@ -64,7 +64,7 @@ models:
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Associated branch # logical FK to corporate.Branch.id"
+        description: "Associated branch # logical FK to organization.Branch.id"
 
       is_active:
         type: bool

@@ -24,7 +24,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns these books # logical FK to corporate.Company.id"
+        description: "Legal entity that owns these books # logical FK to organization.Company.id"
 
       # =======================================================================
       # Account Reference
@@ -166,7 +166,7 @@ models:
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch (denormalized from journal, null = company-level) # logical FK to corporate.Branch.id"
+        description: "Branch (denormalized from journal, null = company-level) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
@@ -196,7 +196,7 @@ models:
       department_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Department dimension # logical FK to corporate.Department.id"
+        description: "Department dimension # logical FK to organization.Department.id"
 
       dimensions:
         type: json?

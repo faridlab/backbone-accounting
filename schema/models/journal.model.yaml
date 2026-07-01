@@ -24,7 +24,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this journal # logical FK to corporate.Company.id"
+        description: "Legal entity that owns this journal # logical FK to organization.Company.id"
 
       # =======================================================================
       # Reference
@@ -53,7 +53,7 @@ models:
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch for this journal (null = company-level) # logical FK to corporate.Branch.id"
+        description: "Branch for this journal (null = company-level) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Transaction Date
@@ -368,12 +368,12 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner (denormalized from journal) # logical FK to corporate.Company.id"
+        description: "Books owner (denormalized from journal) # logical FK to organization.Company.id"
 
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch (denormalized, null = company-level) # logical FK to corporate.Branch.id"
+        description: "Branch (denormalized, null = company-level) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
@@ -471,7 +471,7 @@ models:
       department_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Department dimension # logical FK to corporate.Department.id"
+        description: "Department dimension # logical FK to organization.Department.id"
 
       dimensions:
         type: json?

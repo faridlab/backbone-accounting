@@ -24,7 +24,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this reconciliation # logical FK to corporate.Company.id"
+        description: "Legal entity that owns this reconciliation # logical FK to organization.Company.id"
 
       # =======================================================================
       # Reference
@@ -370,7 +370,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner (denormalized from reconciliation) # logical FK to corporate.Company.id"
+        description: "Books owner (denormalized from reconciliation) # logical FK to organization.Company.id"
 
       # =======================================================================
       # Item Number

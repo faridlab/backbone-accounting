@@ -24,7 +24,7 @@ models:
       company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this Chart of Accounts # logical FK to corporate.Company.id"
+        description: "Legal entity that owns this Chart of Accounts # logical FK to organization.Company.id"
 
       # =======================================================================
       # Account Identification
