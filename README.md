@@ -2,6 +2,10 @@
 
 A complete Domain-Driven Design (DDD) bounded context module built on the **Backbone Framework**. This module follows Clean Architecture principles with a **schema-first** approach where YAML schema files are the single source of truth.
 
+> 📖 **Full handbook:** [`docs/`](./docs/README.md) — philosophy, architecture (C4), maintainer &
+> developer guides, contribution guide, glossary, and ADRs. This README is the quickstart; the
+> handbook is the depth.
+
 ## Architecture Overview
 
 ```
@@ -104,14 +108,21 @@ permissions:
 Run the schema generator to create all code from your schema:
 
 ```bash
+# Validate the schema first
+metaphor schema schema validate
+
 # Generate everything
-backbone schema generate accounting --target all
+metaphor schema schema generate accounting --target all
 
 # Or generate specific targets
-backbone schema generate accounting --target proto,rust,sql
-backbone schema generate accounting --target handler,grpc,cqrs
-backbone schema generate accounting --target repository,events
+metaphor schema schema generate accounting --target rust,sql
+metaphor schema schema generate accounting --target handler,repository,events
 ```
+
+> The canonical CLI is **`metaphor`** (v0.2.0); schema codegen is the nested passthrough
+> `metaphor schema schema <op>`. The `backbone` name used elsewhere is a local dev alias for the
+> framework CLI. Note: the `grpc`, `proto`, and `graphql` generators are **disabled** in
+> `schema/models/index.model.yaml`, so those targets currently produce nothing.
 
 ### 3. Run Migrations
 
@@ -156,37 +167,47 @@ let routes = module.routes();
 
 ## Standard CRUD Endpoints
 
-Each entity automatically gets 12 standard endpoints:
+Each entity automatically gets the 12 standard `BackboneCrudHandler` endpoints:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/{collection}` | List with pagination |
-| `POST` | `/api/v1/{collection}` | Create |
-| `GET` | `/api/v1/{collection}/:id` | Get by ID |
-| `PUT` | `/api/v1/{collection}/:id` | Full update |
-| `PATCH` | `/api/v1/{collection}/:id` | Partial update |
-| `DELETE` | `/api/v1/{collection}/:id` | Soft delete |
-| `POST` | `/api/v1/{collection}/bulk` | Bulk create |
-| `POST` | `/api/v1/{collection}/upsert` | Upsert |
-| `GET` | `/api/v1/{collection}/trash` | List deleted |
-| `POST` | `/api/v1/{collection}/:id/restore` | Restore |
-| `DELETE` | `/api/v1/{collection}/empty` | Empty trash |
-| `GET` | `/api/v1/{collection}/count` | Count records |
+| # | Endpoint | Description |
+|---|----------|-------------|
+| 1 | `list` | List with pagination, filtering, sorting |
+| 2 | `create` | Create |
+| 3 | `get` / `find_by_id` | Get by ID |
+| 4 | `update` | Full update (PUT) |
+| 5 | `patch` | Partial update (PATCH) |
+| 6 | `soft_delete` | Soft delete |
+| 7 | `restore` | Restore a soft-deleted record |
+| 8 | `empty_trash` | Permanently purge soft-deleted records |
+| 9 | `bulk_create` | Bulk create |
+| 10 | `upsert` | Upsert |
+| 11 | `list_deleted` | List soft-deleted records |
+| 12 | `find_by_id` | Fetch a single record by id |
+
+> **Guarded in production.** Posted GL entities (`Journal`, `JournalLine`, `Ledger`,
+> `AccountingPost`) are mounted **read-only** via `create_guarded_accounting_routes` — the only
+> sanctioned GL writer is `POST /accounting/posts` (see
+> [ADR-002](./docs/adr/ADR-002-ledger-write-path-integrity.md)). Master/config entities keep full
+> CRUD. `JournalLine` and `ReconciliationItem` are cascade children with no `@audit_metadata`, so
+> their soft-delete family (`soft_delete`/`restore`/`empty_trash`/`list_deleted`) is not generated.
 
 ## Development Workflow
 
 ### Adding a New Entity
 
 1. Create schema file: `schema/models/{entity}.model.yaml`
-2. Run generator: `backbone schema generate accounting --target all`
-3. Run migrations: `sqlx migrate run`
-4. Test endpoints
+2. Run generator: `metaphor schema schema generate accounting --target all`
+3. Create/run migrations: `metaphor migration create {entity}`
+4. Register the new service in the `AccountingModule` builder (`src/lib.rs`)
+5. Test endpoints
+
+See the [Maintainer Guide](./docs/maintainer-guide.md) for the full add-a-feature walkthrough.
 
 ### Modifying an Entity
 
-1. Update schema file
-2. Generate migration: `backbone migration alter {Entity} accounting -d "description"`
-3. Regenerate code: `backbone schema generate accounting --target all`
+1. Update the schema file
+2. Generate a migration: `metaphor migration create {change}`
+3. Regenerate code: `metaphor schema schema generate accounting --target all`
 4. Run migrations
 
 ### Custom Business Logic
@@ -219,9 +240,12 @@ This module depends on:
 
 ## Documentation
 
-- [Framework Documentation](../../docs/technical/FRAMEWORK.md)
-- [API Guidelines](../../docs/technical/API_GUIDELINES.md)
-- [Quick Start Guide](../../docs/technical/QUICKSTART.md)
+The full handbook lives in [`docs/`](./docs/README.md):
+
+- [Philosophy & motivation](./docs/philosophy.md) · [Background & prior art](./docs/background.md) · [Technology & the why](./docs/technology.md)
+- [Architecture (C4)](./docs/architecture.md) · [Maintainer Guide](./docs/maintainer-guide.md) · [Developer Guide](./docs/developer-guide.md)
+- [Extension Guide](./docs/extension-guide.md) · [Contributing](./docs/contributing.md) · [Glossary](./docs/glossary.md) · [ADRs](./docs/adr/README.md)
+- Specs: [BRD](./docs/brd.md) · [PRD](./docs/prd.md) · [FSD](./docs/fsd.md)
 
 ## License
 

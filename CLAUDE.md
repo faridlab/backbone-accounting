@@ -116,6 +116,7 @@ Cargo.toml                                # feature flags: events, grpc, openapi
 
 ## Key files to read before editing
 
+- `docs/README.md` — the handbook index (philosophy, architecture/C4, maintainer & developer guides, glossary, ADRs). Start here for the "why".
 - `schema/models/*.model.yaml` — the source of truth; never skip.
 - `src/module.rs` — how services wire together.
 - `src/lib.rs` — public re-exports.
