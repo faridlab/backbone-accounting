@@ -19,12 +19,12 @@ models:
         description: "Unique account identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — multi-tenancy is schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider who owns this COA (null = platform template) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this Chart of Accounts # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Account Identification
@@ -306,19 +306,19 @@ models:
 
     indexes:
       - type: unique
-        fields: [provider_id, account_number]
+        fields: [company_id, account_number]
         where: "deleted_at IS NULL"
       - type: unique
-        fields: [provider_id, account_code]
+        fields: [company_id, account_code]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [provider_id, account_type, status]
+        fields: [company_id, account_type, status]
       - type: index
-        fields: [provider_id, parent_id, sort_order]
+        fields: [company_id, parent_id, sort_order]
       - type: index
-        fields: [provider_id, account_subtype]
+        fields: [company_id, account_subtype]
       - type: index
-        fields: [provider_id, is_reconcilable]
+        fields: [company_id, is_reconcilable]
       - type: index
         fields: [source_id, is_cloned]
 
@@ -418,3 +418,17 @@ enums:
         description: "Inactive (no new transactions)"
       - name: archived
         description: "Archived (historical only)"
+
+  # ---------------------------------------------------------------------------
+  # Party Type (AR/AP subledger) — party a receivable/payable line belongs to
+  # ---------------------------------------------------------------------------
+  - name: PartyType
+    description: "Kind of party on a receivable/payable ledger line"
+    variants:
+      - name: customer
+        description: "Customer (Pelanggan) — receivable"
+        default: true
+      - name: supplier
+        description: "Supplier (Pemasok) — payable"
+      - name: employee
+        description: "Employee (Karyawan) — advances/payables"

@@ -19,12 +19,12 @@ models:
         description: "Unique ledger entry identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — multi-tenancy is schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider who owns this ledger (null = platform) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns these books # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Account Reference
@@ -161,30 +161,46 @@ models:
         description: "Sequence within account for ordering"
 
       # =======================================================================
-      # Outlet Reference
+      # Branch Reference (org dimension)
       # =======================================================================
-      outlet_id:
+      branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Outlet (denormalized from journal, null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+        description: "Branch (denormalized from journal, null = company-level) # logical FK to corporate.Branch.id"
 
       # =======================================================================
-      # Cost Center / Project
+      # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
       # =======================================================================
-      cost_center:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Cost center"
+      party_type:
+        type: PartyType?
+        description: "Party kind for receivable/payable lines"
 
-      project:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Project"
+      party_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Party for AR/AP aging # logical FK to party.Party.id (customer/supplier)"
 
-      department:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Department"
+      # =======================================================================
+      # Accounting Dimensions (hard-coded set + JSON escape hatch)
+      # =======================================================================
+      cost_center_id:
+        type: uuid?
+        attributes: ["@foreign_key(CostCenter.id)"]
+        description: "Cost center dimension"
+
+      project_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Project dimension # logical FK to projects.Project.id"
+
+      department_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Department dimension # logical FK to corporate.Department.id"
+
+      dimensions:
+        type: json?
+        description: "Forward-compat bag for additional user dimensions (no runtime column engine)"
 
       # =======================================================================
       # Source Traceability
@@ -303,27 +319,37 @@ models:
         attributes: ["@one", "@foreign_key(reverses_id)"]
         description: "Entry being reversed"
 
+      cost_center:
+        type: CostCenter?
+        attributes: ["@one", "@foreign_key(cost_center_id)"]
+        description: "Cost center dimension"
+        inverse: ledgers
+
     indexes:
       - type: index
-        fields: [provider_id, account_id, transaction_date]
+        fields: [company_id, account_id, transaction_date]
       - type: index
-        fields: [provider_id, account_id, sequence_number]
+        fields: [company_id, account_id, sequence_number]
       - type: index
-        fields: [provider_id, fiscal_year, fiscal_month]
+        fields: [company_id, fiscal_year, fiscal_month]
       - type: index
-        fields: [provider_id, transaction_date]
+        fields: [company_id, transaction_date]
       - type: index
         fields: [journal_id]
       - type: index
         fields: [journal_line_id]
       - type: index
-        fields: [provider_id, account_id, is_reconciled]
+        fields: [company_id, account_id, is_reconciled]
       - type: index
-        fields: [provider_id, is_opening_balance]
+        fields: [company_id, is_opening_balance]
       - type: index
-        fields: [provider_id, is_closing_entry]
+        fields: [company_id, is_closing_entry]
       - type: index
-        fields: [provider_id, outlet_id, account_id, transaction_date]
+        fields: [company_id, branch_id, account_id, transaction_date]
       - type: index
-        fields: [outlet_id, transaction_date]
-        where: "outlet_id IS NOT NULL"
+        fields: [branch_id, transaction_date]
+        where: "branch_id IS NOT NULL"
+      # AR/AP subledger aging
+      - type: index
+        fields: [company_id, party_type, party_id, account_id, transaction_date]
+        where: "party_id IS NOT NULL"

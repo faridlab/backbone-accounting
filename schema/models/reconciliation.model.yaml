@@ -19,12 +19,12 @@ models:
         description: "Unique reconciliation identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider who owns this reconciliation (null = platform) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this reconciliation # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Reference
@@ -334,17 +334,17 @@ models:
 
     indexes:
       - type: unique
-        fields: [provider_id, reconciliation_number]
+        fields: [company_id, reconciliation_number]
         where: "deleted_at IS NULL"
       - type: unique
-        fields: [provider_id, account_id, statement_date]
+        fields: [company_id, account_id, statement_date]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [provider_id, account_id, period_start]
+        fields: [company_id, account_id, period_start]
       - type: index
-        fields: [provider_id, status]
+        fields: [company_id, status]
       - type: index
-        fields: [provider_id, is_balanced]
+        fields: [company_id, is_balanced]
 
   # ---------------------------------------------------------------------------
   # ReconciliationItem - Individual items in reconciliation
@@ -367,10 +367,10 @@ models:
         attributes: ["@required", "@foreign_key(Reconciliation.id)"]
         description: "Parent reconciliation"
 
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider (denormalized, null = platform) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner (denormalized from reconciliation) # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Item Number
@@ -596,16 +596,17 @@ models:
         description: "Write-off approved by user"
 
     indexes:
+      # ReconciliationItem has no @audit_metadata (no soft-delete; cascade child —
+      # repository is generated `no_soft_delete`), so no `deleted_at IS NULL` predicate.
       - type: unique
         fields: [reconciliation_id, item_number]
-        where: "deleted_at IS NULL"
       - type: index
         fields: [reconciliation_id, status]
       - type: index
         fields: [ledger_id]
         where: "ledger_id IS NOT NULL"
       - type: index
-        fields: [provider_id, is_outstanding]
+        fields: [company_id, is_outstanding]
       - type: index
         fields: [reconciliation_id, source]
       - type: index

@@ -1,0 +1,44 @@
+# Codegen policy for backbone-accounting.
+#
+# `user_owned` globs are hand-written files that live inside generator-owned trees but are
+# NOT schema-derived. `metaphor schema generate [--force]` skips them wholesale (never reads,
+# merges, or deletes them). Everything else in src/ is regenerated from schema/models.
+#
+# Re-exports/declarations that must sit alongside generated code live inside
+# `// <<< CUSTOM ... // END CUSTOM` markers (service/mod.rs, presentation/http/mod.rs,
+# exports/events.rs, lib.rs) and are preserved by the marker mechanism, not listed here.
+
+user_owned:
+  # GL-posting contract — hand-authored double-entry behavior + its HTTP surface.
+  - "src/application/service/posting_service.rs"
+  - "src/presentation/http/posting_handler.rs"
+
+  # Financial-statement generation (Trial Balance / Balance Sheet / Income Statement).
+  - "src/application/service/reporting_service.rs"
+  - "src/presentation/http/reporting_handler.rs"
+
+  # Bank reconciliation matching + fiscal-period close.
+  - "src/application/service/bank_reconciliation_service.rs"
+  - "src/application/service/period_close_service.rs"
+  - "src/presentation/http/accounting_ops_handler.rs"
+  - "src/presentation/http/guarded_routes.rs"
+
+  # Message-bus adapter (publishes posting events to backbone-messaging).
+  - "src/infrastructure/messaging/**"
+
+  # Behavior tests + BDD oracle (the golden cases).
+  - "tests/posting_golden_cases.rs"
+  - "tests/reporting_golden_cases.rs"
+  - "tests/reconciliation_golden_cases.rs"
+  - "tests/period_close_golden_cases.rs"
+  - "tests/messaging_bus.rs"
+  - "tests/integrity_probes.rs"
+  - "tests/features/**"
+
+  # Hand-authored module documentation (PRD/BRD/FSD, business flows, ADRs).
+  - "docs/prd.md"
+  - "docs/brd.md"
+  - "docs/fsd.md"
+  - "docs/extension-guide.md"
+  - "docs/business-flows/**"
+  - "docs/adr/**"

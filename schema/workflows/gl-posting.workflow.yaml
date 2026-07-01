@@ -1,0 +1,103 @@
+# GL-Posting Workflow V2.0
+# The transactional double-entry saga executed by PostingService
+# (src/application/service/posting_service.rs), proven by tests/posting_golden_cases.rs.
+# All write steps run in ONE DB transaction; any failure rolls the whole thing back.
+
+name: GLPosting
+description: |
+  Record a balanced AccountingPost into the General Ledger:
+  - idempotency check on (company_id, source_type, source_id, posting_type)
+  - validate R1..R5 (balanced, >=2 lines, postable account, party-for-AR/AP, open period)
+  - atomically write Journal + JournalLines + immutable Ledger rows (running balance)
+  - update account balances, mark the AccountingPost posted, emit AccountingPostPosted
+
+version: 2
+
+trigger:
+  event: AccountingPostRequestedEvent
+  extract:
+    company_id: "event.company_id"
+    source_type: "event.source_type"
+    source_id: "event.source_id"
+    posting_type: "event.posting_type"
+
+config:
+  timeout: 30s
+  persistence: false
+
+context:
+  journal: null
+  total_debit: 0
+  total_credit: 0
+
+steps:
+  - name: idempotency_check
+    type: action
+    action: query
+    entity: AccountingPost
+    params:
+      company_id: "{{ context.company_id }}"
+      source_type: "{{ context.source_type }}"
+      source_id: "{{ context.source_id }}"
+      posting_type: "{{ context.posting_type }}"
+    on_success:
+      next: validate
+    on_failure:
+      next: validate
+
+  - name: validate
+    type: action
+    action: validate
+    entity: AccountingPost
+    on_success:
+      next: write_journal
+    on_failure:
+      next: rejected
+
+  - name: write_journal
+    type: action
+    action: create
+    entity: Journal
+    on_success:
+      set:
+        journal: "{{ result }}"
+      next: write_journal_lines
+
+  - name: write_journal_lines
+    type: action
+    action: create
+    entity: JournalLine
+    on_success:
+      next: write_ledger
+
+  - name: write_ledger
+    type: action
+    action: create
+    entity: Ledger
+    on_success:
+      next: update_account_balances
+
+  - name: update_account_balances
+    type: action
+    action: update
+    entity: Account
+    on_success:
+      next: mark_posted
+
+  - name: mark_posted
+    type: action
+    action: update
+    entity: AccountingPost
+    on_success:
+      next: posted
+
+  # Terminals
+  - name: posted
+    type: terminal
+    status: completed
+    reason: "AccountingPostPosted — Journal + Ledger written, entry balanced"
+
+  - name: rejected
+    type: terminal
+    status: failed
+    reason: "AccountingPostFailed — validation rejected (unbalanced / party / period / non-postable)"

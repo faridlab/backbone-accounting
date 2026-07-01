@@ -62,12 +62,12 @@ models:
         description: "Unique period identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider who owns this period (null = platform) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this fiscal period # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Period Identification
@@ -326,18 +326,18 @@ models:
 
     indexes:
       - type: unique
-        fields: [provider_id, period_code]
+        fields: [company_id, period_code]
         where: "deleted_at IS NULL"
       - type: unique
-        fields: [provider_id, fiscal_year, fiscal_month]
+        fields: [company_id, fiscal_year, fiscal_month]
         where: "deleted_at IS NULL AND fiscal_month IS NOT NULL"
       - type: index
-        fields: [provider_id, fiscal_year]
+        fields: [company_id, fiscal_year]
       - type: index
-        fields: [provider_id, status]
+        fields: [company_id, status]
       - type: index
-        fields: [provider_id, start_date, end_date]
+        fields: [company_id, start_date, end_date]
       - type: index
-        fields: [provider_id, is_current]
+        fields: [company_id, is_current]
       - type: index
         fields: [parent_id]

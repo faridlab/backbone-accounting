@@ -1,0 +1,84 @@
+# =============================================================================
+# Accounting Hooks — Journal lifecycle state machine + GL-posting rules
+# =============================================================================
+# Declarative spec of the behavior implemented in
+# `src/application/service/posting_service.rs` and proven by
+# `tests/posting_golden_cases.rs` / `docs/business-flows/golden-cases.md`.
+
+module: accounting
+version: 2
+
+# -----------------------------------------------------------------------------
+# Journal lifecycle — the status state machine (JournalStatus enum).
+# A journal created by the GL-posting service is born `posted`; the draft/approval
+# path is for manually-entered journals.
+# -----------------------------------------------------------------------------
+state_machines:
+  - entity: Journal
+    field: status
+    initial: draft
+    states: [draft, pending_approval, approved, rejected, posted, voided]
+    transitions:
+      - { from: draft,            to: pending_approval, on: submit }
+      - { from: pending_approval, to: approved,         on: approve }
+      - { from: pending_approval, to: rejected,         on: reject }
+      - { from: approved,         to: posted,           on: post,   guard: balanced }
+      - { from: draft,            to: posted,           on: post,   guard: "balanced && !requires_approval" }
+      - { from: posted,           to: voided,           on: void }
+    guards:
+      balanced: "total_debit == total_credit"     # R1 double-entry invariant
+    effects:
+      post:  "set posted_at = now(), posted_by = actor"
+      void:  "set is_voided = true, voided_at = now()"
+
+# -----------------------------------------------------------------------------
+# GL-posting rules (validated by PostingService before any write). Each maps to a
+# golden case (GC-n) and a stable error_code returned on violation.
+# -----------------------------------------------------------------------------
+rules:
+  - id: R1
+    name: double_entry_balanced
+    when: posting
+    assert: "sum(lines.debit) == sum(lines.credit)"
+    error_code: unbalanced          # GC-5
+  - id: R2
+    name: minimum_two_lines
+    when: posting
+    assert: "count(lines) >= 2"
+    error_code: too_few_lines       # GC-9
+  - id: R3
+    name: postable_account
+    when: posting
+    assert: "every line.account is_detail AND not is_header AND status == 'active'"
+    error_code: non_postable_account # GC-11
+  - id: R4a
+    name: party_required_for_ar_ap
+    when: posting
+    assert: "line.account.subtype in {accounts_receivable, accounts_payable} => line.party_id present"
+    error_code: party_required      # GC-6
+  - id: R4b
+    name: party_only_on_ar_ap
+    when: posting
+    assert: "line.party_id present => line.account.subtype in {accounts_receivable, accounts_payable}"
+    error_code: party_not_allowed   # GC-7
+  - id: R5
+    name: period_open
+    when: posting
+    assert: "fiscal_period(posting_date).status not in {closed, locked}"
+    error_code: period_closed       # GC-10
+  - id: R6
+    name: idempotent_source
+    when: posting
+    unique_on: [company_id, source_type, source_id, posting_type]
+    on_conflict: return_existing    # GC-8
+
+# -----------------------------------------------------------------------------
+# Domain events emitted by the posting service (see src/exports/events.rs).
+# -----------------------------------------------------------------------------
+events:
+  AccountingPostPosted:
+    when: "posting succeeds"
+    payload: [post_id, journal_id, company_id, source_type, source_id, total_debit, total_credit, posted_at]
+  AccountingPostFailed:
+    when: "posting rejected"
+    payload: [company_id, source_type, source_id, error_code, error_message, failed_at]

@@ -19,17 +19,17 @@ models:
         description: "Unique posting identifier"
 
       # =======================================================================
-      # Provider / Outlet
+      # Company (books owner) / Branch — schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider (null = platform-level) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns these books # logical FK to corporate.Company.id"
 
-      outlet_id:
+      branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Outlet (null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+        description: "Branch (null = company-level) # logical FK to corporate.Branch.id"
 
       # =======================================================================
       # Source Transaction (polymorphic)
@@ -184,11 +184,17 @@ models:
         description: "Posting that reversed this one"
 
     indexes:
+      # Idempotency: at most ONE posted entry per (company, source, posting_type). Partial on
+      # posting_status='posted' so failed attempts don't block a later retry. This is the
+      # DB-enforced arbiter that makes concurrent double-posting impossible (the pre-transaction
+      # SELECT in PostingService is only a fast path). NOTE: previously keyed on
+      # (source_type, source_id, posting_type, journal_id) — which included the per-post journal_id
+      # and therefore never deduped anything.
       - type: unique
-        fields: [source_type, source_id, posting_type, journal_id]
-        where: "deleted_at IS NULL"
+        fields: [company_id, source_type, source_id, posting_type]
+        where: "posting_status = 'posted' AND deleted_at IS NULL"
       - type: index
-        fields: [provider_id, source_type, posting_status]
+        fields: [company_id, source_type, posting_status]
       - type: index
         fields: [source_type, source_id]
       - type: index
@@ -199,9 +205,9 @@ models:
         fields: [posting_status, next_retry_at]
         where: "posting_status = 'failed' AND next_retry_at IS NOT NULL"
       - type: index
-        fields: [provider_id, outlet_id, posting_status]
+        fields: [company_id, branch_id, posting_status]
       - type: index
-        fields: [provider_id, posted_at]
+        fields: [company_id, posted_at]
         where: "posted_at IS NOT NULL"
 
 # =============================================================================

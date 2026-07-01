@@ -22,7 +22,6 @@ config:
       - graphql
       - grpc
       - proto
-      - openapi
 
 # External imports - reuse sapiens for user identity (same pattern as bersihir)
 external_imports:
@@ -63,6 +62,7 @@ shared_types:
 # Import all model files
 imports:
   - account.model.yaml
+  - cost_center.model.yaml
   - journal.model.yaml
   - ledger.model.yaml
   - fiscal.model.yaml

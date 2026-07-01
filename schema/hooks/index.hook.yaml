@@ -8,9 +8,8 @@ module: accounting
 version: 2
 
 # Import all hook files
-# Add your hook files here:
-imports: []
-  # - example.hook.yaml
+imports:
+  - journal.hook.yaml   # Journal lifecycle state machine + GL-posting rules/events
 
 # =============================================================================
 # Module-level configuration

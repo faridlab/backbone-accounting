@@ -1,0 +1,116 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: CostCenter
+# Description: Controlling/accounting dimension for segment P&L and budget-vs-actual
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # CostCenter - hierarchical accounting dimension (allocation splits deferred)
+  # ---------------------------------------------------------------------------
+  - name: CostCenter
+    collection: cost_centers
+    description: "Cost center: controlling dimension for segment reporting and budgets"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique cost center identifier"
+
+      # Company (books owner) — schema-per-tenant, no provider_id
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this cost center # logical FK to corporate.Company.id"
+
+      code:
+        type: string
+        attributes: ["@required", "@max(30)"]
+        description: "Short code (e.g., CC-OPS, CC-SALES)"
+
+      name:
+        type: string
+        attributes: ["@required", "@max(100)"]
+        description: "Cost center name"
+
+      name_en:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "English name"
+
+      description:
+        type: string?
+        attributes: ["@max(500)"]
+        description: "Description"
+
+      # Hierarchy (tree)
+      parent_id:
+        type: uuid?
+        attributes: ["@foreign_key(CostCenter.id)"]
+        description: "Parent cost center"
+
+      level:
+        type: int
+        attributes: ["@default(0)", "@non_negative"]
+        description: "Hierarchy level (0 = top level)"
+
+      is_group:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "Group node (cannot be posted to directly)"
+
+      # Optional org link (a cost center may map to a branch, but is not one)
+      branch_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Associated branch # logical FK to corporate.Branch.id"
+
+      is_active:
+        type: bool
+        attributes: ["@default(true)"]
+        description: "Active for posting"
+
+      sort_order:
+        type: int
+        attributes: ["@default(0)"]
+        description: "Display order"
+
+      metadata:
+        type: Metadata
+        attributes: ["@audit_metadata"]
+        description: "Audit metadata (created_at, updated_at, deleted_at, created_by, updated_by, deleted_by)"
+
+    relations:
+      parent:
+        type: CostCenter?
+        attributes: ["@one", "@foreign_key(parent_id)"]
+        description: "Parent cost center"
+        inverse: children
+
+      children:
+        type: CostCenter[]
+        attributes: ["@one_to_many"]
+        description: "Child cost centers"
+        inverse: parent
+
+      ledgers:
+        type: Ledger[]
+        attributes: ["@one_to_many"]
+        description: "Ledger entries tagged with this cost center"
+        inverse: cost_center
+
+      journal_lines:
+        type: JournalLine[]
+        attributes: ["@one_to_many"]
+        description: "Journal lines tagged with this cost center"
+        inverse: cost_center
+
+    indexes:
+      - type: unique
+        fields: [company_id, code]
+        where: "deleted_at IS NULL"
+      - type: index
+        fields: [company_id, parent_id, sort_order]
+      - type: index
+        fields: [company_id, is_active]

@@ -66,12 +66,12 @@ models:
         description: "Unique statement identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
+      company_id:
         type: uuid
         attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Provider who owns this statement # logical FK to bersihir.Provider.id"
+        description: "Legal entity that owns this statement # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Statement Identification
@@ -451,13 +451,13 @@ models:
 
     indexes:
       - type: unique
-        fields: [provider_id, statement_number]
+        fields: [company_id, statement_number]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [provider_id, statement_type, fiscal_year]
+        fields: [company_id, statement_type, fiscal_year]
       - type: index
-        fields: [provider_id, fiscal_period_id]
+        fields: [company_id, fiscal_period_id]
       - type: index
-        fields: [provider_id, status]
+        fields: [company_id, status]
       - type: index
-        fields: [provider_id, as_of_date]
+        fields: [company_id, as_of_date]

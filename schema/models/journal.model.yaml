@@ -19,12 +19,12 @@ models:
         description: "Unique journal identifier"
 
       # =======================================================================
-      # Provider Association (Multi-tenant)
+      # Company (books owner) — multi-tenancy is schema-per-tenant (no provider_id)
       # =======================================================================
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider who owns this journal (null = platform template) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this journal # logical FK to corporate.Company.id"
 
       # =======================================================================
       # Reference
@@ -48,12 +48,12 @@ models:
         description: "Type of journal entry"
 
       # =======================================================================
-      # Outlet Reference
+      # Branch Reference (org dimension)
       # =======================================================================
-      outlet_id:
+      branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Outlet for this journal (null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+        description: "Branch for this journal (null = company-level) # logical FK to corporate.Branch.id"
 
       # =======================================================================
       # Transaction Date
@@ -324,25 +324,25 @@ models:
 
     indexes:
       - type: unique
-        fields: [provider_id, journal_number]
+        fields: [company_id, journal_number]
         where: "deleted_at IS NULL"
       - type: index
-        fields: [provider_id, transaction_date]
+        fields: [company_id, transaction_date]
       - type: index
-        fields: [provider_id, journal_type, status]
+        fields: [company_id, journal_type, status]
       - type: index
-        fields: [provider_id, fiscal_year, fiscal_month]
+        fields: [company_id, fiscal_year, fiscal_month]
       - type: index
-        fields: [provider_id, status, transaction_date]
+        fields: [company_id, status, transaction_date]
       - type: index
         fields: [source, source_id]
       - type: index
-        fields: [provider_id, is_reversed]
+        fields: [company_id, is_reversed]
       - type: index
-        fields: [provider_id, outlet_id, transaction_date]
+        fields: [company_id, branch_id, transaction_date]
       - type: index
-        fields: [outlet_id, status]
-        where: "outlet_id IS NOT NULL"
+        fields: [branch_id, status]
+        where: "branch_id IS NOT NULL"
 
   # ---------------------------------------------------------------------------
   # JournalLine - Individual debit/credit line in journal entry
@@ -365,15 +365,27 @@ models:
         attributes: ["@required", "@foreign_key(Journal.id)"]
         description: "Parent journal entry"
 
-      provider_id:
-        type: uuid?
-        attributes: ["@exclude_from_foreign_key_check"]
-        description: "Provider (denormalized for performance, null = platform) # logical FK to bersihir.Provider.id"
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Books owner (denormalized from journal) # logical FK to corporate.Company.id"
 
-      outlet_id:
+      branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Outlet (denormalized, null = provider-level) # logical FK to bersihir.ProviderOutlet.id"
+        description: "Branch (denormalized, null = company-level) # logical FK to corporate.Branch.id"
+
+      # =======================================================================
+      # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
+      # =======================================================================
+      party_type:
+        type: PartyType?
+        description: "Party kind for receivable/payable lines"
+
+      party_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Party for AR/AP aging # logical FK to party.Party.id (customer/supplier)"
 
       # =======================================================================
       # Line Number
@@ -444,22 +456,26 @@ models:
         description: "Line description/memo"
 
       # =======================================================================
-      # Cost Center / Project (Optional)
+      # Accounting Dimensions (hard-coded set + JSON escape hatch)
       # =======================================================================
-      cost_center:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Cost center code"
+      cost_center_id:
+        type: uuid?
+        attributes: ["@foreign_key(CostCenter.id)"]
+        description: "Cost center dimension"
 
-      project:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Project code"
+      project_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Project dimension # logical FK to projects.Project.id"
 
-      department:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Department code"
+      department_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Department dimension # logical FK to corporate.Department.id"
+
+      dimensions:
+        type: json?
+        description: "Forward-compat bag for additional user dimensions (no runtime column engine)"
 
       # =======================================================================
       # Source Traceability
@@ -598,29 +614,41 @@ models:
         description: "Ledger entry"
         inverse: journal_line
 
+      cost_center:
+        type: CostCenter?
+        attributes: ["@one", "@foreign_key(cost_center_id)"]
+        description: "Cost center dimension"
+        inverse: journal_lines
+
     indexes:
+      # JournalLine has no @audit_metadata (no soft-delete; cascade-deleted with parent
+      # journal — repository is generated `no_soft_delete`), so this unique index must NOT
+      # carry a `deleted_at IS NULL` predicate.
       - type: unique
         fields: [journal_id, line_number]
-        where: "deleted_at IS NULL"
       - type: index
-        fields: [provider_id, account_id]
+        fields: [company_id, account_id]
       - type: index
         fields: [journal_id, account_id]
       - type: index
         fields: [account_id, is_posted]
       - type: index
-        fields: [provider_id, is_reconciled]
+        fields: [company_id, is_reconciled]
       - type: index
         fields: [source_type, source_id]
       - type: index
-        fields: [cost_center]
-        where: "cost_center IS NOT NULL"
+        fields: [cost_center_id]
+        where: "cost_center_id IS NOT NULL"
       - type: index
-        fields: [project]
-        where: "project IS NOT NULL"
+        fields: [project_id]
+        where: "project_id IS NOT NULL"
+      # AR/AP subledger aging
       - type: index
-        fields: [outlet_id, account_id]
-        where: "outlet_id IS NOT NULL"
+        fields: [company_id, party_type, party_id, account_id]
+        where: "party_id IS NOT NULL"
+      - type: index
+        fields: [branch_id, account_id]
+        where: "branch_id IS NOT NULL"
 
 # =============================================================================
 # Enums
