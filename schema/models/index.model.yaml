@@ -9,6 +9,7 @@
 
 module: accounting
 version: 2
+schema: accounting
 description: "GL, journals, ledger, reconciliation (extracted from bersihir)"
 
 # Module-level configuration

@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::CostCenter;
 
 /// Table name for CostCenter entities
-pub const TABLE_NAME: &str = "cost_centers";
+pub const TABLE_NAME: &str = "accounting.cost_centers";
 
 /// Repository for CostCenter entities.
 ///

@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::JournalLine;
 
 /// Table name for JournalLine entities
-pub const TABLE_NAME: &str = "journal_lines";
+pub const TABLE_NAME: &str = "accounting.journal_lines";
 
 /// Repository for JournalLine entities.
 ///

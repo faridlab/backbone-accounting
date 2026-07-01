@@ -40,8 +40,8 @@ impl Seeder for SeedCostCenterSeeder {
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
-        // Check if cost_centers table has any data
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM cost_centers")
+        // Check if accounting.cost_centers table has any data
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting.cost_centers")
             .fetch_one(pool)
             .await?;
         Ok(count.0 == 0)
@@ -55,7 +55,7 @@ impl Seeder for SeedCostCenterSeeder {
     }
 
     async fn rollback(&self, pool: &PgPool) -> Result<()> {
-        sqlx::query("DELETE FROM cost_centers")
+        sqlx::query("DELETE FROM accounting.cost_centers")
             .execute(pool)
             .await?;
         Ok(())

@@ -40,8 +40,8 @@ impl Seeder for SeedJournalSeeder {
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
-        // Check if journals table has any data
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM journals")
+        // Check if accounting.journals table has any data
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting.journals")
             .fetch_one(pool)
             .await?;
         Ok(count.0 == 0)
@@ -55,7 +55,7 @@ impl Seeder for SeedJournalSeeder {
     }
 
     async fn rollback(&self, pool: &PgPool) -> Result<()> {
-        sqlx::query("DELETE FROM journals")
+        sqlx::query("DELETE FROM accounting.journals")
             .execute(pool)
             .await?;
         Ok(())

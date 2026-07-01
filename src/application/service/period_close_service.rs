@@ -72,7 +72,7 @@ impl PeriodCloseService {
     ) -> Result<PeriodCloseResult, PeriodCloseError> {
         // Period must exist and be open.
         let period = sqlx::query(
-            "SELECT start_date, end_date, status::text AS status FROM fiscal_periods WHERE id=$1 AND company_id=$2",
+            "SELECT start_date, end_date, status::text AS status FROM accounting.fiscal_periods WHERE id=$1 AND company_id=$2",
         )
         .bind(period_id)
         .bind(company_id)
@@ -90,8 +90,8 @@ impl PeriodCloseService {
         let rows = sqlx::query(
             r#"SELECT l.account_id AS id, a.account_type::text AS at,
                       COALESCE(SUM(l.debit_amount),0) AS dr, COALESCE(SUM(l.credit_amount),0) AS cr
-               FROM ledgers l
-               JOIN accounts a ON a.id = l.account_id
+               FROM accounting.ledgers l
+               JOIN accounting.accounts a ON a.id = l.account_id
                WHERE l.company_id=$1
                  AND l.posting_date BETWEEN $2 AND $3
                  AND a.account_type::text IN ('revenue','other_income','expense','cogs','other_expense')
@@ -172,7 +172,7 @@ impl PeriodCloseService {
     }
 
     async fn mark_closed(&self, period_id: Uuid) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE fiscal_periods SET status='closed'::period_status WHERE id=$1")
+        sqlx::query("UPDATE accounting.fiscal_periods SET status='closed'::period_status WHERE id=$1")
             .bind(period_id)
             .execute(&self.db_pool)
             .await?;

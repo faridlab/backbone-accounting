@@ -237,7 +237,7 @@ impl PostingService {
         let is_reversing = req.posting_type == "reversal";
 
         sqlx::query(
-            r#"INSERT INTO journals
+            r#"INSERT INTO accounting.journals
                 (id, company_id, branch_id, journal_number, journal_type, transaction_date,
                  posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, currency,
                  total_debit, total_credit, line_count, source, source_type, source_id,
@@ -277,7 +277,7 @@ impl PostingService {
         let mut seq: HashMap<Uuid, i32> = HashMap::new();
         for id in accounts.keys() {
             let max: i32 = sqlx::query_scalar(
-                "SELECT COALESCE(MAX(sequence_number),0) FROM ledgers WHERE company_id=$1 AND account_id=$2",
+                "SELECT COALESCE(MAX(sequence_number),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2",
             )
             .bind(req.company_id)
             .bind(id)
@@ -305,7 +305,7 @@ impl PostingService {
             let sequence_number = *s;
 
             sqlx::query(
-                r#"INSERT INTO journal_lines
+                r#"INSERT INTO accounting.journal_lines
                     (id, journal_id, company_id, branch_id, party_type, party_id, line_number,
                      account_id, account_number, account_name, debit_amount, credit_amount, currency,
                      base_debit_amount, base_credit_amount, description, cost_center_id, project_id,
@@ -340,7 +340,7 @@ impl PostingService {
 
             let ledger_id = Uuid::new_v4();
             sqlx::query(
-                r#"INSERT INTO ledgers
+                r#"INSERT INTO accounting.ledgers
                     (id, company_id, account_id, account_number, account_name, account_type,
                      normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
                      posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, currency,
@@ -383,7 +383,7 @@ impl PostingService {
             .execute(&mut *tx)
             .await?;
 
-            sqlx::query("UPDATE journal_lines SET ledger_id=$1 WHERE id=$2")
+            sqlx::query("UPDATE accounting.journal_lines SET ledger_id=$1 WHERE id=$2")
                 .bind(ledger_id)
                 .bind(journal_line_id)
                 .execute(&mut *tx)
@@ -392,7 +392,7 @@ impl PostingService {
 
         // Persist updated running balances.
         for (account_id, balance) in &running {
-            sqlx::query("UPDATE accounts SET current_balance=$1 WHERE id=$2")
+            sqlx::query("UPDATE accounting.accounts SET current_balance=$1 WHERE id=$2")
                 .bind(balance)
                 .bind(account_id)
                 .execute(&mut *tx)
@@ -402,7 +402,7 @@ impl PostingService {
         // The AccountingPost row (the contract record).
         let post_id = Uuid::new_v4();
         let post_result = sqlx::query(
-            r#"INSERT INTO accounting_posts
+            r#"INSERT INTO accounting.accounting_posts
                 (id, company_id, branch_id, source_type, source_id, source_reference, journal_id,
                  posting_type, posting_status, currency, total_debit, total_credit, posted_at,
                  posted_by, reverses_post_id)
@@ -449,7 +449,7 @@ impl PostingService {
         // Reversal links: original post + original journal point back to the reversing pair.
         if is_reversing {
             if let Some(orig_post) = req.reverses_post_id {
-                sqlx::query("UPDATE accounting_posts SET reversed_by_post_id=$1 WHERE id=$2")
+                sqlx::query("UPDATE accounting.accounting_posts SET reversed_by_post_id=$1 WHERE id=$2")
                     .bind(post_id)
                     .bind(orig_post)
                     .execute(&mut *tx)
@@ -457,7 +457,7 @@ impl PostingService {
             }
             if let Some(orig_journal) = reverses_journal_id {
                 sqlx::query(
-                    "UPDATE journals SET is_reversed=TRUE, reversed_by_id=$1, reversed_at=$2 WHERE id=$3",
+                    "UPDATE accounting.journals SET is_reversed=TRUE, reversed_by_id=$1, reversed_at=$2 WHERE id=$3",
                 )
                 .bind(journal_id)
                 .bind(now)
@@ -523,7 +523,7 @@ impl PostingService {
         // Closed/locked fiscal period blocks posting; absent or open period is fine.
         let blocked: Option<bool> = sqlx::query_scalar(
             r#"SELECT bool_or(status IN ('closed','locked'))
-               FROM fiscal_periods
+               FROM accounting.fiscal_periods
                WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
                  AND (metadata->>'deleted_at') IS NULL"#,
         )
@@ -549,7 +549,7 @@ impl PostingService {
             r#"SELECT id, account_number, name, account_type::text AS at,
                       account_subtype::text AS st, normal_balance::text AS nb,
                       is_detail, is_header, status::text AS status, current_balance
-               FROM accounts
+               FROM accounting.accounts
                WHERE company_id=$1 AND id = ANY($2) AND (metadata->>'deleted_at') IS NULL"#,
         )
         .bind(req.company_id)
@@ -580,7 +580,7 @@ impl PostingService {
 
     async fn find_period_id(&self, req: &PostingRequest) -> Result<Option<Uuid>, PostingError> {
         let id: Option<Uuid> = sqlx::query_scalar(
-            r#"SELECT id FROM fiscal_periods
+            r#"SELECT id FROM accounting.fiscal_periods
                WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
                  AND (metadata->>'deleted_at') IS NULL
                ORDER BY (end_date - start_date) ASC LIMIT 1"#,
@@ -597,7 +597,7 @@ impl PostingService {
         req: &PostingRequest,
     ) -> Result<Option<(Uuid, Uuid)>, PostingError> {
         let row = sqlx::query(
-            r#"SELECT id, journal_id FROM accounting_posts
+            r#"SELECT id, journal_id FROM accounting.accounting_posts
                WHERE company_id=$1 AND source_type=$2::posting_source_type AND source_id=$3
                  AND posting_type=$4::posting_type AND posting_status='posted'::posting_status
                LIMIT 1"#,
@@ -625,7 +625,7 @@ impl PostingService {
             .reverses_post_id
             .ok_or_else(|| PostingError::Conflict("reversal requires reverses_post_id".into()))?;
         let orig_journal_id: Uuid = sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT journal_id FROM accounting_posts WHERE id=$1 AND posting_status='posted'::posting_status",
+            "SELECT journal_id FROM accounting.accounting_posts WHERE id=$1 AND posting_status='posted'::posting_status",
         )
         .bind(orig_post_id)
         .fetch_optional(&self.db_pool)
@@ -636,7 +636,7 @@ impl PostingService {
         let rows = sqlx::query(
             r#"SELECT account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
                       cost_center_id, project_id, department_id
-               FROM journal_lines WHERE journal_id=$1 ORDER BY line_number"#,
+               FROM accounting.journal_lines WHERE journal_id=$1 ORDER BY line_number"#,
         )
         .bind(orig_journal_id)
         .fetch_all(&self.db_pool)
@@ -663,7 +663,7 @@ impl PostingService {
         let total_debit: Decimal = req.lines.iter().map(|l| l.debit).sum();
         let total_credit: Decimal = req.lines.iter().map(|l| l.credit).sum();
         sqlx::query(
-            r#"INSERT INTO accounting_posts
+            r#"INSERT INTO accounting.accounting_posts
                 (id, company_id, branch_id, source_type, source_id, source_reference, posting_type,
                  posting_status, currency, total_debit, total_credit, failed_at, error_code, error_message)
                VALUES ($1,$2,$3,$4::posting_source_type,$5,$6,$7::posting_type,

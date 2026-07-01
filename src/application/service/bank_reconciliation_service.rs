@@ -83,7 +83,7 @@ impl BankReconciliationService {
 
     pub async fn reconcile(&self, req: ReconcileRequest) -> Result<ReconcileResult, ReconcileError> {
         // Account (denormalized fields for the Reconciliation record).
-        let acct = sqlx::query("SELECT account_number, name FROM accounts WHERE id=$1 AND company_id=$2")
+        let acct = sqlx::query("SELECT account_number, name FROM accounting.accounts WHERE id=$1 AND company_id=$2")
             .bind(req.account_id)
             .bind(req.company_id)
             .fetch_optional(&self.db_pool)
@@ -95,7 +95,7 @@ impl BankReconciliationService {
         // Unreconciled book entries in the period.
         let rows = sqlx::query(
             r#"SELECT id, debit_amount, credit_amount, reference
-               FROM ledgers
+               FROM accounting.ledgers
                WHERE company_id=$1 AND account_id=$2 AND is_reconciled=FALSE
                  AND posting_date BETWEEN $3 AND $4
                ORDER BY posting_date, sequence_number"#,
@@ -131,7 +131,7 @@ impl BankReconciliationService {
 
         // Balances.
         let closing_book_balance: Decimal = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(debit_amount - credit_amount),0) FROM ledgers WHERE company_id=$1 AND account_id=$2 AND posting_date <= $3",
+            "SELECT COALESCE(SUM(debit_amount - credit_amount),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2 AND posting_date <= $3",
         )
         .bind(req.company_id)
         .bind(req.account_id)
@@ -150,7 +150,7 @@ impl BankReconciliationService {
         let status = if is_balanced { "completed" } else { "in_progress" };
 
         sqlx::query(
-            r#"INSERT INTO reconciliations
+            r#"INSERT INTO accounting.reconciliations
                 (id, company_id, reconciliation_number, account_id, account_number, account_name,
                  period_start, period_end, statement_date, opening_book_balance,
                  opening_statement_balance, closing_book_balance, closing_statement_balance,
@@ -179,7 +179,7 @@ impl BankReconciliationService {
         for (ledger_id, line) in &matched {
             item_number += 1;
             sqlx::query(
-                r#"INSERT INTO reconciliation_items
+                r#"INSERT INTO accounting.reconciliation_items
                     (id, reconciliation_id, company_id, item_number, source, ledger_id,
                      statement_reference, status, difference_amount)
                    VALUES ($1,$2,$3,$4,'matched',$5,$6,'matched'::reconciliation_item_status,0)"#,
@@ -193,7 +193,7 @@ impl BankReconciliationService {
             .execute(&mut *tx)
             .await?;
 
-            sqlx::query("UPDATE ledgers SET is_reconciled=TRUE, reconciliation_id=$1, reconciled_at=$2 WHERE id=$3")
+            sqlx::query("UPDATE accounting.ledgers SET is_reconciled=TRUE, reconciliation_id=$1, reconciled_at=$2 WHERE id=$3")
                 .bind(reconciliation_id)
                 .bind(now)
                 .bind(ledger_id)
@@ -203,7 +203,7 @@ impl BankReconciliationService {
         for b in &unmatched_book {
             item_number += 1;
             sqlx::query(
-                r#"INSERT INTO reconciliation_items
+                r#"INSERT INTO accounting.reconciliation_items
                     (id, reconciliation_id, company_id, item_number, source, ledger_id, status,
                      difference_amount, is_outstanding)
                    VALUES ($1,$2,$3,$4,'book',$5,'unmatched'::reconciliation_item_status,$6,TRUE)"#,
@@ -220,7 +220,7 @@ impl BankReconciliationService {
         for line in &unmatched_stmt {
             item_number += 1;
             sqlx::query(
-                r#"INSERT INTO reconciliation_items
+                r#"INSERT INTO accounting.reconciliation_items
                     (id, reconciliation_id, company_id, item_number, source, statement_reference,
                      status, difference_amount, is_outstanding)
                    VALUES ($1,$2,$3,$4,'statement',$5,'unmatched'::reconciliation_item_status,$6,TRUE)"#,

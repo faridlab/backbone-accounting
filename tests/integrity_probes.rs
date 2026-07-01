@@ -34,7 +34,7 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     ] {
         let id = Uuid::new_v4();
         sqlx::query(
-            r#"INSERT INTO accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
                VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
@@ -72,11 +72,11 @@ async fn concurrent_double_post_does_not_double_count() {
     r2.unwrap();
 
     // Exactly one posted entry and one journal's worth of ledger rows — no double-count.
-    let posted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting_posts WHERE company_id=$1 AND posting_status='posted'")
+    let posted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounting_posts WHERE company_id=$1 AND posting_status='posted'")
         .bind(company).fetch_one(&pool).await.unwrap();
-    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ledgers WHERE company_id=$1")
+    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
         .bind(company).fetch_one(&pool).await.unwrap();
-    let ar_balance: Decimal = sqlx::query_scalar("SELECT current_balance FROM accounts WHERE id=$1")
+    let ar_balance: Decimal = sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
         .bind(a["1200"]).fetch_one(&pool).await.unwrap();
 
     assert_eq!(posted, 1, "concurrent posts must yield exactly ONE posted entry");

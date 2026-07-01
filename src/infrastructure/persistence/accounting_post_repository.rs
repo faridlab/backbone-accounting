@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::AccountingPost;
 
 /// Table name for AccountingPost entities
-pub const TABLE_NAME: &str = "accounting_posts";
+pub const TABLE_NAME: &str = "accounting.accounting_posts";
 
 /// Repository for AccountingPost entities.
 ///

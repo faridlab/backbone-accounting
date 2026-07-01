@@ -41,7 +41,7 @@ async fn seed(pool: &PgPool) -> Setup {
         (retained, "3200", "Laba Ditahan", "equity", "retained_earnings", "credit"),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
                VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
@@ -50,7 +50,7 @@ async fn seed(pool: &PgPool) -> Setup {
     }
     let period = Uuid::new_v4();
     sqlx::query(
-        r#"INSERT INTO fiscal_periods (id, company_id, period_code, name, period_type, fiscal_year,
+        r#"INSERT INTO accounting.fiscal_periods (id, company_id, period_code, name, period_type, fiscal_year,
             start_date, end_date, status)
            VALUES ($1,$2,'2026-06','June 2026','monthly'::period_type,2026,'2026-06-01','2026-06-30','open'::period_status)"#,
     )
@@ -67,10 +67,10 @@ async fn post(svc: &PostingService, company: Uuid, lines: Vec<PostingLine>) {
     svc.post(r, None).await.unwrap();
 }
 async fn balance(pool: &PgPool, id: Uuid) -> Decimal {
-    sqlx::query_scalar("SELECT current_balance FROM accounts WHERE id=$1").bind(id).fetch_one(pool).await.unwrap()
+    sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1").bind(id).fetch_one(pool).await.unwrap()
 }
 async fn period_status(pool: &PgPool, id: Uuid) -> String {
-    sqlx::query_scalar("SELECT status::text FROM fiscal_periods WHERE id=$1").bind(id).fetch_one(pool).await.unwrap()
+    sqlx::query_scalar("SELECT status::text FROM accounting.fiscal_periods WHERE id=$1").bind(id).fetch_one(pool).await.unwrap()
 }
 
 // PCG-1 — close rolls net income (Revenue 1,000,000 − Expense 400,000) into Retained Earnings ─

@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::FiscalPeriod;
 
 /// Table name for FiscalPeriod entities
-pub const TABLE_NAME: &str = "fiscal_periods";
+pub const TABLE_NAME: &str = "accounting.fiscal_periods";
 
 /// Repository for FiscalPeriod entities.
 ///

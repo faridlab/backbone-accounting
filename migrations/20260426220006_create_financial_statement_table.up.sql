@@ -19,7 +19,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS financial_statements (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.financial_statements (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     statement_number TEXT NOT NULL,
@@ -86,27 +88,27 @@ CREATE TABLE IF NOT EXISTS financial_statements (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_financial_statements_company_id_statement_number ON financial_statements (company_id, statement_number) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_financial_statements_company_id_statement_number ON accounting.financial_statements (company_id, statement_number) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_statement_type_fiscal_year ON financial_statements (company_id, statement_type, fiscal_year);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_statement_type_fiscal_year ON accounting.financial_statements (company_id, statement_type, fiscal_year);
 
-CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_fiscal_period_id ON financial_statements (company_id, fiscal_period_id);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_fiscal_period_id ON accounting.financial_statements (company_id, fiscal_period_id);
 
-CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_status ON financial_statements (company_id, status);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_status ON accounting.financial_statements (company_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_as_of_date ON financial_statements (company_id, as_of_date);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_company_id_as_of_date ON accounting.financial_statements (company_id, as_of_date);
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_gin ON financial_statements USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_deleted_at ON financial_statements ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_created_at ON financial_statements ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_updated_at ON financial_statements ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_gin ON accounting.financial_statements USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_deleted_at ON accounting.financial_statements ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_created_at ON accounting.financial_statements ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_financial_statements_metadata_updated_at ON accounting.financial_statements ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION financial_statements_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.financial_statements_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -119,11 +121,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS financial_statements_insert_audit ON financial_statements;
-CREATE TRIGGER financial_statements_insert_audit BEFORE INSERT ON financial_statements
-    FOR EACH ROW EXECUTE FUNCTION financial_statements_audit_timestamp();
+DROP TRIGGER IF EXISTS financial_statements_insert_audit ON accounting.financial_statements;
+CREATE TRIGGER financial_statements_insert_audit BEFORE INSERT ON accounting.financial_statements
+    FOR EACH ROW EXECUTE FUNCTION accounting.financial_statements_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS financial_statements_update_audit ON financial_statements;
-CREATE TRIGGER financial_statements_update_audit BEFORE UPDATE ON financial_statements
-    FOR EACH ROW EXECUTE FUNCTION financial_statements_audit_timestamp();
+DROP TRIGGER IF EXISTS financial_statements_update_audit ON accounting.financial_statements;
+CREATE TRIGGER financial_statements_update_audit BEFORE UPDATE ON accounting.financial_statements
+    FOR EACH ROW EXECUTE FUNCTION accounting.financial_statements_audit_timestamp();

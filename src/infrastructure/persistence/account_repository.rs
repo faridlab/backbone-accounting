@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::Account;
 
 /// Table name for Account entities
-pub const TABLE_NAME: &str = "accounts";
+pub const TABLE_NAME: &str = "accounting.accounts";
 
 /// Repository for Account entities.
 ///

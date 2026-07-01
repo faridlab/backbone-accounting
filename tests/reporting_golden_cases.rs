@@ -45,7 +45,7 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     for (code, name, at, st, nb) in coa {
         let id = Uuid::new_v4();
         sqlx::query(
-            r#"INSERT INTO accounts
+            r#"INSERT INTO accounting.accounts
                 (id, company_id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_detail, is_header, status)
                VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,

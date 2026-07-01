@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::Journal;
 
 /// Table name for Journal entities
-pub const TABLE_NAME: &str = "journals";
+pub const TABLE_NAME: &str = "accounting.journals";
 
 /// Repository for Journal entities.
 ///

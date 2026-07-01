@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::FinancialStatement;
 
 /// Table name for FinancialStatement entities
-pub const TABLE_NAME: &str = "financial_statements";
+pub const TABLE_NAME: &str = "accounting.financial_statements";
 
 /// Repository for FinancialStatement entities.
 ///

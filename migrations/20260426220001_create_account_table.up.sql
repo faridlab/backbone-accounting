@@ -37,7 +37,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS accounts (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.accounts (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     account_number TEXT NOT NULL,
@@ -83,31 +85,31 @@ CREATE TABLE IF NOT EXISTS accounts (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_company_id_account_number ON accounts (company_id, account_number) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_company_id_account_number ON accounting.accounts (company_id, account_number) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_company_id_account_code ON accounts (company_id, account_code) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_company_id_account_code ON accounting.accounts (company_id, account_code) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_accounts_company_id_account_type_status ON accounts (company_id, account_type, status);
+CREATE INDEX IF NOT EXISTS idx_accounts_company_id_account_type_status ON accounting.accounts (company_id, account_type, status);
 
-CREATE INDEX IF NOT EXISTS idx_accounts_company_id_parent_id_sort_order ON accounts (company_id, parent_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_accounts_company_id_parent_id_sort_order ON accounting.accounts (company_id, parent_id, sort_order);
 
-CREATE INDEX IF NOT EXISTS idx_accounts_company_id_account_subtype ON accounts (company_id, account_subtype);
+CREATE INDEX IF NOT EXISTS idx_accounts_company_id_account_subtype ON accounting.accounts (company_id, account_subtype);
 
-CREATE INDEX IF NOT EXISTS idx_accounts_company_id_is_reconcilable ON accounts (company_id, is_reconcilable);
+CREATE INDEX IF NOT EXISTS idx_accounts_company_id_is_reconcilable ON accounting.accounts (company_id, is_reconcilable);
 
-CREATE INDEX IF NOT EXISTS idx_accounts_source_id_is_cloned ON accounts (source_id, is_cloned);
+CREATE INDEX IF NOT EXISTS idx_accounts_source_id_is_cloned ON accounting.accounts (source_id, is_cloned);
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_accounts_metadata_gin ON accounts USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_accounts_metadata_deleted_at ON accounts ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_accounts_metadata_created_at ON accounts ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_accounts_metadata_updated_at ON accounts ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_accounts_metadata_gin ON accounting.accounts USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_accounts_metadata_deleted_at ON accounting.accounts ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_accounts_metadata_created_at ON accounting.accounts ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_accounts_metadata_updated_at ON accounting.accounts ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION accounts_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.accounts_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -120,16 +122,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS accounts_insert_audit ON accounts;
-CREATE TRIGGER accounts_insert_audit BEFORE INSERT ON accounts
-    FOR EACH ROW EXECUTE FUNCTION accounts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounts_insert_audit ON accounting.accounts;
+CREATE TRIGGER accounts_insert_audit BEFORE INSERT ON accounting.accounts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounts_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS accounts_update_audit ON accounts;
-CREATE TRIGGER accounts_update_audit BEFORE UPDATE ON accounts
-    FOR EACH ROW EXECUTE FUNCTION accounts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounts_update_audit ON accounting.accounts;
+CREATE TRIGGER accounts_update_audit BEFORE UPDATE ON accounting.accounts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounts_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE accounts ADD CONSTRAINT fk_accounts_parent_id FOREIGN KEY (parent_id) REFERENCES accounts (id);
-ALTER TABLE accounts ADD CONSTRAINT fk_accounts_source_id FOREIGN KEY (source_id) REFERENCES accounts (id);
-ALTER TABLE accounts ADD CONSTRAINT fk_accounts_tax_account_id FOREIGN KEY (tax_account_id) REFERENCES accounts (id);
+ALTER TABLE accounting.accounts ADD CONSTRAINT fk_accounts_parent_id FOREIGN KEY (parent_id) REFERENCES accounting.accounts (id);
+ALTER TABLE accounting.accounts ADD CONSTRAINT fk_accounts_source_id FOREIGN KEY (source_id) REFERENCES accounting.accounts (id);
+ALTER TABLE accounting.accounts ADD CONSTRAINT fk_accounts_tax_account_id FOREIGN KEY (tax_account_id) REFERENCES accounting.accounts (id);

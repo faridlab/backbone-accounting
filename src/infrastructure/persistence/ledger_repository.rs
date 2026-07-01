@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::Ledger;
 
 /// Table name for Ledger entities
-pub const TABLE_NAME: &str = "ledgers";
+pub const TABLE_NAME: &str = "accounting.ledgers";
 
 /// Repository for Ledger entities.
 ///

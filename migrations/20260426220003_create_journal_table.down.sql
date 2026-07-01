@@ -1,3 +1,3 @@
--- Down: drop journals table
-DROP TABLE IF EXISTS journals CASCADE;
-DROP FUNCTION IF EXISTS journals_audit_timestamp() CASCADE;
+-- Down: drop accounting.journals table
+DROP TABLE IF EXISTS accounting.journals CASCADE;
+DROP FUNCTION IF EXISTS accounting.journals_audit_timestamp() CASCADE;

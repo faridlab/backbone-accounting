@@ -57,7 +57,7 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     for (code, name, at, st, nb, is_header, is_detail) in coa {
         let id = Uuid::new_v4();
         sqlx::query(
-            r#"INSERT INTO accounts
+            r#"INSERT INTO accounting.accounts
                 (id, company_id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_header, is_detail, status)
                VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
@@ -108,7 +108,7 @@ fn req(company: Uuid, source_type: &str, source_id: Uuid, lines: Vec<PostingLine
 }
 
 async fn ledger_count(pool: &PgPool, company: Uuid) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM ledgers WHERE company_id=$1")
+    sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
         .bind(company)
         .fetch_one(pool)
         .await
@@ -116,7 +116,7 @@ async fn ledger_count(pool: &PgPool, company: Uuid) -> i64 {
 }
 
 async fn journal_count(pool: &PgPool, company: Uuid) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM journals WHERE company_id=$1")
+    sqlx::query_scalar("SELECT COUNT(*) FROM accounting.journals WHERE company_id=$1")
         .bind(company)
         .fetch_one(pool)
         .await
@@ -124,7 +124,7 @@ async fn journal_count(pool: &PgPool, company: Uuid) -> i64 {
 }
 
 async fn acct_balance(pool: &PgPool, id: Uuid) -> Decimal {
-    sqlx::query_scalar("SELECT current_balance FROM accounts WHERE id=$1")
+    sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
         .bind(id)
         .fetch_one(pool)
         .await
@@ -134,7 +134,7 @@ async fn acct_balance(pool: &PgPool, id: Uuid) -> Decimal {
 /// A/R (or A/P) subledger balance for one party on one control account = Σ balance_change.
 async fn party_balance(pool: &PgPool, account_id: Uuid, party_id: Uuid) -> Decimal {
     sqlx::query_scalar(
-        "SELECT COALESCE(SUM(balance_change),0) FROM ledgers WHERE account_id=$1 AND party_id=$2",
+        "SELECT COALESCE(SUM(balance_change),0) FROM accounting.ledgers WHERE account_id=$1 AND party_id=$2",
     )
     .bind(account_id)
     .bind(party_id)
@@ -145,7 +145,7 @@ async fn party_balance(pool: &PgPool, account_id: Uuid, party_id: Uuid) -> Decim
 
 async fn ledger_change(pool: &PgPool, company: Uuid, account_id: Uuid) -> Decimal {
     sqlx::query_scalar(
-        "SELECT COALESCE(SUM(balance_change),0) FROM ledgers WHERE company_id=$1 AND account_id=$2",
+        "SELECT COALESCE(SUM(balance_change),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2",
     )
     .bind(company)
     .bind(account_id)
@@ -157,7 +157,7 @@ async fn ledger_change(pool: &PgPool, company: Uuid, account_id: Uuid) -> Decima
 /// Global double-entry invariant across all ledger rows for a company.
 async fn assert_globally_balanced(pool: &PgPool, company: Uuid) {
     let row = sqlx::query(
-        "SELECT COALESCE(SUM(debit_amount),0) AS d, COALESCE(SUM(credit_amount),0) AS c FROM ledgers WHERE company_id=$1",
+        "SELECT COALESCE(SUM(debit_amount),0) AS d, COALESCE(SUM(credit_amount),0) AS c FROM accounting.ledgers WHERE company_id=$1",
     )
     .bind(company)
     .fetch_one(pool)
@@ -289,10 +289,10 @@ async fn gc4_reversal() {
     assert_globally_balanced(&pool, company).await;
 
     // Reversal links.
-    let is_reversed: bool = sqlx::query_scalar("SELECT is_reversed FROM journals WHERE id=$1")
+    let is_reversed: bool = sqlx::query_scalar("SELECT is_reversed FROM accounting.journals WHERE id=$1")
         .bind(p1.journal_id).fetch_one(&pool).await.unwrap();
     assert!(is_reversed, "original journal must be flagged reversed");
-    let reversed_by: Option<Uuid> = sqlx::query_scalar("SELECT reversed_by_post_id FROM accounting_posts WHERE id=$1")
+    let reversed_by: Option<Uuid> = sqlx::query_scalar("SELECT reversed_by_post_id FROM accounting.accounting_posts WHERE id=$1")
         .bind(p1.post_id).fetch_one(&pool).await.unwrap();
     assert_eq!(reversed_by, Some(p2.post_id));
 }
@@ -389,7 +389,7 @@ async fn gc10_closed_period() {
     let svc = PostingService::new(pool.clone());
     // A closed fiscal period covering the posting date.
     sqlx::query(
-        r#"INSERT INTO fiscal_periods
+        r#"INSERT INTO accounting.fiscal_periods
             (id, company_id, period_code, name, period_type, fiscal_year, start_date, end_date, status)
            VALUES ($1,$2,'2026-06','June 2026','monthly'::period_type,2026,'2026-06-01','2026-06-30','closed'::period_status)"#,
     )

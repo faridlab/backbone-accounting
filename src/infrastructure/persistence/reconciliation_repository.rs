@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use crate::domain::entity::Reconciliation;
 
 /// Table name for Reconciliation entities
-pub const TABLE_NAME: &str = "reconciliations";
+pub const TABLE_NAME: &str = "accounting.reconciliations";
 
 /// Repository for Reconciliation entities.
 ///

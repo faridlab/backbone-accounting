@@ -92,8 +92,8 @@ impl ReportingService {
             r#"SELECT a.account_type::text AS at, a.account_number AS num, a.name AS name,
                       COALESCE(SUM(l.debit_amount),0) AS dr,
                       COALESCE(SUM(l.credit_amount),0) AS cr
-               FROM accounts a
-               LEFT JOIN ledgers l
+               FROM accounting.accounts a
+               LEFT JOIN accounting.ledgers l
                  ON l.account_id = a.id
                 AND l.posting_date <= $2
                 AND ($3::date IS NULL OR l.posting_date >= $3)

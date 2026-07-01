@@ -10,7 +10,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS journal_lines (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.journal_lines (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     journal_id UUID NOT NULL,
     company_id UUID NOT NULL,
@@ -54,30 +56,30 @@ CREATE TABLE IF NOT EXISTS journal_lines (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_lines_journal_id_line_number ON journal_lines (journal_id, line_number);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_lines_journal_id_line_number ON accounting.journal_lines (journal_id, line_number);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_account_id ON journal_lines (company_id, account_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_account_id ON accounting.journal_lines (company_id, account_id);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_journal_id_account_id ON journal_lines (journal_id, account_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_journal_id_account_id ON accounting.journal_lines (journal_id, account_id);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_account_id_is_posted ON journal_lines (account_id, is_posted);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account_id_is_posted ON accounting.journal_lines (account_id, is_posted);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_is_reconciled ON journal_lines (company_id, is_reconciled);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_is_reconciled ON accounting.journal_lines (company_id, is_reconciled);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_source_type_source_id ON journal_lines (source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_source_type_source_id ON accounting.journal_lines (source_type, source_id);
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_cost_center_id ON journal_lines (cost_center_id) WHERE cost_center_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_lines_cost_center_id ON accounting.journal_lines (cost_center_id) WHERE cost_center_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_project_id ON journal_lines (project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_lines_project_id ON accounting.journal_lines (project_id) WHERE project_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_party_type_party_id_account_id ON journal_lines (company_id, party_type, party_id, account_id) WHERE party_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_lines_company_id_party_type_party_id_account_id ON accounting.journal_lines (company_id, party_type, party_id, account_id) WHERE party_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_journal_lines_branch_id_account_id ON journal_lines (branch_id, account_id) WHERE branch_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_lines_branch_id_account_id ON accounting.journal_lines (branch_id, account_id) WHERE branch_id IS NOT NULL;
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_journal_id FOREIGN KEY (journal_id) REFERENCES journals (id);
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_account_id FOREIGN KEY (account_id) REFERENCES accounts (id);
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_related_line_id FOREIGN KEY (related_line_id) REFERENCES journal_lines (id);
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES reconciliations (id);
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_ledger_id FOREIGN KEY (ledger_id) REFERENCES ledgers (id);
-ALTER TABLE journal_lines ADD CONSTRAINT fk_journal_lines_cost_center_id FOREIGN KEY (cost_center_id) REFERENCES cost_centers (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_journal_id FOREIGN KEY (journal_id) REFERENCES accounting.journals (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_account_id FOREIGN KEY (account_id) REFERENCES accounting.accounts (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_related_line_id FOREIGN KEY (related_line_id) REFERENCES accounting.journal_lines (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES accounting.reconciliations (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_ledger_id FOREIGN KEY (ledger_id) REFERENCES accounting.ledgers (id);
+ALTER TABLE accounting.journal_lines ADD CONSTRAINT fk_journal_lines_cost_center_id FOREIGN KEY (cost_center_id) REFERENCES accounting.cost_centers (id);

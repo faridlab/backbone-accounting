@@ -53,7 +53,7 @@ impl PostgresSnapshotStore {
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
-            table_name: "aggregate_snapshots".to_string(),
+            table_name: "accounting.aggregate_snapshots".to_string(),
         }
     }
 

@@ -19,7 +19,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS fiscal_periods (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.fiscal_periods (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     period_code TEXT NOT NULL,
@@ -63,31 +65,31 @@ CREATE TABLE IF NOT EXISTS fiscal_periods (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_period_code ON fiscal_periods (company_id, period_code) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_period_code ON accounting.fiscal_periods (company_id, period_code) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_fiscal_year_fiscal_month ON fiscal_periods (company_id, fiscal_year, fiscal_month) WHERE (metadata->>'deleted_at') IS NULL AND fiscal_month IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_fiscal_year_fiscal_month ON accounting.fiscal_periods (company_id, fiscal_year, fiscal_month) WHERE (metadata->>'deleted_at') IS NULL AND fiscal_month IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_fiscal_year ON fiscal_periods (company_id, fiscal_year);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_fiscal_year ON accounting.fiscal_periods (company_id, fiscal_year);
 
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_status ON fiscal_periods (company_id, status);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_status ON accounting.fiscal_periods (company_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_start_date_end_date ON fiscal_periods (company_id, start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_start_date_end_date ON accounting.fiscal_periods (company_id, start_date, end_date);
 
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_is_current ON fiscal_periods (company_id, is_current);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_company_id_is_current ON accounting.fiscal_periods (company_id, is_current);
 
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_parent_id ON fiscal_periods (parent_id);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_parent_id ON accounting.fiscal_periods (parent_id);
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_gin ON fiscal_periods USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_deleted_at ON fiscal_periods ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_created_at ON fiscal_periods ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_updated_at ON fiscal_periods ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_gin ON accounting.fiscal_periods USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_deleted_at ON accounting.fiscal_periods ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_created_at ON accounting.fiscal_periods ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_fiscal_periods_metadata_updated_at ON accounting.fiscal_periods ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION fiscal_periods_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.fiscal_periods_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -100,14 +102,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS fiscal_periods_insert_audit ON fiscal_periods;
-CREATE TRIGGER fiscal_periods_insert_audit BEFORE INSERT ON fiscal_periods
-    FOR EACH ROW EXECUTE FUNCTION fiscal_periods_audit_timestamp();
+DROP TRIGGER IF EXISTS fiscal_periods_insert_audit ON accounting.fiscal_periods;
+CREATE TRIGGER fiscal_periods_insert_audit BEFORE INSERT ON accounting.fiscal_periods
+    FOR EACH ROW EXECUTE FUNCTION accounting.fiscal_periods_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS fiscal_periods_update_audit ON fiscal_periods;
-CREATE TRIGGER fiscal_periods_update_audit BEFORE UPDATE ON fiscal_periods
-    FOR EACH ROW EXECUTE FUNCTION fiscal_periods_audit_timestamp();
+DROP TRIGGER IF EXISTS fiscal_periods_update_audit ON accounting.fiscal_periods;
+CREATE TRIGGER fiscal_periods_update_audit BEFORE UPDATE ON accounting.fiscal_periods
+    FOR EACH ROW EXECUTE FUNCTION accounting.fiscal_periods_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE fiscal_periods ADD CONSTRAINT fk_fiscal_periods_parent_id FOREIGN KEY (parent_id) REFERENCES fiscal_periods (id);
+ALTER TABLE accounting.fiscal_periods ADD CONSTRAINT fk_fiscal_periods_parent_id FOREIGN KEY (parent_id) REFERENCES accounting.fiscal_periods (id);

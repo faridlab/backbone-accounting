@@ -72,7 +72,7 @@ impl PostgresEventStore {
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
-            table_name: "domain_events".to_string(),
+            table_name: "accounting.domain_events".to_string(),
         }
     }
 
@@ -224,7 +224,7 @@ impl EventStore for PostgresEventStore {
 
     async fn get_projector_position(&self, projector_name: &str) -> Result<i64> {
         let query = "SELECT COALESCE(
-            (SELECT last_position FROM projector_positions WHERE projector_name = $1),
+            (SELECT last_position FROM accounting.projector_positions WHERE projector_name = $1),
             0
         )";
 
@@ -237,7 +237,7 @@ impl EventStore for PostgresEventStore {
     }
 
     async fn save_projector_position(&self, projector_name: &str, position: i64) -> Result<()> {
-        let query = "INSERT INTO projector_positions (projector_name, last_position, updated_at)
+        let query = "INSERT INTO accounting.projector_positions (projector_name, last_position, updated_at)
             VALUES ($1, $2, NOW())
             ON CONFLICT (projector_name) DO UPDATE SET
             last_position = EXCLUDED.last_position,

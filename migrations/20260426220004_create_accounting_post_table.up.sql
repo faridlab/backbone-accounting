@@ -28,7 +28,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS accounting_posts (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.accounting_posts (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     branch_id UUID,
@@ -57,33 +59,33 @@ CREATE TABLE IF NOT EXISTS accounting_posts (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_accounting_posts_company_id_source_type_source_id_posting_type ON accounting_posts (company_id, source_type, source_id, posting_type) WHERE posting_status = 'posted' AND (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounting_posts_company_id_source_type_source_id_posting_type ON accounting.accounting_posts (company_id, source_type, source_id, posting_type) WHERE posting_status = 'posted' AND (metadata->>'deleted_at') IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_source_type_posting_status ON accounting_posts (company_id, source_type, posting_status);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_source_type_posting_status ON accounting.accounting_posts (company_id, source_type, posting_status);
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_source_type_source_id ON accounting_posts (source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_source_type_source_id ON accounting.accounting_posts (source_type, source_id);
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_journal_id ON accounting_posts (journal_id);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_journal_id ON accounting.accounting_posts (journal_id);
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_posting_status_scheduled_at ON accounting_posts (posting_status, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_posting_status_scheduled_at ON accounting.accounting_posts (posting_status, scheduled_at);
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_posting_status_next_retry_at ON accounting_posts (posting_status, next_retry_at) WHERE posting_status = 'failed' AND next_retry_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_posting_status_next_retry_at ON accounting.accounting_posts (posting_status, next_retry_at) WHERE posting_status = 'failed' AND next_retry_at IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_branch_id_posting_status ON accounting_posts (company_id, branch_id, posting_status);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_branch_id_posting_status ON accounting.accounting_posts (company_id, branch_id, posting_status);
 
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_posted_at ON accounting_posts (company_id, posted_at) WHERE posted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_company_id_posted_at ON accounting.accounting_posts (company_id, posted_at) WHERE posted_at IS NOT NULL;
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_gin ON accounting_posts USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_deleted_at ON accounting_posts ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_created_at ON accounting_posts ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_updated_at ON accounting_posts ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_gin ON accounting.accounting_posts USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_deleted_at ON accounting.accounting_posts ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_created_at ON accounting.accounting_posts ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_accounting_posts_metadata_updated_at ON accounting.accounting_posts ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION accounting_posts_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.accounting_posts_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -96,16 +98,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS accounting_posts_insert_audit ON accounting_posts;
-CREATE TRIGGER accounting_posts_insert_audit BEFORE INSERT ON accounting_posts
-    FOR EACH ROW EXECUTE FUNCTION accounting_posts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounting_posts_insert_audit ON accounting.accounting_posts;
+CREATE TRIGGER accounting_posts_insert_audit BEFORE INSERT ON accounting.accounting_posts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounting_posts_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS accounting_posts_update_audit ON accounting_posts;
-CREATE TRIGGER accounting_posts_update_audit BEFORE UPDATE ON accounting_posts
-    FOR EACH ROW EXECUTE FUNCTION accounting_posts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounting_posts_update_audit ON accounting.accounting_posts;
+CREATE TRIGGER accounting_posts_update_audit BEFORE UPDATE ON accounting.accounting_posts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounting_posts_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE accounting_posts ADD CONSTRAINT fk_accounting_posts_journal_id FOREIGN KEY (journal_id) REFERENCES journals (id);
-ALTER TABLE accounting_posts ADD CONSTRAINT fk_accounting_posts_reverses_post_id FOREIGN KEY (reverses_post_id) REFERENCES accounting_posts (id);
-ALTER TABLE accounting_posts ADD CONSTRAINT fk_accounting_posts_reversed_by_post_id FOREIGN KEY (reversed_by_post_id) REFERENCES accounting_posts (id);
+ALTER TABLE accounting.accounting_posts ADD CONSTRAINT fk_accounting_posts_journal_id FOREIGN KEY (journal_id) REFERENCES accounting.journals (id);
+ALTER TABLE accounting.accounting_posts ADD CONSTRAINT fk_accounting_posts_reverses_post_id FOREIGN KEY (reverses_post_id) REFERENCES accounting.accounting_posts (id);
+ALTER TABLE accounting.accounting_posts ADD CONSTRAINT fk_accounting_posts_reversed_by_post_id FOREIGN KEY (reversed_by_post_id) REFERENCES accounting.accounting_posts (id);

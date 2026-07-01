@@ -10,7 +10,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS reconciliation_items (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.reconciliation_items (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     reconciliation_id UUID NOT NULL,
     company_id UUID NOT NULL,
@@ -51,21 +53,21 @@ CREATE TABLE IF NOT EXISTS reconciliation_items (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_item_number ON reconciliation_items (reconciliation_id, item_number);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_item_number ON accounting.reconciliation_items (reconciliation_id, item_number);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_status ON reconciliation_items (reconciliation_id, status);
+CREATE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_status ON accounting.reconciliation_items (reconciliation_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliation_items_ledger_id ON reconciliation_items (ledger_id) WHERE ledger_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_reconciliation_items_ledger_id ON accounting.reconciliation_items (ledger_id) WHERE ledger_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_reconciliation_items_company_id_is_outstanding ON reconciliation_items (company_id, is_outstanding);
+CREATE INDEX IF NOT EXISTS idx_reconciliation_items_company_id_is_outstanding ON accounting.reconciliation_items (company_id, is_outstanding);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_source ON reconciliation_items (reconciliation_id, source);
+CREATE INDEX IF NOT EXISTS idx_reconciliation_items_reconciliation_id_source ON accounting.reconciliation_items (reconciliation_id, source);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliation_items_matched_with_id ON reconciliation_items (matched_with_id) WHERE matched_with_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_reconciliation_items_matched_with_id ON accounting.reconciliation_items (matched_with_id) WHERE matched_with_id IS NOT NULL;
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE reconciliation_items ADD CONSTRAINT fk_reconciliation_items_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES reconciliations (id);
-ALTER TABLE reconciliation_items ADD CONSTRAINT fk_reconciliation_items_ledger_id FOREIGN KEY (ledger_id) REFERENCES ledgers (id);
-ALTER TABLE reconciliation_items ADD CONSTRAINT fk_reconciliation_items_journal_id FOREIGN KEY (journal_id) REFERENCES journals (id);
-ALTER TABLE reconciliation_items ADD CONSTRAINT fk_reconciliation_items_matched_with_id FOREIGN KEY (matched_with_id) REFERENCES reconciliation_items (id);
-ALTER TABLE reconciliation_items ADD CONSTRAINT fk_reconciliation_items_adjustment_journal_id FOREIGN KEY (adjustment_journal_id) REFERENCES journals (id);
+ALTER TABLE accounting.reconciliation_items ADD CONSTRAINT fk_reconciliation_items_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES accounting.reconciliations (id);
+ALTER TABLE accounting.reconciliation_items ADD CONSTRAINT fk_reconciliation_items_ledger_id FOREIGN KEY (ledger_id) REFERENCES accounting.ledgers (id);
+ALTER TABLE accounting.reconciliation_items ADD CONSTRAINT fk_reconciliation_items_journal_id FOREIGN KEY (journal_id) REFERENCES accounting.journals (id);
+ALTER TABLE accounting.reconciliation_items ADD CONSTRAINT fk_reconciliation_items_matched_with_id FOREIGN KEY (matched_with_id) REFERENCES accounting.reconciliation_items (id);
+ALTER TABLE accounting.reconciliation_items ADD CONSTRAINT fk_reconciliation_items_adjustment_journal_id FOREIGN KEY (adjustment_journal_id) REFERENCES accounting.journals (id);

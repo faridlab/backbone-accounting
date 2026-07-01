@@ -28,7 +28,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS ledgers (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.ledgers (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     account_id UUID NOT NULL,
@@ -76,41 +78,41 @@ CREATE TABLE IF NOT EXISTS ledgers (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_transaction_date ON ledgers (company_id, account_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_transaction_date ON accounting.ledgers (company_id, account_id, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_sequence_number ON ledgers (company_id, account_id, sequence_number);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_sequence_number ON accounting.ledgers (company_id, account_id, sequence_number);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_fiscal_year_fiscal_month ON ledgers (company_id, fiscal_year, fiscal_month);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_fiscal_year_fiscal_month ON accounting.ledgers (company_id, fiscal_year, fiscal_month);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_transaction_date ON ledgers (company_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_transaction_date ON accounting.ledgers (company_id, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_journal_id ON ledgers (journal_id);
+CREATE INDEX IF NOT EXISTS idx_ledgers_journal_id ON accounting.ledgers (journal_id);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_journal_line_id ON ledgers (journal_line_id);
+CREATE INDEX IF NOT EXISTS idx_ledgers_journal_line_id ON accounting.ledgers (journal_line_id);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_is_reconciled ON ledgers (company_id, account_id, is_reconciled);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_account_id_is_reconciled ON accounting.ledgers (company_id, account_id, is_reconciled);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_is_opening_balance ON ledgers (company_id, is_opening_balance);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_is_opening_balance ON accounting.ledgers (company_id, is_opening_balance);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_is_closing_entry ON ledgers (company_id, is_closing_entry);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_is_closing_entry ON accounting.ledgers (company_id, is_closing_entry);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_branch_id_account_id_transaction_date ON ledgers (company_id, branch_id, account_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_branch_id_account_id_transaction_date ON accounting.ledgers (company_id, branch_id, account_id, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_branch_id_transaction_date ON ledgers (branch_id, transaction_date) WHERE branch_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ledgers_branch_id_transaction_date ON accounting.ledgers (branch_id, transaction_date) WHERE branch_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_party_type_party_id_account_id_transaction_date ON ledgers (company_id, party_type, party_id, account_id, transaction_date) WHERE party_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ledgers_company_id_party_type_party_id_account_id_transaction_date ON accounting.ledgers (company_id, party_type, party_id, account_id, transaction_date) WHERE party_id IS NOT NULL;
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_gin ON ledgers USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_deleted_at ON ledgers ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_created_at ON ledgers ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_updated_at ON ledgers ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_gin ON accounting.ledgers USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_deleted_at ON accounting.ledgers ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_created_at ON accounting.ledgers ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_ledgers_metadata_updated_at ON accounting.ledgers ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION ledgers_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.ledgers_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -123,20 +125,20 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS ledgers_insert_audit ON ledgers;
-CREATE TRIGGER ledgers_insert_audit BEFORE INSERT ON ledgers
-    FOR EACH ROW EXECUTE FUNCTION ledgers_audit_timestamp();
+DROP TRIGGER IF EXISTS ledgers_insert_audit ON accounting.ledgers;
+CREATE TRIGGER ledgers_insert_audit BEFORE INSERT ON accounting.ledgers
+    FOR EACH ROW EXECUTE FUNCTION accounting.ledgers_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS ledgers_update_audit ON ledgers;
-CREATE TRIGGER ledgers_update_audit BEFORE UPDATE ON ledgers
-    FOR EACH ROW EXECUTE FUNCTION ledgers_audit_timestamp();
+DROP TRIGGER IF EXISTS ledgers_update_audit ON accounting.ledgers;
+CREATE TRIGGER ledgers_update_audit BEFORE UPDATE ON accounting.ledgers
+    FOR EACH ROW EXECUTE FUNCTION accounting.ledgers_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_account_id FOREIGN KEY (account_id) REFERENCES accounts (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_journal_id FOREIGN KEY (journal_id) REFERENCES journals (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_fiscal_period_id FOREIGN KEY (fiscal_period_id) REFERENCES fiscal_periods (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES reconciliations (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_reversed_by_id FOREIGN KEY (reversed_by_id) REFERENCES ledgers (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_reverses_id FOREIGN KEY (reverses_id) REFERENCES ledgers (id);
-ALTER TABLE ledgers ADD CONSTRAINT fk_ledgers_cost_center_id FOREIGN KEY (cost_center_id) REFERENCES cost_centers (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_account_id FOREIGN KEY (account_id) REFERENCES accounting.accounts (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_journal_id FOREIGN KEY (journal_id) REFERENCES accounting.journals (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_fiscal_period_id FOREIGN KEY (fiscal_period_id) REFERENCES accounting.fiscal_periods (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_reconciliation_id FOREIGN KEY (reconciliation_id) REFERENCES accounting.reconciliations (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_reversed_by_id FOREIGN KEY (reversed_by_id) REFERENCES accounting.ledgers (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_reverses_id FOREIGN KEY (reverses_id) REFERENCES accounting.ledgers (id);
+ALTER TABLE accounting.ledgers ADD CONSTRAINT fk_ledgers_cost_center_id FOREIGN KEY (cost_center_id) REFERENCES accounting.cost_centers (id);

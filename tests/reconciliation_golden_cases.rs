@@ -32,7 +32,7 @@ async fn seed(pool: &PgPool) -> (Uuid, Uuid, Uuid) {
         (revenue, "4000", "Pendapatan", "revenue", "operating_revenue", "credit"),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
                VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
@@ -53,7 +53,7 @@ async fn receipt(svc: &PostingService, company: Uuid, bank: Uuid, revenue: Uuid,
 }
 
 async fn is_reconciled_count(pool: &PgPool, company: Uuid, account: Uuid) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM ledgers WHERE company_id=$1 AND account_id=$2 AND is_reconciled=TRUE")
+    sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2 AND is_reconciled=TRUE")
         .bind(company).bind(account).fetch_one(pool).await.unwrap()
 }
 

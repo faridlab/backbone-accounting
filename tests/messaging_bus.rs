@@ -86,7 +86,7 @@ async fn posting_service_publishes_to_bus() {
         (revenue, "4000", "Rev", "revenue", "operating_revenue", "credit"),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
                VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )

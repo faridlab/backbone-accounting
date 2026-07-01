@@ -9,11 +9,11 @@
 --   - metadata->'updated_at' on INSERT and UPDATE
 
 -- ==============================================================================
--- Table: Account (accounts)
+-- Table: Account (accounting.accounts)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION accounts_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.accounts_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -26,21 +26,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS accounts_insert_audit ON accounts;
-CREATE TRIGGER accounts_insert_audit BEFORE INSERT ON accounts
-    FOR EACH ROW EXECUTE FUNCTION accounts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounts_insert_audit ON accounting.accounts;
+CREATE TRIGGER accounts_insert_audit BEFORE INSERT ON accounting.accounts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounts_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS accounts_update_audit ON accounts;
-CREATE TRIGGER accounts_update_audit BEFORE UPDATE ON accounts
-    FOR EACH ROW EXECUTE FUNCTION accounts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounts_update_audit ON accounting.accounts;
+CREATE TRIGGER accounts_update_audit BEFORE UPDATE ON accounting.accounts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounts_audit_timestamp();
 
 -- ==============================================================================
--- Table: AccountingPost (accounting_posts)
+-- Table: AccountingPost (accounting.accounting_posts)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION accounting_posts_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.accounting_posts_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -53,21 +53,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS accounting_posts_insert_audit ON accounting_posts;
-CREATE TRIGGER accounting_posts_insert_audit BEFORE INSERT ON accounting_posts
-    FOR EACH ROW EXECUTE FUNCTION accounting_posts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounting_posts_insert_audit ON accounting.accounting_posts;
+CREATE TRIGGER accounting_posts_insert_audit BEFORE INSERT ON accounting.accounting_posts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounting_posts_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS accounting_posts_update_audit ON accounting_posts;
-CREATE TRIGGER accounting_posts_update_audit BEFORE UPDATE ON accounting_posts
-    FOR EACH ROW EXECUTE FUNCTION accounting_posts_audit_timestamp();
+DROP TRIGGER IF EXISTS accounting_posts_update_audit ON accounting.accounting_posts;
+CREATE TRIGGER accounting_posts_update_audit BEFORE UPDATE ON accounting.accounting_posts
+    FOR EACH ROW EXECUTE FUNCTION accounting.accounting_posts_audit_timestamp();
 
 -- ==============================================================================
--- Table: CostCenter (cost_centers)
+-- Table: CostCenter (accounting.cost_centers)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION cost_centers_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.cost_centers_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -80,21 +80,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS cost_centers_insert_audit ON cost_centers;
-CREATE TRIGGER cost_centers_insert_audit BEFORE INSERT ON cost_centers
-    FOR EACH ROW EXECUTE FUNCTION cost_centers_audit_timestamp();
+DROP TRIGGER IF EXISTS cost_centers_insert_audit ON accounting.cost_centers;
+CREATE TRIGGER cost_centers_insert_audit BEFORE INSERT ON accounting.cost_centers
+    FOR EACH ROW EXECUTE FUNCTION accounting.cost_centers_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS cost_centers_update_audit ON cost_centers;
-CREATE TRIGGER cost_centers_update_audit BEFORE UPDATE ON cost_centers
-    FOR EACH ROW EXECUTE FUNCTION cost_centers_audit_timestamp();
+DROP TRIGGER IF EXISTS cost_centers_update_audit ON accounting.cost_centers;
+CREATE TRIGGER cost_centers_update_audit BEFORE UPDATE ON accounting.cost_centers
+    FOR EACH ROW EXECUTE FUNCTION accounting.cost_centers_audit_timestamp();
 
 -- ==============================================================================
--- Table: FinancialStatement (financial_statements)
+-- Table: FinancialStatement (accounting.financial_statements)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION financial_statements_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.financial_statements_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -107,21 +107,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS financial_statements_insert_audit ON financial_statements;
-CREATE TRIGGER financial_statements_insert_audit BEFORE INSERT ON financial_statements
-    FOR EACH ROW EXECUTE FUNCTION financial_statements_audit_timestamp();
+DROP TRIGGER IF EXISTS financial_statements_insert_audit ON accounting.financial_statements;
+CREATE TRIGGER financial_statements_insert_audit BEFORE INSERT ON accounting.financial_statements
+    FOR EACH ROW EXECUTE FUNCTION accounting.financial_statements_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS financial_statements_update_audit ON financial_statements;
-CREATE TRIGGER financial_statements_update_audit BEFORE UPDATE ON financial_statements
-    FOR EACH ROW EXECUTE FUNCTION financial_statements_audit_timestamp();
+DROP TRIGGER IF EXISTS financial_statements_update_audit ON accounting.financial_statements;
+CREATE TRIGGER financial_statements_update_audit BEFORE UPDATE ON accounting.financial_statements
+    FOR EACH ROW EXECUTE FUNCTION accounting.financial_statements_audit_timestamp();
 
 -- ==============================================================================
--- Table: FiscalPeriod (fiscal_periods)
+-- Table: FiscalPeriod (accounting.fiscal_periods)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION fiscal_periods_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.fiscal_periods_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -134,21 +134,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS fiscal_periods_insert_audit ON fiscal_periods;
-CREATE TRIGGER fiscal_periods_insert_audit BEFORE INSERT ON fiscal_periods
-    FOR EACH ROW EXECUTE FUNCTION fiscal_periods_audit_timestamp();
+DROP TRIGGER IF EXISTS fiscal_periods_insert_audit ON accounting.fiscal_periods;
+CREATE TRIGGER fiscal_periods_insert_audit BEFORE INSERT ON accounting.fiscal_periods
+    FOR EACH ROW EXECUTE FUNCTION accounting.fiscal_periods_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS fiscal_periods_update_audit ON fiscal_periods;
-CREATE TRIGGER fiscal_periods_update_audit BEFORE UPDATE ON fiscal_periods
-    FOR EACH ROW EXECUTE FUNCTION fiscal_periods_audit_timestamp();
+DROP TRIGGER IF EXISTS fiscal_periods_update_audit ON accounting.fiscal_periods;
+CREATE TRIGGER fiscal_periods_update_audit BEFORE UPDATE ON accounting.fiscal_periods
+    FOR EACH ROW EXECUTE FUNCTION accounting.fiscal_periods_audit_timestamp();
 
 -- ==============================================================================
--- Table: Journal (journals)
+-- Table: Journal (accounting.journals)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION journals_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.journals_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -161,21 +161,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS journals_insert_audit ON journals;
-CREATE TRIGGER journals_insert_audit BEFORE INSERT ON journals
-    FOR EACH ROW EXECUTE FUNCTION journals_audit_timestamp();
+DROP TRIGGER IF EXISTS journals_insert_audit ON accounting.journals;
+CREATE TRIGGER journals_insert_audit BEFORE INSERT ON accounting.journals
+    FOR EACH ROW EXECUTE FUNCTION accounting.journals_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS journals_update_audit ON journals;
-CREATE TRIGGER journals_update_audit BEFORE UPDATE ON journals
-    FOR EACH ROW EXECUTE FUNCTION journals_audit_timestamp();
+DROP TRIGGER IF EXISTS journals_update_audit ON accounting.journals;
+CREATE TRIGGER journals_update_audit BEFORE UPDATE ON accounting.journals
+    FOR EACH ROW EXECUTE FUNCTION accounting.journals_audit_timestamp();
 
 -- ==============================================================================
--- Table: Ledger (ledgers)
+-- Table: Ledger (accounting.ledgers)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION ledgers_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.ledgers_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -188,21 +188,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS ledgers_insert_audit ON ledgers;
-CREATE TRIGGER ledgers_insert_audit BEFORE INSERT ON ledgers
-    FOR EACH ROW EXECUTE FUNCTION ledgers_audit_timestamp();
+DROP TRIGGER IF EXISTS ledgers_insert_audit ON accounting.ledgers;
+CREATE TRIGGER ledgers_insert_audit BEFORE INSERT ON accounting.ledgers
+    FOR EACH ROW EXECUTE FUNCTION accounting.ledgers_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS ledgers_update_audit ON ledgers;
-CREATE TRIGGER ledgers_update_audit BEFORE UPDATE ON ledgers
-    FOR EACH ROW EXECUTE FUNCTION ledgers_audit_timestamp();
+DROP TRIGGER IF EXISTS ledgers_update_audit ON accounting.ledgers;
+CREATE TRIGGER ledgers_update_audit BEFORE UPDATE ON accounting.ledgers
+    FOR EACH ROW EXECUTE FUNCTION accounting.ledgers_audit_timestamp();
 
 -- ==============================================================================
--- Table: Reconciliation (reconciliations)
+-- Table: Reconciliation (accounting.reconciliations)
 -- ==============================================================================
 
 -- Function to set metadata timestamps
-CREATE OR REPLACE FUNCTION reconciliations_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.reconciliations_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -215,12 +215,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS reconciliations_insert_audit ON reconciliations;
-CREATE TRIGGER reconciliations_insert_audit BEFORE INSERT ON reconciliations
-    FOR EACH ROW EXECUTE FUNCTION reconciliations_audit_timestamp();
+DROP TRIGGER IF EXISTS reconciliations_insert_audit ON accounting.reconciliations;
+CREATE TRIGGER reconciliations_insert_audit BEFORE INSERT ON accounting.reconciliations
+    FOR EACH ROW EXECUTE FUNCTION accounting.reconciliations_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS reconciliations_update_audit ON reconciliations;
-CREATE TRIGGER reconciliations_update_audit BEFORE UPDATE ON reconciliations
-    FOR EACH ROW EXECUTE FUNCTION reconciliations_audit_timestamp();
+DROP TRIGGER IF EXISTS reconciliations_update_audit ON accounting.reconciliations;
+CREATE TRIGGER reconciliations_update_audit BEFORE UPDATE ON accounting.reconciliations
+    FOR EACH ROW EXECUTE FUNCTION accounting.reconciliations_audit_timestamp();
 

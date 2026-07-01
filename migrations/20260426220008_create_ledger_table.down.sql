@@ -1,3 +1,3 @@
--- Down: drop ledgers table
-DROP TABLE IF EXISTS ledgers CASCADE;
-DROP FUNCTION IF EXISTS ledgers_audit_timestamp() CASCADE;
+-- Down: drop accounting.ledgers table
+DROP TABLE IF EXISTS accounting.ledgers CASCADE;
+DROP FUNCTION IF EXISTS accounting.ledgers_audit_timestamp() CASCADE;

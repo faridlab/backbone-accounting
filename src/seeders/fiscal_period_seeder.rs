@@ -40,8 +40,8 @@ impl Seeder for SeedFiscalPeriodSeeder {
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
-        // Check if fiscal_periods table has any data
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM fiscal_periods")
+        // Check if accounting.fiscal_periods table has any data
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting.fiscal_periods")
             .fetch_one(pool)
             .await?;
         Ok(count.0 == 0)
@@ -55,7 +55,7 @@ impl Seeder for SeedFiscalPeriodSeeder {
     }
 
     async fn rollback(&self, pool: &PgPool) -> Result<()> {
-        sqlx::query("DELETE FROM fiscal_periods")
+        sqlx::query("DELETE FROM accounting.fiscal_periods")
             .execute(pool)
             .await?;
         Ok(())

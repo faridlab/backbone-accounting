@@ -40,8 +40,8 @@ impl Seeder for SeedReconciliationItemSeeder {
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
-        // Check if reconciliation_items table has any data
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM reconciliation_items")
+        // Check if accounting.reconciliation_items table has any data
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting.reconciliation_items")
             .fetch_one(pool)
             .await?;
         Ok(count.0 == 0)
@@ -55,7 +55,7 @@ impl Seeder for SeedReconciliationItemSeeder {
     }
 
     async fn rollback(&self, pool: &PgPool) -> Result<()> {
-        sqlx::query("DELETE FROM reconciliation_items")
+        sqlx::query("DELETE FROM accounting.reconciliation_items")
             .execute(pool)
             .await?;
         Ok(())

@@ -1,3 +1,3 @@
--- Down: drop reconciliations table
-DROP TABLE IF EXISTS reconciliations CASCADE;
-DROP FUNCTION IF EXISTS reconciliations_audit_timestamp() CASCADE;
+-- Down: drop accounting.reconciliations table
+DROP TABLE IF EXISTS accounting.reconciliations CASCADE;
+DROP FUNCTION IF EXISTS accounting.reconciliations_audit_timestamp() CASCADE;

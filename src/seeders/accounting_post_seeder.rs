@@ -40,8 +40,8 @@ impl Seeder for SeedAccountingPostSeeder {
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
-        // Check if accounting_posts table has any data
-        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting_posts")
+        // Check if accounting.accounting_posts table has any data
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounting.accounting_posts")
             .fetch_one(pool)
             .await?;
         Ok(count.0 == 0)
@@ -55,7 +55,7 @@ impl Seeder for SeedAccountingPostSeeder {
     }
 
     async fn rollback(&self, pool: &PgPool) -> Result<()> {
-        sqlx::query("DELETE FROM accounting_posts")
+        sqlx::query("DELETE FROM accounting.accounting_posts")
             .execute(pool)
             .await?;
         Ok(())

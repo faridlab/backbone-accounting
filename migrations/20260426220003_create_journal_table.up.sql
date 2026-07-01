@@ -28,7 +28,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS journals (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.journals (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     journal_number TEXT NOT NULL,
@@ -79,35 +81,35 @@ CREATE TABLE IF NOT EXISTS journals (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_journals_company_id_journal_number ON journals (company_id, journal_number) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journals_company_id_journal_number ON accounting.journals (company_id, journal_number) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_transaction_date ON journals (company_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_transaction_date ON accounting.journals (company_id, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_journal_type_status ON journals (company_id, journal_type, status);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_journal_type_status ON accounting.journals (company_id, journal_type, status);
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_fiscal_year_fiscal_month ON journals (company_id, fiscal_year, fiscal_month);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_fiscal_year_fiscal_month ON accounting.journals (company_id, fiscal_year, fiscal_month);
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_status_transaction_date ON journals (company_id, status, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_status_transaction_date ON accounting.journals (company_id, status, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_journals_source_source_id ON journals (source, source_id);
+CREATE INDEX IF NOT EXISTS idx_journals_source_source_id ON accounting.journals (source, source_id);
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_is_reversed ON journals (company_id, is_reversed);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_is_reversed ON accounting.journals (company_id, is_reversed);
 
-CREATE INDEX IF NOT EXISTS idx_journals_company_id_branch_id_transaction_date ON journals (company_id, branch_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_journals_company_id_branch_id_transaction_date ON accounting.journals (company_id, branch_id, transaction_date);
 
-CREATE INDEX IF NOT EXISTS idx_journals_branch_id_status ON journals (branch_id, status) WHERE branch_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_journals_branch_id_status ON accounting.journals (branch_id, status) WHERE branch_id IS NOT NULL;
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_journals_metadata_gin ON journals USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_journals_metadata_deleted_at ON journals ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_journals_metadata_created_at ON journals ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_journals_metadata_updated_at ON journals ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_journals_metadata_gin ON accounting.journals USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_journals_metadata_deleted_at ON accounting.journals ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_journals_metadata_created_at ON accounting.journals ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_journals_metadata_updated_at ON accounting.journals ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION journals_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.journals_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -120,16 +122,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS journals_insert_audit ON journals;
-CREATE TRIGGER journals_insert_audit BEFORE INSERT ON journals
-    FOR EACH ROW EXECUTE FUNCTION journals_audit_timestamp();
+DROP TRIGGER IF EXISTS journals_insert_audit ON accounting.journals;
+CREATE TRIGGER journals_insert_audit BEFORE INSERT ON accounting.journals
+    FOR EACH ROW EXECUTE FUNCTION accounting.journals_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS journals_update_audit ON journals;
-CREATE TRIGGER journals_update_audit BEFORE UPDATE ON journals
-    FOR EACH ROW EXECUTE FUNCTION journals_audit_timestamp();
+DROP TRIGGER IF EXISTS journals_update_audit ON accounting.journals;
+CREATE TRIGGER journals_update_audit BEFORE UPDATE ON accounting.journals
+    FOR EACH ROW EXECUTE FUNCTION accounting.journals_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE journals ADD CONSTRAINT fk_journals_fiscal_period_id FOREIGN KEY (fiscal_period_id) REFERENCES fiscal_periods (id);
-ALTER TABLE journals ADD CONSTRAINT fk_journals_reversed_by_id FOREIGN KEY (reversed_by_id) REFERENCES journals (id);
-ALTER TABLE journals ADD CONSTRAINT fk_journals_reverses_id FOREIGN KEY (reverses_id) REFERENCES journals (id);
+ALTER TABLE accounting.journals ADD CONSTRAINT fk_journals_fiscal_period_id FOREIGN KEY (fiscal_period_id) REFERENCES accounting.fiscal_periods (id);
+ALTER TABLE accounting.journals ADD CONSTRAINT fk_journals_reversed_by_id FOREIGN KEY (reversed_by_id) REFERENCES accounting.journals (id);
+ALTER TABLE accounting.journals ADD CONSTRAINT fk_journals_reverses_id FOREIGN KEY (reverses_id) REFERENCES accounting.journals (id);

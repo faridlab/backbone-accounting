@@ -1,2 +1,2 @@
--- Down: drop journal_lines table
-DROP TABLE IF EXISTS journal_lines CASCADE;
+-- Down: drop accounting.journal_lines table
+DROP TABLE IF EXISTS accounting.journal_lines CASCADE;

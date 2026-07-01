@@ -19,7 +19,9 @@ BEGIN
 END
 $$;
 
-CREATE TABLE IF NOT EXISTS reconciliations (
+CREATE SCHEMA IF NOT EXISTS accounting;
+
+CREATE TABLE IF NOT EXISTS accounting.reconciliations (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL,
     reconciliation_number TEXT NOT NULL,
@@ -73,27 +75,27 @@ CREATE TABLE IF NOT EXISTS reconciliations (
     PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliations_company_id_reconciliation_number ON reconciliations (company_id, reconciliation_number) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliations_company_id_reconciliation_number ON accounting.reconciliations (company_id, reconciliation_number) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliations_company_id_account_id_statement_date ON reconciliations (company_id, account_id, statement_date) WHERE (metadata->>'deleted_at') IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reconciliations_company_id_account_id_statement_date ON accounting.reconciliations (company_id, account_id, statement_date) WHERE (metadata->>'deleted_at') IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_account_id_period_start ON reconciliations (company_id, account_id, period_start);
+CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_account_id_period_start ON accounting.reconciliations (company_id, account_id, period_start);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_status ON reconciliations (company_id, status);
+CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_status ON accounting.reconciliations (company_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_is_balanced ON reconciliations (company_id, is_balanced);
+CREATE INDEX IF NOT EXISTS idx_reconciliations_company_id_is_balanced ON accounting.reconciliations (company_id, is_balanced);
 
 -- GIN index for audit metadata JSONB queries
-CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_gin ON reconciliations USING GIN (metadata);
-CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_deleted_at ON reconciliations ((metadata->>'deleted_at'));
-CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_created_at ON reconciliations ((metadata->>'created_at'));
-CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_updated_at ON reconciliations ((metadata->>'updated_at'));
+CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_gin ON accounting.reconciliations USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_deleted_at ON accounting.reconciliations ((metadata->>'deleted_at'));
+CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_created_at ON accounting.reconciliations ((metadata->>'created_at'));
+CREATE INDEX IF NOT EXISTS idx_reconciliations_metadata_updated_at ON accounting.reconciliations ((metadata->>'updated_at'));
 
 -- Triggers for automatic metadata timestamp management
 -- Automatically sets created_at on INSERT and updated_at on UPDATE
 
 -- Function to set metadata->'created_at' on INSERT
-CREATE OR REPLACE FUNCTION reconciliations_audit_timestamp() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION accounting.reconciliations_audit_timestamp() RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         NEW.metadata = jsonb_set(NEW.metadata::jsonb, '{created_at}', to_jsonb(NOW()));
@@ -106,15 +108,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to set timestamps on INSERT
-DROP TRIGGER IF EXISTS reconciliations_insert_audit ON reconciliations;
-CREATE TRIGGER reconciliations_insert_audit BEFORE INSERT ON reconciliations
-    FOR EACH ROW EXECUTE FUNCTION reconciliations_audit_timestamp();
+DROP TRIGGER IF EXISTS reconciliations_insert_audit ON accounting.reconciliations;
+CREATE TRIGGER reconciliations_insert_audit BEFORE INSERT ON accounting.reconciliations
+    FOR EACH ROW EXECUTE FUNCTION accounting.reconciliations_audit_timestamp();
 
 -- Trigger to set updated_at on UPDATE
-DROP TRIGGER IF EXISTS reconciliations_update_audit ON reconciliations;
-CREATE TRIGGER reconciliations_update_audit BEFORE UPDATE ON reconciliations
-    FOR EACH ROW EXECUTE FUNCTION reconciliations_audit_timestamp();
+DROP TRIGGER IF EXISTS reconciliations_update_audit ON accounting.reconciliations;
+CREATE TRIGGER reconciliations_update_audit BEFORE UPDATE ON accounting.reconciliations
+    FOR EACH ROW EXECUTE FUNCTION accounting.reconciliations_audit_timestamp();
 
 -- Inline foreign key constraints (forward + self refs)
-ALTER TABLE reconciliations ADD CONSTRAINT fk_reconciliations_account_id FOREIGN KEY (account_id) REFERENCES accounts (id);
-ALTER TABLE reconciliations ADD CONSTRAINT fk_reconciliations_previous_reconciliation_id FOREIGN KEY (previous_reconciliation_id) REFERENCES reconciliations (id);
+ALTER TABLE accounting.reconciliations ADD CONSTRAINT fk_reconciliations_account_id FOREIGN KEY (account_id) REFERENCES accounting.accounts (id);
+ALTER TABLE accounting.reconciliations ADD CONSTRAINT fk_reconciliations_previous_reconciliation_id FOREIGN KEY (previous_reconciliation_id) REFERENCES accounting.reconciliations (id);
