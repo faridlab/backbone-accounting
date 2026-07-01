@@ -10,9 +10,9 @@ A library crate (no `main.rs`) that owns one business domain (e.g. `accounting`,
 ## Golden path
 
 ```bash
-metaphor schema validate                 # check schema YAML
+metaphor schema schema validate                 # check schema YAML
 metaphor make entity <Name>              # scaffold from schema
-metaphor migration create <name>         # new migration
+metaphor migration generate <name>         # new migration
 metaphor dev test                        # run tests
 metaphor lint check
 ```
@@ -112,7 +112,7 @@ Cargo.toml                                # feature flags: events, grpc, openapi
 - "Add a new entity `Vendor`" → add `schema/models/vendor.model.yaml` → `metaphor make entity vendor` → migration/entity/service/handler/route wired automatically → register `vendor_service` in `module.rs`.
 - "Add a custom business rule" → put it in `application/service/<entity>_service_custom.rs`, or inside `// <<< CUSTOM` markers in the generated service.
 - "Add a non-CRUD endpoint" → add a handler fn in `presentation/http/`, register in `routes/mod.rs` (outside `BackboneCrudHandler` composition).
-- "Change a column" → edit schema YAML, `metaphor migration create <change>`, regenerate.
+- "Change a column" → edit schema YAML, `metaphor migration generate <change>`, regenerate.
 
 ## Key files to read before editing
 
