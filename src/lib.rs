@@ -58,7 +58,8 @@ use sqlx::PgPool;
 ///     .with_database(pool.clone())
 ///     .build()?;
 ///
-/// let router = accounting.routes();
+/// // Unguarded full CRUD (trusted/admin); compose a guarded router for production.
+/// let router = accounting.all_crud_routes();
 /// ```
 pub struct AccountingModule {
     pub account_service: Arc<AccountService>,
@@ -79,10 +80,12 @@ impl AccountingModule {
         AccountingModuleBuilder::new()
     }
 
-    /// Configure HTTP routes for this module using Axum
-    ///
-    /// Returns an Axum Router with all 12 Backbone CRUD endpoints per entity.
-    pub fn routes(&self) -> Router {
+    /// Mount ALL generated CRUD endpoints (12 per entity) with NO domain
+    /// validation — the fully **unguarded** surface. A well-formed request can
+    /// create invalid rows or soft-delete a referenced master out from under its
+    /// dependents. Prefer a guarded composition (read + validated writes) for any
+    /// real deployment; use this only in trusted/admin/seeding contexts.
+    pub fn all_crud_routes(&self) -> Router {
         use presentation::http::{
             create_account_routes,
             create_accounting_post_routes,
@@ -107,6 +110,16 @@ impl AccountingModule {
             .merge(create_ledger_routes(self.ledger_service.clone()))
             .merge(create_reconciliation_routes(self.reconciliation_service.clone()))
             .merge(create_reconciliation_item_routes(self.reconciliation_item_service.clone()))
+    }
+
+    /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
+    /// "the routes" but mounts UNVALIDATED generic CRUD on every entity — a naive
+    /// mount exposes unguarded writes. Compose a guarded router (read + validated
+    /// writes) for production, or call `all_crud_routes()` to opt into the full
+    /// unguarded surface explicitly.
+    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    pub fn routes(&self) -> Router {
+        self.all_crud_routes()
     }
 }
 
