@@ -15,4 +15,5 @@
 - reconciliation_seed
 - reconciliation_item_seed
 - account_seed
+- cost_center_seed
 - fiscal_period_seed

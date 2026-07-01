@@ -1,0 +1,19 @@
+-- Down: drop enum types for accounting module
+DROP TYPE IF EXISTS reconciliation_item_status CASCADE;
+DROP TYPE IF EXISTS reconciliation_status CASCADE;
+DROP TYPE IF EXISTS reconciliation_type CASCADE;
+DROP TYPE IF EXISTS journal_status CASCADE;
+DROP TYPE IF EXISTS journal_source CASCADE;
+DROP TYPE IF EXISTS journal_type CASCADE;
+DROP TYPE IF EXISTS period_status CASCADE;
+DROP TYPE IF EXISTS period_type CASCADE;
+DROP TYPE IF EXISTS statement_status CASCADE;
+DROP TYPE IF EXISTS statement_type CASCADE;
+DROP TYPE IF EXISTS posting_status CASCADE;
+DROP TYPE IF EXISTS posting_type CASCADE;
+DROP TYPE IF EXISTS posting_source_type CASCADE;
+DROP TYPE IF EXISTS party_type CASCADE;
+DROP TYPE IF EXISTS account_status CASCADE;
+DROP TYPE IF EXISTS normal_balance CASCADE;
+DROP TYPE IF EXISTS account_subtype CASCADE;
+DROP TYPE IF EXISTS account_type CASCADE;
