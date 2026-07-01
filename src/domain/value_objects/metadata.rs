@@ -128,15 +128,16 @@ impl Metadata {
 /// Builder for Metadata value object
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// use chrono::Utc;
 /// use uuid::Uuid;
 ///
+/// let user_id = Uuid::new_v4();
 /// let metadata = Metadata::builder()
 ///     .created_at(Utc::now())
 ///     .updated_at(Utc::now())
 ///     .created_by(Some(user_id))
-///     .build()
+///     .build();
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct MetadataBuilder {
