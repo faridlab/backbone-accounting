@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use std::str::FromStr;
+#[cfg(feature = "openapi")]
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "journal_status", rename_all = "snake_case")]
 pub enum JournalStatus {

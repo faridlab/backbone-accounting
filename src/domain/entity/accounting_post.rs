@@ -53,42 +53,28 @@ impl std::ops::Deref for AccountingPostId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AccountingPost {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outlet_id: Option<Uuid>,
+    pub company_id: Uuid,
+    pub branch_id: Option<Uuid>,
     pub source_type: PostingSourceType,
     pub source_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_reference: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub journal_id: Option<Uuid>,
     pub posting_type: PostingType,
     pub posting_status: PostingStatus,
     pub currency: String,
     pub total_debit: Decimal,
     pub total_credit: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub scheduled_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub failed_at: Option<DateTime<Utc>>,
     pub retry_count: i32,
     pub max_retries: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub next_retry_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reverses_post_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversed_by_post_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posted_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[serde(default)]
     #[sqlx(json)]
@@ -102,11 +88,11 @@ impl AccountingPost {
     }
 
     /// Create a new AccountingPost with required fields
-    pub fn new(source_type: PostingSourceType, source_id: Uuid, posting_type: PostingType, posting_status: PostingStatus, currency: String, total_debit: Decimal, total_credit: Decimal, retry_count: i32, max_retries: i32) -> Self {
+    pub fn new(company_id: Uuid, source_type: PostingSourceType, source_id: Uuid, posting_type: PostingType, posting_status: PostingStatus, currency: String, total_debit: Decimal, total_credit: Decimal, retry_count: i32, max_retries: i32) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
-            outlet_id: None,
+            company_id,
+            branch_id: None,
             source_type,
             source_id,
             source_reference: None,
@@ -187,15 +173,9 @@ impl AccountingPost {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
-
-    /// Set the outlet_id field (chainable)
-    pub fn with_outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (chainable)
+    pub fn with_branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
@@ -279,11 +259,11 @@ impl AccountingPost {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
-                "outlet_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.outlet_id = v; }
+                "branch_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
                 }
                 "source_type" => {
                     if let Ok(v) = serde_json::from_value(value) { self.source_type = v; }
@@ -402,8 +382,8 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
-        m.insert("outlet_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("branch_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("journal_id".to_string(), "uuid".to_string());
         m.insert("reverses_post_id".to_string(), "uuid".to_string());
@@ -416,6 +396,9 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
     fn search_fields() -> &'static [&'static str] {
         &["currency"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("journal", "journals", "journalId"), ("reversesPost", "accounting_posts", "reversesPostId"), ("reversedByPost", "accounting_posts", "reversedByPostId")]
+    }
 }
 
 /// Builder for AccountingPost entity
@@ -424,8 +407,8 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct AccountingPostBuilder {
-    provider_id: Option<Uuid>,
-    outlet_id: Option<Uuid>,
+    company_id: Option<Uuid>,
+    branch_id: Option<Uuid>,
     source_type: Option<PostingSourceType>,
     source_id: Option<Uuid>,
     source_reference: Option<String>,
@@ -450,15 +433,15 @@ pub struct AccountingPostBuilder {
 }
 
 impl AccountingPostBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
-    /// Set the outlet_id field (optional)
-    pub fn outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (optional)
+    pub fn branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
@@ -592,13 +575,14 @@ impl AccountingPostBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<AccountingPost, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let source_type = self.source_type.ok_or_else(|| "source_type is required".to_string())?;
         let source_id = self.source_id.ok_or_else(|| "source_id is required".to_string())?;
 
         Ok(AccountingPost {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
-            outlet_id: self.outlet_id,
+            company_id,
+            branch_id: self.branch_id,
             source_type,
             source_id,
             source_reference: self.source_reference,

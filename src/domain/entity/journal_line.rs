@@ -4,6 +4,8 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use rust_decimal::Decimal;
 
+use super::PartyType;
+
 /// Strongly-typed ID for JournalLine
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -49,10 +51,10 @@ impl std::ops::Deref for JournalLineId {
 pub struct JournalLine {
     pub id: Uuid,
     pub journal_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outlet_id: Option<Uuid>,
+    pub company_id: Uuid,
+    pub branch_id: Option<Uuid>,
+    pub party_type: Option<PartyType>,
+    pub party_id: Option<Uuid>,
     pub line_number: i32,
     pub account_id: Uuid,
     pub account_number: String,
@@ -63,43 +65,27 @@ pub struct JournalLine {
     pub exchange_rate: Decimal,
     pub base_debit_amount: Decimal,
     pub base_credit_amount: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost_center: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub project: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub department: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_center_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub department_id: Option<Uuid>,
+    pub dimensions: Option<serde_json::Value>,
     pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_reference: Option<String>,
     pub is_tax_line: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_rate: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_base_amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub related_line_id: Option<Uuid>,
     pub has_quantity: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub unit: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub unit_price: Option<Decimal>,
     pub is_reconciled: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reconciliation_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reconciled_at: Option<DateTime<Utc>>,
     pub is_posted: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ledger_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posted_at: Option<DateTime<Utc>>,
     pub tags: serde_json::Value,
     pub data: serde_json::Value,
@@ -112,12 +98,14 @@ impl JournalLine {
     }
 
     /// Create a new JournalLine with required fields
-    pub fn new(journal_id: Uuid, line_number: i32, account_id: Uuid, account_number: String, account_name: String, debit_amount: Decimal, credit_amount: Decimal, currency: String, exchange_rate: Decimal, base_debit_amount: Decimal, base_credit_amount: Decimal, is_tax_line: bool, has_quantity: bool, is_reconciled: bool, is_posted: bool, tags: serde_json::Value, data: serde_json::Value) -> Self {
+    pub fn new(journal_id: Uuid, company_id: Uuid, line_number: i32, account_id: Uuid, account_number: String, account_name: String, debit_amount: Decimal, credit_amount: Decimal, currency: String, exchange_rate: Decimal, base_debit_amount: Decimal, base_credit_amount: Decimal, is_tax_line: bool, has_quantity: bool, is_reconciled: bool, is_posted: bool, tags: serde_json::Value, data: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
             journal_id,
-            provider_id: None,
-            outlet_id: None,
+            company_id,
+            branch_id: None,
+            party_type: None,
+            party_id: None,
             line_number,
             account_id,
             account_number,
@@ -129,9 +117,10 @@ impl JournalLine {
             base_debit_amount,
             base_credit_amount,
             description: None,
-            cost_center: None,
-            project: None,
-            department: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            dimensions: None,
             source_type: None,
             source_id: None,
             source_reference: None,
@@ -169,15 +158,21 @@ impl JournalLine {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the branch_id field (chainable)
+    pub fn with_branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
-    /// Set the outlet_id field (chainable)
-    pub fn with_outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the party_type field (chainable)
+    pub fn with_party_type(mut self, value: PartyType) -> Self {
+        self.party_type = Some(value);
+        self
+    }
+
+    /// Set the party_id field (chainable)
+    pub fn with_party_id(mut self, value: Uuid) -> Self {
+        self.party_id = Some(value);
         self
     }
 
@@ -187,21 +182,27 @@ impl JournalLine {
         self
     }
 
-    /// Set the cost_center field (chainable)
-    pub fn with_cost_center(mut self, value: String) -> Self {
-        self.cost_center = Some(value);
+    /// Set the cost_center_id field (chainable)
+    pub fn with_cost_center_id(mut self, value: Uuid) -> Self {
+        self.cost_center_id = Some(value);
         self
     }
 
-    /// Set the project field (chainable)
-    pub fn with_project(mut self, value: String) -> Self {
-        self.project = Some(value);
+    /// Set the project_id field (chainable)
+    pub fn with_project_id(mut self, value: Uuid) -> Self {
+        self.project_id = Some(value);
         self
     }
 
-    /// Set the department field (chainable)
-    pub fn with_department(mut self, value: String) -> Self {
-        self.department = Some(value);
+    /// Set the department_id field (chainable)
+    pub fn with_department_id(mut self, value: Uuid) -> Self {
+        self.department_id = Some(value);
+        self
+    }
+
+    /// Set the dimensions field (chainable)
+    pub fn with_dimensions(mut self, value: serde_json::Value) -> Self {
+        self.dimensions = Some(value);
         self
     }
 
@@ -294,11 +295,17 @@ impl JournalLine {
                 "journal_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.journal_id = v; }
                 }
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
-                "outlet_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.outlet_id = v; }
+                "branch_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
+                }
+                "party_type" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.party_type = v; }
+                }
+                "party_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.party_id = v; }
                 }
                 "line_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.line_number = v; }
@@ -333,14 +340,17 @@ impl JournalLine {
                 "description" => {
                     if let Ok(v) = serde_json::from_value(value) { self.description = v; }
                 }
-                "cost_center" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.cost_center = v; }
+                "cost_center_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.cost_center_id = v; }
                 }
-                "project" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.project = v; }
+                "project_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.project_id = v; }
                 }
-                "department" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.department = v; }
+                "department_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.department_id = v; }
+                }
+                "dimensions" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.dimensions = v; }
                 }
                 "source_type" => {
                     if let Ok(v) = serde_json::from_value(value) { self.source_type = v; }
@@ -454,17 +464,25 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("journal_id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
-        m.insert("outlet_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("branch_id".to_string(), "uuid".to_string());
+        m.insert("party_id".to_string(), "uuid".to_string());
         m.insert("account_id".to_string(), "uuid".to_string());
+        m.insert("cost_center_id".to_string(), "uuid".to_string());
+        m.insert("project_id".to_string(), "uuid".to_string());
+        m.insert("department_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("related_line_id".to_string(), "uuid".to_string());
         m.insert("reconciliation_id".to_string(), "uuid".to_string());
         m.insert("ledger_id".to_string(), "uuid".to_string());
+        m.insert("party_type".to_string(), "party_type".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_name", "currency"]
+    }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("journal", "journals", "journalId"), ("account", "accounts", "accountId"), ("relatedLine", "journal_lines", "relatedLineId"), ("reconciliation", "reconciliations", "reconciliationId"), ("ledger", "ledgers", "ledgerId"), ("costCenter", "cost_centers", "costCenterId")]
     }
 }
 
@@ -475,8 +493,10 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
 #[derive(Debug, Clone, Default)]
 pub struct JournalLineBuilder {
     journal_id: Option<Uuid>,
-    provider_id: Option<Uuid>,
-    outlet_id: Option<Uuid>,
+    company_id: Option<Uuid>,
+    branch_id: Option<Uuid>,
+    party_type: Option<PartyType>,
+    party_id: Option<Uuid>,
     line_number: Option<i32>,
     account_id: Option<Uuid>,
     account_number: Option<String>,
@@ -488,9 +508,10 @@ pub struct JournalLineBuilder {
     base_debit_amount: Option<Decimal>,
     base_credit_amount: Option<Decimal>,
     description: Option<String>,
-    cost_center: Option<String>,
-    project: Option<String>,
-    department: Option<String>,
+    cost_center_id: Option<Uuid>,
+    project_id: Option<Uuid>,
+    department_id: Option<Uuid>,
+    dimensions: Option<serde_json::Value>,
     source_type: Option<String>,
     source_id: Option<Uuid>,
     source_reference: Option<String>,
@@ -519,15 +540,27 @@ impl JournalLineBuilder {
         self
     }
 
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
-    /// Set the outlet_id field (optional)
-    pub fn outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (optional)
+    pub fn branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
+        self
+    }
+
+    /// Set the party_type field (optional)
+    pub fn party_type(mut self, value: PartyType) -> Self {
+        self.party_type = Some(value);
+        self
+    }
+
+    /// Set the party_id field (optional)
+    pub fn party_id(mut self, value: Uuid) -> Self {
+        self.party_id = Some(value);
         self
     }
 
@@ -597,21 +630,27 @@ impl JournalLineBuilder {
         self
     }
 
-    /// Set the cost_center field (optional)
-    pub fn cost_center(mut self, value: String) -> Self {
-        self.cost_center = Some(value);
+    /// Set the cost_center_id field (optional)
+    pub fn cost_center_id(mut self, value: Uuid) -> Self {
+        self.cost_center_id = Some(value);
         self
     }
 
-    /// Set the project field (optional)
-    pub fn project(mut self, value: String) -> Self {
-        self.project = Some(value);
+    /// Set the project_id field (optional)
+    pub fn project_id(mut self, value: Uuid) -> Self {
+        self.project_id = Some(value);
         self
     }
 
-    /// Set the department field (optional)
-    pub fn department(mut self, value: String) -> Self {
-        self.department = Some(value);
+    /// Set the department_id field (optional)
+    pub fn department_id(mut self, value: Uuid) -> Self {
+        self.department_id = Some(value);
+        self
+    }
+
+    /// Set the dimensions field (optional)
+    pub fn dimensions(mut self, value: serde_json::Value) -> Self {
+        self.dimensions = Some(value);
         self
     }
 
@@ -734,6 +773,7 @@ impl JournalLineBuilder {
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<JournalLine, String> {
         let journal_id = self.journal_id.ok_or_else(|| "journal_id is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let line_number = self.line_number.ok_or_else(|| "line_number is required".to_string())?;
         let account_id = self.account_id.ok_or_else(|| "account_id is required".to_string())?;
         let account_number = self.account_number.ok_or_else(|| "account_number is required".to_string())?;
@@ -742,8 +782,10 @@ impl JournalLineBuilder {
         Ok(JournalLine {
             id: Uuid::new_v4(),
             journal_id,
-            provider_id: self.provider_id,
-            outlet_id: self.outlet_id,
+            company_id,
+            branch_id: self.branch_id,
+            party_type: self.party_type,
+            party_id: self.party_id,
             line_number,
             account_id,
             account_number,
@@ -755,9 +797,10 @@ impl JournalLineBuilder {
             base_debit_amount: self.base_debit_amount.unwrap_or(Decimal::from(0)),
             base_credit_amount: self.base_credit_amount.unwrap_or(Decimal::from(0)),
             description: self.description,
-            cost_center: self.cost_center,
-            project: self.project,
-            department: self.department,
+            cost_center_id: self.cost_center_id,
+            project_id: self.project_id,
+            department_id: self.department_id,
+            dimensions: self.dimensions,
             source_type: self.source_type,
             source_id: self.source_id,
             source_reference: self.source_reference,

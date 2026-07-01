@@ -6,6 +6,7 @@ use rust_decimal::Decimal;
 
 use super::AccountType;
 use super::NormalBalance;
+use super::PartyType;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for Ledger
@@ -52,8 +53,7 @@ impl std::ops::Deref for LedgerId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Ledger {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub account_id: Uuid,
     pub account_number: String,
     pub account_name: String,
@@ -64,12 +64,10 @@ pub struct Ledger {
     pub journal_line_id: Uuid,
     pub transaction_date: NaiveDate,
     pub posting_date: NaiveDate,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_period_id: Option<Uuid>,
     pub fiscal_year: i32,
     pub fiscal_month: i32,
     pub description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
     pub currency: String,
     pub debit_amount: Decimal,
@@ -78,32 +76,24 @@ pub struct Ledger {
     pub balance_after: Decimal,
     pub balance_change: Decimal,
     pub sequence_number: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outlet_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cost_center: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub project: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub department: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_id: Option<Uuid>,
+    pub party_type: Option<PartyType>,
+    pub party_id: Option<Uuid>,
+    pub cost_center_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub department_id: Option<Uuid>,
+    pub dimensions: Option<serde_json::Value>,
     pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_reference: Option<String>,
     pub is_reconciled: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reconciliation_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reconciled_at: Option<DateTime<Utc>>,
     pub is_opening_balance: bool,
     pub is_closing_entry: bool,
     pub is_adjustment: bool,
     pub is_reversed: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reverses_id: Option<Uuid>,
     #[serde(default)]
     #[sqlx(json)]
@@ -117,10 +107,10 @@ impl Ledger {
     }
 
     /// Create a new Ledger with required fields
-    pub fn new(account_id: Uuid, account_number: String, account_name: String, account_type: AccountType, normal_balance: NormalBalance, journal_id: Uuid, journal_number: String, journal_line_id: Uuid, transaction_date: NaiveDate, posting_date: NaiveDate, fiscal_year: i32, fiscal_month: i32, description: String, currency: String, debit_amount: Decimal, credit_amount: Decimal, balance_before: Decimal, balance_after: Decimal, balance_change: Decimal, sequence_number: i32, is_reconciled: bool, is_opening_balance: bool, is_closing_entry: bool, is_adjustment: bool, is_reversed: bool) -> Self {
+    pub fn new(company_id: Uuid, account_id: Uuid, account_number: String, account_name: String, account_type: AccountType, normal_balance: NormalBalance, journal_id: Uuid, journal_number: String, journal_line_id: Uuid, transaction_date: NaiveDate, posting_date: NaiveDate, fiscal_year: i32, fiscal_month: i32, description: String, currency: String, debit_amount: Decimal, credit_amount: Decimal, balance_before: Decimal, balance_after: Decimal, balance_change: Decimal, sequence_number: i32, is_reconciled: bool, is_opening_balance: bool, is_closing_entry: bool, is_adjustment: bool, is_reversed: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
+            company_id,
             account_id,
             account_number,
             account_name,
@@ -143,10 +133,13 @@ impl Ledger {
             balance_after,
             balance_change,
             sequence_number,
-            outlet_id: None,
-            cost_center: None,
-            project: None,
-            department: None,
+            branch_id: None,
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            dimensions: None,
             source_type: None,
             source_id: None,
             source_reference: None,
@@ -218,12 +211,6 @@ impl Ledger {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
-
     /// Set the fiscal_period_id field (chainable)
     pub fn with_fiscal_period_id(mut self, value: Uuid) -> Self {
         self.fiscal_period_id = Some(value);
@@ -236,27 +223,45 @@ impl Ledger {
         self
     }
 
-    /// Set the outlet_id field (chainable)
-    pub fn with_outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (chainable)
+    pub fn with_branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
-    /// Set the cost_center field (chainable)
-    pub fn with_cost_center(mut self, value: String) -> Self {
-        self.cost_center = Some(value);
+    /// Set the party_type field (chainable)
+    pub fn with_party_type(mut self, value: PartyType) -> Self {
+        self.party_type = Some(value);
         self
     }
 
-    /// Set the project field (chainable)
-    pub fn with_project(mut self, value: String) -> Self {
-        self.project = Some(value);
+    /// Set the party_id field (chainable)
+    pub fn with_party_id(mut self, value: Uuid) -> Self {
+        self.party_id = Some(value);
         self
     }
 
-    /// Set the department field (chainable)
-    pub fn with_department(mut self, value: String) -> Self {
-        self.department = Some(value);
+    /// Set the cost_center_id field (chainable)
+    pub fn with_cost_center_id(mut self, value: Uuid) -> Self {
+        self.cost_center_id = Some(value);
+        self
+    }
+
+    /// Set the project_id field (chainable)
+    pub fn with_project_id(mut self, value: Uuid) -> Self {
+        self.project_id = Some(value);
+        self
+    }
+
+    /// Set the department_id field (chainable)
+    pub fn with_department_id(mut self, value: Uuid) -> Self {
+        self.department_id = Some(value);
+        self
+    }
+
+    /// Set the dimensions field (chainable)
+    pub fn with_dimensions(mut self, value: serde_json::Value) -> Self {
+        self.dimensions = Some(value);
         self
     }
 
@@ -310,8 +315,8 @@ impl Ledger {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "account_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.account_id = v; }
@@ -379,17 +384,26 @@ impl Ledger {
                 "sequence_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.sequence_number = v; }
                 }
-                "outlet_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.outlet_id = v; }
+                "branch_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
                 }
-                "cost_center" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.cost_center = v; }
+                "party_type" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.party_type = v; }
                 }
-                "project" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.project = v; }
+                "party_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.party_id = v; }
                 }
-                "department" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.department = v; }
+                "cost_center_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.cost_center_id = v; }
+                }
+                "project_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.project_id = v; }
+                }
+                "department_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.department_id = v; }
+                }
+                "dimensions" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.dimensions = v; }
                 }
                 "source_type" => {
                     if let Ok(v) = serde_json::from_value(value) { self.source_type = v; }
@@ -481,22 +495,30 @@ impl backbone_orm::EntityRepoMeta for Ledger {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("account_id".to_string(), "uuid".to_string());
         m.insert("journal_id".to_string(), "uuid".to_string());
         m.insert("journal_line_id".to_string(), "uuid".to_string());
         m.insert("fiscal_period_id".to_string(), "uuid".to_string());
-        m.insert("outlet_id".to_string(), "uuid".to_string());
+        m.insert("branch_id".to_string(), "uuid".to_string());
+        m.insert("party_id".to_string(), "uuid".to_string());
+        m.insert("cost_center_id".to_string(), "uuid".to_string());
+        m.insert("project_id".to_string(), "uuid".to_string());
+        m.insert("department_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("reconciliation_id".to_string(), "uuid".to_string());
         m.insert("reversed_by_id".to_string(), "uuid".to_string());
         m.insert("reverses_id".to_string(), "uuid".to_string());
         m.insert("account_type".to_string(), "account_type".to_string());
         m.insert("normal_balance".to_string(), "normal_balance".to_string());
+        m.insert("party_type".to_string(), "party_type".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_name", "journal_number", "description", "currency"]
+    }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("account", "accounts", "accountId"), ("journal", "journals", "journalId"), ("journalLine", "journal_lines", "journalLineId"), ("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("reconciliation", "reconciliations", "reconciliationId"), ("reversedBy", "ledgers", "reversedById"), ("reverses", "ledgers", "reversesId"), ("costCenter", "cost_centers", "costCenterId")]
     }
 }
 
@@ -506,7 +528,7 @@ impl backbone_orm::EntityRepoMeta for Ledger {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct LedgerBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     account_id: Option<Uuid>,
     account_number: Option<String>,
     account_name: Option<String>,
@@ -529,10 +551,13 @@ pub struct LedgerBuilder {
     balance_after: Option<Decimal>,
     balance_change: Option<Decimal>,
     sequence_number: Option<i32>,
-    outlet_id: Option<Uuid>,
-    cost_center: Option<String>,
-    project: Option<String>,
-    department: Option<String>,
+    branch_id: Option<Uuid>,
+    party_type: Option<PartyType>,
+    party_id: Option<Uuid>,
+    cost_center_id: Option<Uuid>,
+    project_id: Option<Uuid>,
+    department_id: Option<Uuid>,
+    dimensions: Option<serde_json::Value>,
     source_type: Option<String>,
     source_id: Option<Uuid>,
     source_reference: Option<String>,
@@ -548,9 +573,9 @@ pub struct LedgerBuilder {
 }
 
 impl LedgerBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -686,27 +711,45 @@ impl LedgerBuilder {
         self
     }
 
-    /// Set the outlet_id field (optional)
-    pub fn outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (optional)
+    pub fn branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
-    /// Set the cost_center field (optional)
-    pub fn cost_center(mut self, value: String) -> Self {
-        self.cost_center = Some(value);
+    /// Set the party_type field (optional)
+    pub fn party_type(mut self, value: PartyType) -> Self {
+        self.party_type = Some(value);
         self
     }
 
-    /// Set the project field (optional)
-    pub fn project(mut self, value: String) -> Self {
-        self.project = Some(value);
+    /// Set the party_id field (optional)
+    pub fn party_id(mut self, value: Uuid) -> Self {
+        self.party_id = Some(value);
         self
     }
 
-    /// Set the department field (optional)
-    pub fn department(mut self, value: String) -> Self {
-        self.department = Some(value);
+    /// Set the cost_center_id field (optional)
+    pub fn cost_center_id(mut self, value: Uuid) -> Self {
+        self.cost_center_id = Some(value);
+        self
+    }
+
+    /// Set the project_id field (optional)
+    pub fn project_id(mut self, value: Uuid) -> Self {
+        self.project_id = Some(value);
+        self
+    }
+
+    /// Set the department_id field (optional)
+    pub fn department_id(mut self, value: Uuid) -> Self {
+        self.department_id = Some(value);
+        self
+    }
+
+    /// Set the dimensions field (optional)
+    pub fn dimensions(mut self, value: serde_json::Value) -> Self {
+        self.dimensions = Some(value);
         self
     }
 
@@ -786,6 +829,7 @@ impl LedgerBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Ledger, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let account_id = self.account_id.ok_or_else(|| "account_id is required".to_string())?;
         let account_number = self.account_number.ok_or_else(|| "account_number is required".to_string())?;
         let account_name = self.account_name.ok_or_else(|| "account_name is required".to_string())?;
@@ -806,7 +850,7 @@ impl LedgerBuilder {
 
         Ok(Ledger {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
+            company_id,
             account_id,
             account_number,
             account_name,
@@ -829,10 +873,13 @@ impl LedgerBuilder {
             balance_after,
             balance_change,
             sequence_number,
-            outlet_id: self.outlet_id,
-            cost_center: self.cost_center,
-            project: self.project,
-            department: self.department,
+            branch_id: self.branch_id,
+            party_type: self.party_type,
+            party_id: self.party_id,
+            cost_center_id: self.cost_center_id,
+            project_id: self.project_id,
+            department_id: self.department_id,
+            dimensions: self.dimensions,
             source_type: self.source_type,
             source_id: self.source_id,
             source_reference: self.source_reference,

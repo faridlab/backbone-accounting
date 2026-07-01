@@ -51,61 +51,39 @@ impl std::ops::Deref for ReconciliationItemId {
 pub struct ReconciliationItem {
     pub id: Uuid,
     pub reconciliation_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub item_number: i32,
     pub source: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ledger_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub journal_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub book_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub book_reference: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub book_description: Option<String>,
     pub book_debit: Decimal,
     pub book_credit: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statement_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statement_reference: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statement_description: Option<String>,
     pub statement_debit: Decimal,
     pub statement_credit: Decimal,
     pub status: ReconciliationItemStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub matched_with_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub match_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub match_method: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub match_confidence: Option<Decimal>,
     pub has_difference: bool,
     pub difference_amount: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub difference_reason: Option<String>,
     pub requires_adjustment: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjustment_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjustment_journal_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjusted_at: Option<DateTime<Utc>>,
     pub is_written_off: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub write_off_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub write_off_approved_by: Option<Uuid>,
     pub is_outstanding: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub outstanding_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub expected_clear_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     pub data: serde_json::Value,
 }
@@ -117,11 +95,11 @@ impl ReconciliationItem {
     }
 
     /// Create a new ReconciliationItem with required fields
-    pub fn new(reconciliation_id: Uuid, item_number: i32, source: String, book_debit: Decimal, book_credit: Decimal, statement_debit: Decimal, statement_credit: Decimal, status: ReconciliationItemStatus, has_difference: bool, difference_amount: Decimal, requires_adjustment: bool, is_written_off: bool, is_outstanding: bool, data: serde_json::Value) -> Self {
+    pub fn new(reconciliation_id: Uuid, company_id: Uuid, item_number: i32, source: String, book_debit: Decimal, book_credit: Decimal, statement_debit: Decimal, statement_credit: Decimal, status: ReconciliationItemStatus, has_difference: bool, difference_amount: Decimal, requires_adjustment: bool, is_written_off: bool, is_outstanding: bool, data: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
             reconciliation_id,
-            provider_id: None,
+            company_id,
             item_number,
             source,
             ledger_id: None,
@@ -178,12 +156,6 @@ impl ReconciliationItem {
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
-
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
 
     /// Set the ledger_id field (chainable)
     pub fn with_ledger_id(mut self, value: Uuid) -> Self {
@@ -322,8 +294,8 @@ impl ReconciliationItem {
                 "reconciliation_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.reconciliation_id = v; }
                 }
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "item_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.item_number = v; }
@@ -482,7 +454,7 @@ impl backbone_orm::EntityRepoMeta for ReconciliationItem {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("reconciliation_id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("ledger_id".to_string(), "uuid".to_string());
         m.insert("journal_id".to_string(), "uuid".to_string());
         m.insert("matched_with_id".to_string(), "uuid".to_string());
@@ -493,6 +465,9 @@ impl backbone_orm::EntityRepoMeta for ReconciliationItem {
     fn search_fields() -> &'static [&'static str] {
         &["source"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("reconciliation", "reconciliations", "reconciliationId"), ("ledger", "ledgers", "ledgerId"), ("journal", "journals", "journalId"), ("matchedWith", "reconciliation_items", "matchedWithId"), ("adjustmentJournal", "journals", "adjustmentJournalId")]
+    }
 }
 
 /// Builder for ReconciliationItem entity
@@ -502,7 +477,7 @@ impl backbone_orm::EntityRepoMeta for ReconciliationItem {
 #[derive(Debug, Clone, Default)]
 pub struct ReconciliationItemBuilder {
     reconciliation_id: Option<Uuid>,
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     item_number: Option<i32>,
     source: Option<String>,
     ledger_id: Option<Uuid>,
@@ -546,9 +521,9 @@ impl ReconciliationItemBuilder {
         self
     }
 
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -761,13 +736,14 @@ impl ReconciliationItemBuilder {
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<ReconciliationItem, String> {
         let reconciliation_id = self.reconciliation_id.ok_or_else(|| "reconciliation_id is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let item_number = self.item_number.ok_or_else(|| "item_number is required".to_string())?;
         let source = self.source.ok_or_else(|| "source is required".to_string())?;
 
         Ok(ReconciliationItem {
             id: Uuid::new_v4(),
             reconciliation_id,
-            provider_id: self.provider_id,
+            company_id,
             item_number,
             source,
             ledger_id: self.ledger_id,

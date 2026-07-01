@@ -52,8 +52,7 @@ impl std::ops::Deref for ReconciliationId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Reconciliation {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub reconciliation_number: String,
     pub account_id: Uuid,
     pub account_number: String,
@@ -64,7 +63,6 @@ pub struct Reconciliation {
     pub statement_date: NaiveDate,
     pub opening_book_balance: Decimal,
     pub opening_statement_balance: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub previous_reconciliation_id: Option<Uuid>,
     pub closing_book_balance: Decimal,
     pub closing_statement_balance: Decimal,
@@ -84,36 +82,23 @@ pub struct Reconciliation {
     pub bank_interest: Decimal,
     pub nsf_checks: Decimal,
     pub other_adjustments: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjusted_book_balance: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjusted_statement_balance: Option<Decimal>,
     pub difference: Decimal,
     pub is_balanced: bool,
     pub status: ReconciliationStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub started_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub completed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub completed_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reviewed_by: Option<Uuid>,
     pub has_adjusting_entries: bool,
     pub adjusting_journal_ids: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statement_source: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statement_file_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub import_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub discrepancy_notes: Option<String>,
     #[serde(default)]
     #[sqlx(json)]
@@ -127,10 +112,10 @@ impl Reconciliation {
     }
 
     /// Create a new Reconciliation with required fields
-    pub fn new(reconciliation_number: String, account_id: Uuid, account_number: String, account_name: String, reconciliation_type: ReconciliationType, period_start: NaiveDate, period_end: NaiveDate, statement_date: NaiveDate, opening_book_balance: Decimal, opening_statement_balance: Decimal, closing_book_balance: Decimal, closing_statement_balance: Decimal, total_matched_debits: Decimal, total_matched_credits: Decimal, matched_count: i32, total_unmatched_book_debits: Decimal, total_unmatched_book_credits: Decimal, unmatched_book_count: i32, total_unmatched_statement_debits: Decimal, total_unmatched_statement_credits: Decimal, unmatched_statement_count: i32, outstanding_deposits: Decimal, outstanding_checks: Decimal, deposits_in_transit: Decimal, bank_charges: Decimal, bank_interest: Decimal, nsf_checks: Decimal, other_adjustments: Decimal, difference: Decimal, is_balanced: bool, status: ReconciliationStatus, has_adjusting_entries: bool, adjusting_journal_ids: serde_json::Value) -> Self {
+    pub fn new(company_id: Uuid, reconciliation_number: String, account_id: Uuid, account_number: String, account_name: String, reconciliation_type: ReconciliationType, period_start: NaiveDate, period_end: NaiveDate, statement_date: NaiveDate, opening_book_balance: Decimal, opening_statement_balance: Decimal, closing_book_balance: Decimal, closing_statement_balance: Decimal, total_matched_debits: Decimal, total_matched_credits: Decimal, matched_count: i32, total_unmatched_book_debits: Decimal, total_unmatched_book_credits: Decimal, unmatched_book_count: i32, total_unmatched_statement_debits: Decimal, total_unmatched_statement_credits: Decimal, unmatched_statement_count: i32, outstanding_deposits: Decimal, outstanding_checks: Decimal, deposits_in_transit: Decimal, bank_charges: Decimal, bank_interest: Decimal, nsf_checks: Decimal, other_adjustments: Decimal, difference: Decimal, is_balanced: bool, status: ReconciliationStatus, has_adjusting_entries: bool, adjusting_journal_ids: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
+            company_id,
             reconciliation_number,
             account_id,
             account_number,
@@ -242,12 +227,6 @@ impl Reconciliation {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
-
     /// Set the previous_reconciliation_id field (chainable)
     pub fn with_previous_reconciliation_id(mut self, value: Uuid) -> Self {
         self.previous_reconciliation_id = Some(value);
@@ -340,8 +319,8 @@ impl Reconciliation {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "reconciliation_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.reconciliation_number = v; }
@@ -538,7 +517,7 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("account_id".to_string(), "uuid".to_string());
         m.insert("previous_reconciliation_id".to_string(), "uuid".to_string());
         m.insert("reconciliation_type".to_string(), "reconciliation_type".to_string());
@@ -548,6 +527,9 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
     fn search_fields() -> &'static [&'static str] {
         &["reconciliation_number", "account_number", "account_name"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("account", "accounts", "accountId"), ("previousReconciliation", "reconciliations", "previousReconciliationId")]
+    }
 }
 
 /// Builder for Reconciliation entity
@@ -556,7 +538,7 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct ReconciliationBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     reconciliation_number: Option<String>,
     account_id: Option<Uuid>,
     account_number: Option<String>,
@@ -607,9 +589,9 @@ pub struct ReconciliationBuilder {
 }
 
 impl ReconciliationBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -899,6 +881,7 @@ impl ReconciliationBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Reconciliation, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let reconciliation_number = self.reconciliation_number.ok_or_else(|| "reconciliation_number is required".to_string())?;
         let account_id = self.account_id.ok_or_else(|| "account_id is required".to_string())?;
         let account_number = self.account_number.ok_or_else(|| "account_number is required".to_string())?;
@@ -913,7 +896,7 @@ impl ReconciliationBuilder {
 
         Ok(Reconciliation {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
+            company_id,
             reconciliation_number,
             account_id,
             account_number,

@@ -53,78 +53,49 @@ impl std::ops::Deref for JournalId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Journal {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub journal_number: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reference_number: Option<String>,
     pub journal_type: JournalType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outlet_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
     pub transaction_date: NaiveDate,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posting_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_period_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_year: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_month: Option<i32>,
     pub description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     pub currency: String,
     pub total_debit: Decimal,
     pub total_credit: Decimal,
     pub line_count: i32,
     pub source: JournalSource,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_reference: Option<String>,
     pub is_reversed: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversal_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reverses_id: Option<Uuid>,
     pub is_reversing: bool,
     pub auto_reverse: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_reverse_date: Option<NaiveDate>,
     pub status: JournalStatus,
     pub requires_approval: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub approval_threshold: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub submitted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub submitted_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rejected_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rejected_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rejection_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub posted_by: Option<Uuid>,
     pub is_voided: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub voided_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub voided_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub void_reason: Option<String>,
     pub attachments: serde_json::Value,
     #[serde(default)]
@@ -139,14 +110,14 @@ impl Journal {
     }
 
     /// Create a new Journal with required fields
-    pub fn new(journal_number: String, journal_type: JournalType, transaction_date: NaiveDate, description: String, currency: String, total_debit: Decimal, total_credit: Decimal, line_count: i32, source: JournalSource, is_reversed: bool, is_reversing: bool, auto_reverse: bool, status: JournalStatus, requires_approval: bool, is_voided: bool, attachments: serde_json::Value) -> Self {
+    pub fn new(company_id: Uuid, journal_number: String, journal_type: JournalType, transaction_date: NaiveDate, description: String, currency: String, total_debit: Decimal, total_credit: Decimal, line_count: i32, source: JournalSource, is_reversed: bool, is_reversing: bool, auto_reverse: bool, status: JournalStatus, requires_approval: bool, is_voided: bool, attachments: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
+            company_id,
             journal_number,
             reference_number: None,
             journal_type,
-            outlet_id: None,
+            branch_id: None,
             transaction_date,
             posting_date: None,
             fiscal_period_id: None,
@@ -251,21 +222,15 @@ impl Journal {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
-
     /// Set the reference_number field (chainable)
     pub fn with_reference_number(mut self, value: String) -> Self {
         self.reference_number = Some(value);
         self
     }
 
-    /// Set the outlet_id field (chainable)
-    pub fn with_outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (chainable)
+    pub fn with_branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
@@ -433,8 +398,8 @@ impl Journal {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "journal_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.journal_number = v; }
@@ -445,8 +410,8 @@ impl Journal {
                 "journal_type" => {
                     if let Ok(v) = serde_json::from_value(value) { self.journal_type = v; }
                 }
-                "outlet_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.outlet_id = v; }
+                "branch_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
                 }
                 "transaction_date" => {
                     if let Ok(v) = serde_json::from_value(value) { self.transaction_date = v; }
@@ -622,8 +587,8 @@ impl backbone_orm::EntityRepoMeta for Journal {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
-        m.insert("outlet_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
+        m.insert("branch_id".to_string(), "uuid".to_string());
         m.insert("fiscal_period_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("reversed_by_id".to_string(), "uuid".to_string());
@@ -636,6 +601,9 @@ impl backbone_orm::EntityRepoMeta for Journal {
     fn search_fields() -> &'static [&'static str] {
         &["journal_number", "description", "currency"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("reversedBy", "journals", "reversedById"), ("reverses", "journals", "reversesId")]
+    }
 }
 
 /// Builder for Journal entity
@@ -644,11 +612,11 @@ impl backbone_orm::EntityRepoMeta for Journal {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct JournalBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     journal_number: Option<String>,
     reference_number: Option<String>,
     journal_type: Option<JournalType>,
-    outlet_id: Option<Uuid>,
+    branch_id: Option<Uuid>,
     transaction_date: Option<NaiveDate>,
     posting_date: Option<NaiveDate>,
     fiscal_period_id: Option<Uuid>,
@@ -692,9 +660,9 @@ pub struct JournalBuilder {
 }
 
 impl JournalBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -716,9 +684,9 @@ impl JournalBuilder {
         self
     }
 
-    /// Set the outlet_id field (optional)
-    pub fn outlet_id(mut self, value: Uuid) -> Self {
-        self.outlet_id = Some(value);
+    /// Set the branch_id field (optional)
+    pub fn branch_id(mut self, value: Uuid) -> Self {
+        self.branch_id = Some(value);
         self
     }
 
@@ -966,17 +934,18 @@ impl JournalBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Journal, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let journal_number = self.journal_number.ok_or_else(|| "journal_number is required".to_string())?;
         let transaction_date = self.transaction_date.ok_or_else(|| "transaction_date is required".to_string())?;
         let description = self.description.ok_or_else(|| "description is required".to_string())?;
 
         Ok(Journal {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
+            company_id,
             journal_number,
             reference_number: self.reference_number,
             journal_type: self.journal_type.unwrap_or(JournalType::default()),
-            outlet_id: self.outlet_id,
+            branch_id: self.branch_id,
             transaction_date,
             posting_date: self.posting_date,
             fiscal_period_id: self.fiscal_period_id,

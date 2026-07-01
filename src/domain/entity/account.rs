@@ -54,50 +54,35 @@ impl std::ops::Deref for AccountId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Account {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub account_number: String,
     pub account_code: String,
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name_en: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
     pub normal_balance: NormalBalance,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<Uuid>,
     pub level: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     pub is_header: bool,
     pub is_detail: bool,
     pub currency: String,
     pub opening_balance: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub opening_balance_date: Option<NaiveDate>,
     pub current_balance: Decimal,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_account_number: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_account_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_branch: Option<String>,
     pub is_taxable: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_rate: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_account_id: Option<Uuid>,
     pub is_reconcilable: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_reconciled_balance: Option<Decimal>,
     pub has_budget: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub budget_amount: Option<Decimal>,
     pub allow_manual_entry: bool,
     pub require_cost_center: bool,
@@ -106,9 +91,7 @@ pub struct Account {
     pub show_in_reports: bool,
     pub status: AccountStatus,
     pub is_system: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_id: Option<Uuid>,
     pub is_cloned: bool,
     #[serde(default)]
@@ -123,10 +106,10 @@ impl Account {
     }
 
     /// Create a new Account with required fields
-    pub fn new(account_number: String, account_code: String, name: String, account_type: AccountType, account_subtype: AccountSubtype, normal_balance: NormalBalance, level: i32, is_header: bool, is_detail: bool, currency: String, opening_balance: Decimal, current_balance: Decimal, is_taxable: bool, is_reconcilable: bool, has_budget: bool, allow_manual_entry: bool, require_cost_center: bool, require_project: bool, sort_order: i32, show_in_reports: bool, status: AccountStatus, is_system: bool, is_cloned: bool) -> Self {
+    pub fn new(company_id: Uuid, account_number: String, account_code: String, name: String, account_type: AccountType, account_subtype: AccountSubtype, normal_balance: NormalBalance, level: i32, is_header: bool, is_detail: bool, currency: String, opening_balance: Decimal, current_balance: Decimal, is_taxable: bool, is_reconcilable: bool, has_budget: bool, allow_manual_entry: bool, require_cost_center: bool, require_project: bool, sort_order: i32, show_in_reports: bool, status: AccountStatus, is_system: bool, is_cloned: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
+            company_id,
             account_number,
             account_code,
             name,
@@ -229,12 +212,6 @@ impl Account {
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
-
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
 
     /// Set the name_en field (chainable)
     pub fn with_name_en(mut self, value: String) -> Self {
@@ -340,8 +317,8 @@ impl Account {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "account_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.account_number = v; }
@@ -514,7 +491,7 @@ impl backbone_orm::EntityRepoMeta for Account {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("parent_id".to_string(), "uuid".to_string());
         m.insert("tax_account_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
@@ -527,6 +504,9 @@ impl backbone_orm::EntityRepoMeta for Account {
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_code", "name", "currency"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("parent", "accounts", "parentId"), ("source", "accounts", "sourceId"), ("taxAccount", "accounts", "taxAccountId")]
+    }
 }
 
 /// Builder for Account entity
@@ -535,7 +515,7 @@ impl backbone_orm::EntityRepoMeta for Account {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct AccountBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     account_number: Option<String>,
     account_code: Option<String>,
     name: Option<String>,
@@ -578,9 +558,9 @@ pub struct AccountBuilder {
 }
 
 impl AccountBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -822,6 +802,7 @@ impl AccountBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Account, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let account_number = self.account_number.ok_or_else(|| "account_number is required".to_string())?;
         let account_code = self.account_code.ok_or_else(|| "account_code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
@@ -831,7 +812,7 @@ impl AccountBuilder {
 
         Ok(Account {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
+            company_id,
             account_number,
             account_code,
             name,

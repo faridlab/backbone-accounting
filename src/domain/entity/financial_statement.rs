@@ -52,110 +52,65 @@ impl std::ops::Deref for FinancialStatementId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FinancialStatement {
     pub id: Uuid,
-    pub provider_id: Uuid,
+    pub company_id: Uuid,
     pub statement_number: String,
     pub statement_type: StatementType,
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_period_id: Option<Uuid>,
     pub fiscal_year: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_month: Option<i32>,
     pub as_of_date: NaiveDate,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub period_start: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub period_end: Option<NaiveDate>,
     pub is_comparative: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub comparative_period_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub comparative_as_of_date: Option<NaiveDate>,
     pub status: StatementStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_current_assets: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_non_current_assets: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_assets: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_current_liabilities: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_non_current_liabilities: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_liabilities: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_equity: Option<Decimal>,
     pub balance_check: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_difference: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_revenue: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_cogs: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub gross_profit: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub gross_profit_margin: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_operating_expenses: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub operating_income: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub operating_margin: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_other_income: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_other_expenses: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub income_before_tax: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_expense: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub net_income: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub net_profit_margin: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cash_from_operations: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cash_from_investing: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cash_from_financing: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub net_cash_change: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub beginning_cash: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ending_cash: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_debits: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_credits: Option<Decimal>,
     pub trial_balance_check: bool,
     pub line_items: serde_json::Value,
     pub comparative_data: serde_json::Value,
     pub variance_data: serde_json::Value,
     pub notes: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub management_notes: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub generated_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub generated_by: Option<Uuid>,
     pub generation_parameters: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub reviewed_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub approved_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub published_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub pdf_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub excel_url: Option<String>,
     pub currency: String,
     #[serde(default)]
@@ -170,10 +125,10 @@ impl FinancialStatement {
     }
 
     /// Create a new FinancialStatement with required fields
-    pub fn new(provider_id: Uuid, statement_number: String, statement_type: StatementType, name: String, fiscal_year: i32, as_of_date: NaiveDate, is_comparative: bool, status: StatementStatus, balance_check: bool, trial_balance_check: bool, line_items: serde_json::Value, comparative_data: serde_json::Value, variance_data: serde_json::Value, notes: serde_json::Value, generation_parameters: serde_json::Value, currency: String) -> Self {
+    pub fn new(company_id: Uuid, statement_number: String, statement_type: StatementType, name: String, fiscal_year: i32, as_of_date: NaiveDate, is_comparative: bool, status: StatementStatus, balance_check: bool, trial_balance_check: bool, line_items: serde_json::Value, comparative_data: serde_json::Value, variance_data: serde_json::Value, notes: serde_json::Value, generation_parameters: serde_json::Value, currency: String) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id,
+            company_id,
             statement_number,
             statement_type,
             name,
@@ -576,8 +531,8 @@ impl FinancialStatement {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "statement_number" => {
                     if let Ok(v) = serde_json::from_value(value) { self.statement_number = v; }
@@ -813,7 +768,7 @@ impl backbone_orm::EntityRepoMeta for FinancialStatement {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("fiscal_period_id".to_string(), "uuid".to_string());
         m.insert("comparative_period_id".to_string(), "uuid".to_string());
         m.insert("statement_type".to_string(), "statement_type".to_string());
@@ -831,7 +786,7 @@ impl backbone_orm::EntityRepoMeta for FinancialStatement {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct FinancialStatementBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     statement_number: Option<String>,
     statement_type: Option<StatementType>,
     name: Option<String>,
@@ -895,9 +850,9 @@ pub struct FinancialStatementBuilder {
 }
 
 impl FinancialStatementBuilder {
-    /// Set the provider_id field (required)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -1265,7 +1220,7 @@ impl FinancialStatementBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<FinancialStatement, String> {
-        let provider_id = self.provider_id.ok_or_else(|| "provider_id is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let statement_number = self.statement_number.ok_or_else(|| "statement_number is required".to_string())?;
         let statement_type = self.statement_type.ok_or_else(|| "statement_type is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
@@ -1274,7 +1229,7 @@ impl FinancialStatementBuilder {
 
         Ok(FinancialStatement {
             id: Uuid::new_v4(),
-            provider_id,
+            company_id,
             statement_number,
             statement_type,
             name,

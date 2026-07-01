@@ -52,44 +52,30 @@ impl std::ops::Deref for FiscalPeriodId {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FiscalPeriod {
     pub id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider_id: Option<Uuid>,
+    pub company_id: Uuid,
     pub period_code: String,
     pub name: String,
     pub period_type: PeriodType,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub fiscal_year: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_quarter: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fiscal_month: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<Uuid>,
     pub level: i32,
     pub status: PeriodStatus,
     pub is_current: bool,
     pub opening_balance_set: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub opening_balance_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub opening_balance_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub closing_started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub closing_started_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub closed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub closed_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub locked_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub locked_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub lock_reason: Option<String>,
     pub allow_adjustments: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub adjustment_deadline: Option<NaiveDate>,
     pub total_debits: Decimal,
     pub total_credits: Decimal,
@@ -102,9 +88,7 @@ pub struct FiscalPeriod {
     pub total_equity: Decimal,
     pub balance_sheet_generated: bool,
     pub income_statement_generated: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub statements_generated_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[serde(default)]
     #[sqlx(json)]
@@ -118,10 +102,10 @@ impl FiscalPeriod {
     }
 
     /// Create a new FiscalPeriod with required fields
-    pub fn new(period_code: String, name: String, period_type: PeriodType, start_date: NaiveDate, end_date: NaiveDate, fiscal_year: i32, level: i32, status: PeriodStatus, is_current: bool, opening_balance_set: bool, allow_adjustments: bool, total_debits: Decimal, total_credits: Decimal, journal_count: i32, total_revenue: Decimal, total_expenses: Decimal, net_income: Decimal, total_assets: Decimal, total_liabilities: Decimal, total_equity: Decimal, balance_sheet_generated: bool, income_statement_generated: bool) -> Self {
+    pub fn new(company_id: Uuid, period_code: String, name: String, period_type: PeriodType, start_date: NaiveDate, end_date: NaiveDate, fiscal_year: i32, level: i32, status: PeriodStatus, is_current: bool, opening_balance_set: bool, allow_adjustments: bool, total_debits: Decimal, total_credits: Decimal, journal_count: i32, total_revenue: Decimal, total_expenses: Decimal, net_income: Decimal, total_assets: Decimal, total_liabilities: Decimal, total_equity: Decimal, balance_sheet_generated: bool, income_statement_generated: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
-            provider_id: None,
+            company_id,
             period_code,
             name,
             period_type,
@@ -223,12 +207,6 @@ impl FiscalPeriod {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the provider_id field (chainable)
-    pub fn with_provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
-        self
-    }
-
     /// Set the fiscal_quarter field (chainable)
     pub fn with_fiscal_quarter(mut self, value: i32) -> Self {
         self.fiscal_quarter = Some(value);
@@ -327,8 +305,8 @@ impl FiscalPeriod {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "provider_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.provider_id = v; }
+                "company_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "period_code" => {
                     if let Ok(v) = serde_json::from_value(value) { self.period_code = v; }
@@ -495,7 +473,7 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("provider_id".to_string(), "uuid".to_string());
+        m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("parent_id".to_string(), "uuid".to_string());
         m.insert("period_type".to_string(), "period_type".to_string());
         m.insert("status".to_string(), "period_status".to_string());
@@ -503,6 +481,9 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
     }
     fn search_fields() -> &'static [&'static str] {
         &["period_code", "name"]
+    }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("parent", "fiscal_periods", "parentId")]
     }
 }
 
@@ -512,7 +493,7 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct FiscalPeriodBuilder {
-    provider_id: Option<Uuid>,
+    company_id: Option<Uuid>,
     period_code: Option<String>,
     name: Option<String>,
     period_type: Option<PeriodType>,
@@ -553,9 +534,9 @@ pub struct FiscalPeriodBuilder {
 }
 
 impl FiscalPeriodBuilder {
-    /// Set the provider_id field (optional)
-    pub fn provider_id(mut self, value: Uuid) -> Self {
-        self.provider_id = Some(value);
+    /// Set the company_id field (required)
+    pub fn company_id(mut self, value: Uuid) -> Self {
+        self.company_id = Some(value);
         self
     }
 
@@ -785,6 +766,7 @@ impl FiscalPeriodBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<FiscalPeriod, String> {
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
         let period_code = self.period_code.ok_or_else(|| "period_code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
         let start_date = self.start_date.ok_or_else(|| "start_date is required".to_string())?;
@@ -793,7 +775,7 @@ impl FiscalPeriodBuilder {
 
         Ok(FiscalPeriod {
             id: Uuid::new_v4(),
-            provider_id: self.provider_id,
+            company_id,
             period_code,
             name,
             period_type: self.period_type.unwrap_or(PeriodType::default()),
