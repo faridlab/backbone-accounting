@@ -234,6 +234,8 @@ enums:
         description: "Expense record"
       - name: inventory
         description: "Inventory movement"
+      - name: manufacturing
+        description: "Manufacturing WIP/FG valuation (Work Order consume/operate/receive)"
       - name: manual
         description: "Manual posting"
 
