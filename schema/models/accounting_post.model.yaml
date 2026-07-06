@@ -236,6 +236,8 @@ enums:
         description: "Inventory movement"
       - name: manufacturing
         description: "Manufacturing WIP/FG valuation (Work Order consume/operate/receive)"
+      - name: asset
+        description: "Fixed-asset lifecycle (capitalization, depreciation, disposal)"
       - name: manual
         description: "Manual posting"
 
