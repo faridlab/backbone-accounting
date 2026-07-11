@@ -12,15 +12,25 @@ use std::sync::Arc;
 // Import handlers
 use crate::presentation::http::{
     create_account_routes,
+    create_account_read_routes,
     create_accounting_post_routes,
+    create_accounting_post_read_routes,
     create_cost_center_routes,
+    create_cost_center_read_routes,
     create_financial_statement_routes,
+    create_financial_statement_read_routes,
     create_fiscal_period_routes,
+    create_fiscal_period_read_routes,
     create_journal_routes,
+    create_journal_read_routes,
     create_journal_line_routes,
+    create_journal_line_read_routes,
     create_ledger_routes,
+    create_ledger_read_routes,
     create_reconciliation_routes,
-    create_reconciliation_item_routes
+    create_reconciliation_read_routes,
+    create_reconciliation_item_routes,
+    create_reconciliation_item_read_routes
 };
 
 // Import AppState for stateful routes
@@ -54,6 +64,25 @@ pub fn create_stateless_routes(module: &crate::AccountingModule) -> Router<()> {
         .merge(create_ledger_routes(module.ledger_service.clone()))
         .merge(create_reconciliation_routes(module.reconciliation_service.clone()))
         .merge(create_reconciliation_item_routes(module.reconciliation_item_service.clone()))
+}
+
+/// Read-only routes for the Accounting module — every entity mounted READ-ONLY (the guarded base).
+///
+/// The generic `create_stateless_routes` exposes full mutable CRUD with no domain
+/// validation; this exposes only reads, so generic mutation can't bypass a write
+/// service's invariants. Extend it: `create_readonly_accounting_routes(m).merge(my_validated_writes)`.
+pub fn create_readonly_accounting_routes(module: &crate::AccountingModule) -> Router<()> {
+    Router::new()
+        .merge(create_account_read_routes(module.account_service.clone()))
+        .merge(create_accounting_post_read_routes(module.accounting_post_service.clone()))
+        .merge(create_cost_center_read_routes(module.cost_center_service.clone()))
+        .merge(create_financial_statement_read_routes(module.financial_statement_service.clone()))
+        .merge(create_fiscal_period_read_routes(module.fiscal_period_service.clone()))
+        .merge(create_journal_read_routes(module.journal_service.clone()))
+        .merge(create_journal_line_read_routes(module.journal_line_service.clone()))
+        .merge(create_ledger_read_routes(module.ledger_service.clone()))
+        .merge(create_reconciliation_read_routes(module.reconciliation_service.clone()))
+        .merge(create_reconciliation_item_read_routes(module.reconciliation_item_service.clone()))
 }
 
 /// Get all routes (stateless) for the Accounting module.
