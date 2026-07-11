@@ -50,6 +50,12 @@ pub struct PostingRequest {
     pub reverses_post_id: Option<Uuid>,
     pub description: Option<String>,
     pub lines: Vec<PostingLine>,
+    /// The REAL dedup key when set: two posts with the same `(company_id, idempotency_key)` collapse to one,
+    /// and the producer may reuse `source_id` across its several posts. When `None`, dedup falls back to the
+    /// tuple `(company_id, source_type, source_id, posting_type)` (backward compatible). A multi-post
+    /// producer should EITHER set a distinct key per post OR namespace `source_id` — see the GL-posting
+    /// contract §3.5.
+    pub idempotency_key: Option<String>,
 }
 
 impl PostingRequest {
@@ -67,7 +73,15 @@ impl PostingRequest {
             reverses_post_id: None,
             description: None,
             lines: Vec::new(),
+            idempotency_key: None,
         }
+    }
+
+    /// Set the idempotency key (the real per-post dedup identity). Prefer this over hand-namespacing
+    /// `source_id` when a producer emits more than one post per source document.
+    pub fn with_idempotency_key(mut self, key: impl Into<String>) -> Self {
+        self.idempotency_key = Some(key.into());
+        self
     }
 }
 
@@ -405,9 +419,9 @@ impl PostingService {
             r#"INSERT INTO accounting.accounting_posts
                 (id, company_id, branch_id, source_type, source_id, source_reference, journal_id,
                  posting_type, posting_status, currency, total_debit, total_credit, posted_at,
-                 posted_by, reverses_post_id)
+                 posted_by, reverses_post_id, idempotency_key)
                VALUES ($1,$2,$3,$4::posting_source_type,$5,$6,$7,$8::posting_type,
-                       'posted'::posting_status,$9,$10,$11,$12,$13,$14)"#,
+                       'posted'::posting_status,$9,$10,$11,$12,$13,$14,$15)"#,
         )
         .bind(post_id)
         .bind(req.company_id)
@@ -423,6 +437,7 @@ impl PostingService {
         .bind(now)
         .bind(posted_by)
         .bind(req.reverses_post_id)
+        .bind(&req.idempotency_key)
         .execute(&mut *tx)
         .await;
 
@@ -596,18 +611,32 @@ impl PostingService {
         &self,
         req: &PostingRequest,
     ) -> Result<Option<(Uuid, Uuid)>, PostingError> {
-        let row = sqlx::query(
-            r#"SELECT id, journal_id FROM accounting.accounting_posts
-               WHERE company_id=$1 AND source_type=$2::posting_source_type AND source_id=$3
-                 AND posting_type=$4::posting_type AND posting_status='posted'::posting_status
-               LIMIT 1"#,
-        )
-        .bind(req.company_id)
-        .bind(&req.source_type)
-        .bind(req.source_id)
-        .bind(&req.posting_type)
-        .fetch_optional(&self.db_pool)
-        .await?;
+        // When the producer set an idempotency_key, THAT is the dedup identity (a post may reuse source_id
+        // across its several posts); otherwise fall back to the legacy tuple.
+        let row = if let Some(key) = &req.idempotency_key {
+            sqlx::query(
+                r#"SELECT id, journal_id FROM accounting.accounting_posts
+                   WHERE company_id=$1 AND idempotency_key=$2 AND posting_status='posted'::posting_status
+                   LIMIT 1"#,
+            )
+            .bind(req.company_id)
+            .bind(key)
+            .fetch_optional(&self.db_pool)
+            .await?
+        } else {
+            sqlx::query(
+                r#"SELECT id, journal_id FROM accounting.accounting_posts
+                   WHERE company_id=$1 AND source_type=$2::posting_source_type AND source_id=$3
+                     AND posting_type=$4::posting_type AND posting_status='posted'::posting_status
+                   LIMIT 1"#,
+            )
+            .bind(req.company_id)
+            .bind(&req.source_type)
+            .bind(req.source_id)
+            .bind(&req.posting_type)
+            .fetch_optional(&self.db_pool)
+            .await?
+        };
         Ok(row.and_then(|r| {
             let id: Uuid = r.get("id");
             let jid: Option<Uuid> = r.get("journal_id");

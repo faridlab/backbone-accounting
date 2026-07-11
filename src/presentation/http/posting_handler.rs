@@ -99,6 +99,7 @@ async fn post_handler(
                 description: l.description,
             })
             .collect(),
+        idempotency_key: None,
     };
 
     match service.post(req, dto.posted_by).await {
