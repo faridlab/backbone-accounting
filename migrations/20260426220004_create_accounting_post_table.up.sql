@@ -5,7 +5,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'posting_source_type') THEN
-        CREATE TYPE posting_source_type AS ENUM ('order', 'payment', 'settlement', 'refund', 'expense', 'inventory', 'manual');
+        CREATE TYPE posting_source_type AS ENUM ('order', 'payment', 'settlement', 'refund', 'expense', 'inventory', 'manufacturing', 'asset', 'manual');
     END IF;
 END
 $$;
@@ -41,13 +41,13 @@ CREATE TABLE IF NOT EXISTS accounting.accounting_posts (
     posting_type posting_type NOT NULL DEFAULT 'original',
     posting_status posting_status NOT NULL DEFAULT 'pending',
     currency TEXT NOT NULL DEFAULT 'IDR',
-    total_debit NUMERIC NOT NULL DEFAULT 0,
-    total_credit NUMERIC NOT NULL DEFAULT 0,
+    total_debit NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (total_debit >= 0),
+    total_credit NUMERIC(18, 2) NOT NULL DEFAULT 0 CHECK (total_credit >= 0),
     scheduled_at TIMESTAMPTZ,
     posted_at TIMESTAMPTZ,
     failed_at TIMESTAMPTZ,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    max_retries INTEGER NOT NULL DEFAULT 3,
+    retry_count INTEGER NOT NULL DEFAULT 0 CHECK (retry_count >= 0),
+    max_retries INTEGER NOT NULL DEFAULT 3 CHECK (max_retries >= 0),
     next_retry_at TIMESTAMPTZ,
     error_code TEXT,
     error_message TEXT,

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS accounting.cost_centers (
     name_en TEXT,
     description TEXT,
     parent_id UUID,
-    level INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 0 CHECK (level >= 0),
     is_group BOOLEAN NOT NULL DEFAULT FALSE,
     branch_id UUID,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
