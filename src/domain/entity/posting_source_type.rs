@@ -15,6 +15,11 @@ pub enum PostingSourceType {
     Refund,
     Expense,
     Inventory,
+    Manufacturing,
+    Asset,
+    Payroll,
+    Maintenance,
+    Equity,
     Manual,
 }
 
@@ -27,6 +32,11 @@ impl std::fmt::Display for PostingSourceType {
             Self::Refund => write!(f, "refund"),
             Self::Expense => write!(f, "expense"),
             Self::Inventory => write!(f, "inventory"),
+            Self::Manufacturing => write!(f, "manufacturing"),
+            Self::Asset => write!(f, "asset"),
+            Self::Payroll => write!(f, "payroll"),
+            Self::Maintenance => write!(f, "maintenance"),
+            Self::Equity => write!(f, "equity"),
             Self::Manual => write!(f, "manual"),
         }
     }
@@ -43,6 +53,11 @@ impl FromStr for PostingSourceType {
             "refund" => Ok(Self::Refund),
             "expense" => Ok(Self::Expense),
             "inventory" => Ok(Self::Inventory),
+            "manufacturing" => Ok(Self::Manufacturing),
+            "asset" => Ok(Self::Asset),
+            "payroll" => Ok(Self::Payroll),
+            "maintenance" => Ok(Self::Maintenance),
+            "equity" => Ok(Self::Equity),
             "manual" => Ok(Self::Manual),
             _ => Err(format!("Unknown PostingSourceType variant: {}", s)),
         }

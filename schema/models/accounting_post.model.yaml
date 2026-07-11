@@ -238,6 +238,12 @@ enums:
         description: "Manufacturing WIP/FG valuation (Work Order consume/operate/receive)"
       - name: asset
         description: "Fixed-asset lifecycle (capitalization, depreciation, disposal)"
+      - name: payroll
+        description: "Payroll run (salary journal: gross expense, net + statutory payables)"
+      - name: maintenance
+        description: "Asset maintenance visit cost (parts + labor)"
+      - name: equity
+        description: "Cap table + dividends (share issue/buyback, dividend declare/pay)"
       - name: manual
         description: "Manual posting"
 
