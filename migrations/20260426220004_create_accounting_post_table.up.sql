@@ -5,7 +5,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'posting_source_type') THEN
-        CREATE TYPE posting_source_type AS ENUM ('order', 'payment', 'settlement', 'refund', 'expense', 'inventory', 'manufacturing', 'asset', 'manual');
+        CREATE TYPE posting_source_type AS ENUM ('order', 'payment', 'settlement', 'refund', 'expense', 'inventory', 'manufacturing', 'asset', 'payroll', 'maintenance', 'equity', 'manual');
     END IF;
 END
 $$;
