@@ -66,7 +66,7 @@ models:
         description: "Unique statement identifier"
 
       # =======================================================================
-      # Company (books owner) — this IS the tenant boundary (see organization/company.model.yaml).
+      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
       # =======================================================================
       company_id:
         type: uuid
