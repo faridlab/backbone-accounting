@@ -19,7 +19,7 @@ models:
         description: "Unique ledger entry identifier"
 
       # =======================================================================
-      # Company (books owner) — multi-tenancy is schema-per-tenant (no provider_id)
+      # Company (books owner) — this IS the tenant boundary (see organization/company.model.yaml).
       # =======================================================================
       company_id:
         type: uuid

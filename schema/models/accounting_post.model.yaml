@@ -19,7 +19,7 @@ models:
         description: "Unique posting identifier"
 
       # =======================================================================
-      # Company (books owner) / Branch — schema-per-tenant (no provider_id)
+      # Company (books owner) / Branch — company_id IS the tenant boundary (see organization/company.model.yaml).
       # =======================================================================
       company_id:
         type: uuid

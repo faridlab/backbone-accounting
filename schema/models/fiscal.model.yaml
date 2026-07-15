@@ -62,7 +62,7 @@ models:
         description: "Unique period identifier"
 
       # =======================================================================
-      # Company (books owner) — schema-per-tenant (no provider_id)
+      # Company (books owner) — this IS the tenant boundary (see organization/company.model.yaml).
       # =======================================================================
       company_id:
         type: uuid
