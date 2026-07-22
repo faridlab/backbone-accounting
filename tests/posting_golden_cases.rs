@@ -297,6 +297,45 @@ async fn gc4_reversal() {
     assert_eq!(reversed_by, Some(p2.post_id));
 }
 
+// ── GC-4a: cross-tenant reversal blocked ────────────────────────────────────────
+#[tokio::test]
+async fn gc4a_cross_tenant_reversal_blocked() {
+    let pool = pool().await;
+
+    // Company A: post an invoice
+    let (company_a, a) = seed_coa(&pool).await;
+    let svc_a = PostingService::new(pool.clone());
+    let cust = Uuid::new_v4();
+    let source = Uuid::new_v4();
+
+    let p1 = svc_a.post(
+        req(company_a, "order", source, vec![
+            party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+            line(a["4000"], "0", "1000000.00"),
+            line(a["2200"], "0", "110000.00"),
+        ]),
+        None,
+    ).await.unwrap();
+
+    // Company B: attempt to reverse Company A's post
+    let (company_b, _b) = seed_coa(&pool).await;
+    let svc_b = PostingService::new(pool.clone());
+
+    let mut rev = PostingRequest::original(company_b, "order", source, chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+    rev.posting_type = "reversal".to_string();
+    rev.reverses_post_id = Some(p1.post_id);
+    let res = svc_b.post(rev, None).await;
+
+    // Must fail: original post not found under company B (cross-tenant blocked)
+    match res {
+        Ok(_) => panic!("cross-tenant reversal should be rejected"),
+        Err(e) => assert_eq!(e.code(), "conflict", "expected conflict error"),
+    }
+
+    // Verify no ledger rows written for company B
+    assert_eq!(ledger_count(&pool, company_b).await, 0, "no ledger rows should be written");
+}
+
 // ── GC-8: idempotent retry → original returned, no double write ───────────────
 #[tokio::test]
 async fn gc8_idempotent_retry() {

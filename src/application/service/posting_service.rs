@@ -654,9 +654,10 @@ impl PostingService {
             .reverses_post_id
             .ok_or_else(|| PostingError::Conflict("reversal requires reverses_post_id".into()))?;
         let orig_journal_id: Uuid = sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT journal_id FROM accounting.accounting_posts WHERE id=$1 AND posting_status='posted'::posting_status",
+            "SELECT journal_id FROM accounting.accounting_posts WHERE id=$1 AND company_id=$2 AND posting_status='posted'::posting_status",
         )
         .bind(orig_post_id)
+        .bind(req.company_id)
         .fetch_optional(&self.db_pool)
         .await?
         .flatten()
@@ -665,9 +666,10 @@ impl PostingService {
         let rows = sqlx::query(
             r#"SELECT account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
                       cost_center_id, project_id, department_id
-               FROM accounting.journal_lines WHERE journal_id=$1 ORDER BY line_number"#,
+               FROM accounting.journal_lines WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
         )
         .bind(orig_journal_id)
+        .bind(req.company_id)
         .fetch_all(&self.db_pool)
         .await?;
 

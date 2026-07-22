@@ -51,6 +51,8 @@ pub struct PostingRequestDto {
     pub description: Option<String>,
     pub posted_by: Option<Uuid>,
     #[serde(default)]
+    pub idempotency_key: Option<String>,
+    #[serde(default)]
     pub lines: Vec<PostingLineDto>,
 }
 
@@ -99,7 +101,7 @@ async fn post_handler(
                 description: l.description,
             })
             .collect(),
-        idempotency_key: None,
+        idempotency_key: dto.idempotency_key,
     };
 
     match service.post(req, dto.posted_by).await {
