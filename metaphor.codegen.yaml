@@ -13,6 +13,10 @@ user_owned:
   - "src/application/service/posting_service.rs"
   - "src/presentation/http/posting_handler.rs"
 
+  # Manual-journal approval workflow (draft → submit → approve → post → void).
+  - "src/application/service/journal_workflow_service.rs"
+  - "src/presentation/http/journal_workflow_handler.rs"
+
   # Financial-statement generation (Trial Balance / Balance Sheet / Income Statement).
   - "src/application/service/reporting_service.rs"
   - "src/presentation/http/reporting_handler.rs"
@@ -33,6 +37,7 @@ user_owned:
   - "tests/period_close_golden_cases.rs"
   - "tests/messaging_bus.rs"
   - "tests/integrity_probes.rs"
+  - "tests/journal_workflow_golden_cases.rs"
   - "tests/features/**"
 
   # Hand-authored module documentation (PRD/BRD/FSD, business flows, ADRs).
