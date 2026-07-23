@@ -62,3 +62,118 @@
 -- <<< CUSTOM SEED DATA >>>
 -- Add your custom seed data below
 
+INSERT INTO accounting.accounts
+    (id, company_id, account_number, account_code, name, name_en, account_type, account_subtype,
+     normal_balance, parent_id, level, path, is_header, is_detail, currency, is_reconcilable,
+     allow_manual_entry, show_in_reports, status)
+VALUES
+    -- ===== 1. ASET (Assets) =====
+    ('11111111-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '1-0000', '1-0000', 'Aset', 'Assets', 'asset'::account_type, 'current_asset'::account_subtype,
+     'debit'::normal_balance, NULL, 0, '1-0000', TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('11111111-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '1-1000', '1-1000', 'Kas', 'Cash', 'asset'::account_type, 'cash'::account_subtype,
+     'debit'::normal_balance, '11111111-0000-0000-0000-000000000001', 1, '1-0000/1-1000',
+     FALSE, TRUE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('11111111-0000-0000-0000-000000000020', '00000000-0000-0000-0000-000000000001',
+     '1-1100', '1-1100', 'Bank', 'Bank', 'asset'::account_type, 'bank'::account_subtype,
+     'debit'::normal_balance, '11111111-0000-0000-0000-000000000001', 1, '1-0000/1-1100',
+     FALSE, TRUE, 'IDR', TRUE, TRUE, TRUE, 'active'::account_status),
+
+    ('11111111-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000001',
+     '1-2000', '1-2000', 'Piutang Usaha', 'Accounts Receivable', 'asset'::account_type,
+     'accounts_receivable'::account_subtype, 'debit'::normal_balance,
+     '11111111-0000-0000-0000-000000000001', 1, '1-0000/1-2000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('11111111-0000-0000-0000-000000000040', '00000000-0000-0000-0000-000000000001',
+     '1-3000', '1-3000', 'Persediaan', 'Inventory', 'asset'::account_type,
+     'inventory'::account_subtype, 'debit'::normal_balance,
+     '11111111-0000-0000-0000-000000000001', 1, '1-0000/1-3000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- PPN Masukan (input VAT) — a tax receivable, debit-normal, lives under assets.
+    ('11111111-0000-0000-0000-000000000050', '00000000-0000-0000-0000-000000000001',
+     '1-4000', '1-4000', 'PPN Masukan', 'VAT Input', 'asset'::account_type,
+     'tax'::account_subtype, 'debit'::normal_balance,
+     '11111111-0000-0000-0000-000000000001', 1, '1-0000/1-4000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- ===== 2. LIABILITAS (Liabilities) =====
+    ('22222222-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '2-0000', '2-0000', 'Liabilitas', 'Liabilities', 'liability'::account_type,
+     'current_liability'::account_subtype, 'credit'::normal_balance, NULL, 0, '2-0000',
+     TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('22222222-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '2-1000', '2-1000', 'Hutang Usaha', 'Accounts Payable', 'liability'::account_type,
+     'accounts_payable'::account_subtype, 'credit'::normal_balance,
+     '22222222-0000-0000-0000-000000000001', 1, '2-0000/2-1000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- PPN Keluaran (output VAT payable) — credit-normal liability. G1 credits this account.
+    ('22222222-0000-0000-0000-000000000020', '00000000-0000-0000-0000-000000000001',
+     '2-2000', '2-2000', 'PPN Keluaran', 'VAT Output Payable', 'liability'::account_type,
+     'tax'::account_subtype, 'credit'::normal_balance,
+     '22222222-0000-0000-0000-000000000001', 1, '2-0000/2-2000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- PPh Payable (income-tax withholding payable).
+    ('22222222-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000001',
+     '2-3000', '2-3000', 'Hutang PPh', 'Income Tax Payable', 'liability'::account_type,
+     'tax'::account_subtype, 'credit'::normal_balance,
+     '22222222-0000-0000-0000-000000000001', 1, '2-0000/2-3000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- ===== 3. EKUITAS (Equity) =====
+    ('33333333-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '3-0000', '3-0000', 'Ekuitas', 'Equity', 'equity'::account_type,
+     'paid_in_capital'::account_subtype, 'credit'::normal_balance, NULL, 0, '3-0000',
+     TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- Retained Earnings — period close zeroes revenue/expense into this account.
+    ('33333333-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '3-1000', '3-1000', 'Laba Ditahan', 'Retained Earnings', 'equity'::account_type,
+     'retained_earnings'::account_subtype, 'credit'::normal_balance,
+     '33333333-0000-0000-0000-000000000001', 1, '3-0000/3-1000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- ===== 4. PENDAPATAN (Revenue) =====
+    ('44444444-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '4-0000', '4-0000', 'Pendapatan', 'Revenue', 'revenue'::account_type,
+     'operating_revenue'::account_subtype, 'credit'::normal_balance, NULL, 0, '4-0000',
+     TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('44444444-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '4-1000', '4-1000', 'Pendapatan Penjualan', 'Sales Revenue', 'revenue'::account_type,
+     'operating_revenue'::account_subtype, 'credit'::normal_balance,
+     '44444444-0000-0000-0000-000000000001', 1, '4-0000/4-1000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- ===== 5. HPP (Cost of Goods Sold) =====
+    ('55555555-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '5-0000', '5-0000', 'Harga Pokok Penjualan', 'Cost of Goods Sold', 'cogs'::account_type,
+     'direct_cost'::account_subtype, 'debit'::normal_balance, NULL, 0, '5-0000',
+     TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    ('55555555-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '5-1000', '5-1000', 'HPP', 'COGS', 'cogs'::account_type,
+     'direct_cost'::account_subtype, 'debit'::normal_balance,
+     '55555555-0000-0000-0000-000000000001', 1, '5-0000/5-1000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- ===== 6. BEBAN (Expenses) =====
+    ('66666666-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+     '6-0000', '6-0000', 'Beban Operasional', 'Operating Expenses', 'expense'::account_type,
+     'operating_expense'::account_subtype, 'debit'::normal_balance, NULL, 0, '6-0000',
+     TRUE, FALSE, 'IDR', FALSE, TRUE, TRUE, 'active'::account_status),
+
+    -- Bank Charges — G8 reconciliation adjusting entry debits this account.
+    ('66666666-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001',
+     '6-1000', '6-1000', 'Beban Admin Bank', 'Bank Charges', 'expense'::account_type,
+     'operating_expense'::account_subtype, 'debit'::normal_balance,
+     '66666666-0000-0000-0000-000000000001', 1, '6-0000/6-1000', FALSE, TRUE, 'IDR',
+     FALSE, TRUE, TRUE, 'active'::account_status)
+ON CONFLICT DO NOTHING;
