@@ -21,6 +21,7 @@ pub mod posting_handler;
 pub mod reporting_handler;
 pub mod accounting_ops_handler;
 pub mod journal_workflow_handler;
+pub mod hierarchy_handler;
 pub mod guarded_routes;
 // END CUSTOM
 
@@ -40,5 +41,6 @@ pub use posting_handler::{create_posting_routes, PostingRequestDto, PostingLineD
 pub use reporting_handler::create_reporting_routes;
 pub use accounting_ops_handler::{create_bank_reconciliation_routes, create_period_close_routes, ClosePeriodBody};
 pub use journal_workflow_handler::create_journal_workflow_routes;
+pub use hierarchy_handler::create_hierarchy_routes;
 pub use guarded_routes::create_guarded_accounting_routes;
 // END CUSTOM

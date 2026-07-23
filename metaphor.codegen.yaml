@@ -36,6 +36,12 @@ user_owned:
   - "src/infrastructure/persistence/bank_reconciliation_repository.rs"
   - "src/infrastructure/persistence/reporting_repository.rs"
 
+  # Entity hierarchy read (ancestors root → self) for account / cost_center / fiscal_period.
+  - "src/domain/repositories/hierarchy_repository.rs"
+  - "src/infrastructure/persistence/hierarchy_repository.rs"
+  - "src/application/service/hierarchy_service.rs"
+  - "src/presentation/http/hierarchy_handler.rs"
+
   # Financial-statement generation (Trial Balance / Balance Sheet / Income Statement).
   - "src/application/service/reporting_service.rs"
   - "src/presentation/http/reporting_handler.rs"

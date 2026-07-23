@@ -22,6 +22,7 @@ pub mod journal_workflow_repository;
 pub mod period_close_repository;
 pub mod bank_reconciliation_repository;
 pub mod reporting_repository;
+pub mod hierarchy_repository;
 // END CUSTOM
 
 // Re-exports
@@ -50,4 +51,5 @@ pub use journal_workflow_repository::SqlxJournalWorkflowRepository;
 pub use period_close_repository::SqlxPeriodCloseRepository;
 pub use bank_reconciliation_repository::SqlxBankReconciliationRepository;
 pub use reporting_repository::SqlxReportingRepository;
+pub use hierarchy_repository::SqlxHierarchyRepository;
 // END CUSTOM

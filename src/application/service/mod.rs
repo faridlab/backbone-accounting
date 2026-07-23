@@ -49,4 +49,6 @@ pub use bank_reconciliation_service::{
 };
 pub use period_close_service::{PeriodCloseError, PeriodCloseResult, PeriodCloseService};
 pub use journal_workflow_service::{JournalWorkflowError, JournalWorkflowService};
+pub mod hierarchy_service;
+pub use hierarchy_service::HierarchyService;
 // END CUSTOM

@@ -85,6 +85,7 @@ pub mod journal_workflow_repository;
 pub mod period_close_repository;
 pub mod bank_reconciliation_repository;
 pub mod reporting_repository;
+pub mod hierarchy_repository;
 pub use posting_repository::{
     FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
     PostingCommit, PostingRepository, PostingWrite, ReversalSource,
@@ -96,4 +97,5 @@ pub use bank_reconciliation_repository::{
     UnmatchedStatement,
 };
 pub use reporting_repository::{AccountSumRow, ReportingRepository};
+pub use hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};
 // END CUSTOM
