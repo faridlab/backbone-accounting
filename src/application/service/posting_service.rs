@@ -160,6 +160,41 @@ struct AccountInfo {
     current_balance: Decimal,
 }
 
+/// Context shared by every ledger-write path (`post()` and `post_journal()`). Carries everything
+/// the per-line ledger insert needs that is constant across all lines of one journal.
+struct LedgerCtx {
+    company_id: Uuid,
+    branch_id: Option<Uuid>,
+    journal_id: Uuid,
+    journal_number: String,
+    posting_date: NaiveDate,
+    fiscal_period_id: Option<Uuid>,
+    fiscal_year: i32,
+    fiscal_month: i32,
+    currency: String,
+    source_type: String,
+    source_id: Uuid,
+    description: Option<String>,
+    is_reversing: bool,
+    now: DateTime<Utc>,
+}
+
+/// One line to write to the ledger. `journal_line_id` is the already-persisted `journal_lines`
+/// row this ledger entry back-references — freshly created by `post()`, or loaded from an
+/// existing draft journal by `post_journal()`.
+struct LedgerEntryInput {
+    journal_line_id: Uuid,
+    account_id: Uuid,
+    debit: Decimal,
+    credit: Decimal,
+    party_type: Option<String>,
+    party_id: Option<Uuid>,
+    cost_center_id: Option<Uuid>,
+    project_id: Option<Uuid>,
+    department_id: Option<Uuid>,
+    description: Option<String>,
+}
+
 /// Sink for GL-posting domain events (the event-bus seam). Fire-and-forget. A real adapter
 /// (e.g. backbone-messaging) implements this; tests use a recording sink; default logs.
 pub trait PostingEventSink: Send + Sync {
@@ -239,7 +274,12 @@ impl PostingService {
         let fiscal_year = req.posting_date.year();
         let fiscal_month = req.posting_date.month() as i32;
         let fiscal_period_id = self.find_period_id(&req).await?;
-        let accounts = self.load_accounts(&req).await?;
+        // Lock the accounts we are about to mutate (FOR UPDATE, in deterministic id order) BEFORE
+        // reading current_balance / MAX(sequence_number). Without this, two concurrent posts from
+        // distinct sources to the SAME account both read the same balance/sequence and corrupt the
+        // running-balance chain (duplicate sequence_number, last-writer-wins current_balance).
+        // The lock serializes only same-account writers; cross-account posts stay fully parallel.
+        let accounts = self.load_accounts_locked(&mut *tx, &req).await?;
 
         let journal_id = Uuid::new_v4();
         let journal_number = format!(
@@ -285,38 +325,14 @@ impl PostingService {
         .execute(&mut *tx)
         .await?;
 
-        // Running balance + sequence per account (seeded from accounts + existing ledger).
-        let mut running: HashMap<Uuid, Decimal> =
-            accounts.iter().map(|(id, a)| (*id, a.current_balance)).collect();
-        let mut seq: HashMap<Uuid, i32> = HashMap::new();
-        for id in accounts.keys() {
-            let max: i32 = sqlx::query_scalar(
-                "SELECT COALESCE(MAX(sequence_number),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2",
-            )
-            .bind(req.company_id)
-            .bind(id)
-            .fetch_one(&mut *tx)
-            .await?;
-            seq.insert(*id, max);
-        }
-
+        // Create the journal_lines rows (is_posted=TRUE on creation here), collecting the inputs
+        // the shared ledger-write core needs. The immutable ledger rows + running balances are
+        // written by `append_ledger_entries`, shared with `post_journal()`.
+        let mut line_inputs: Vec<LedgerEntryInput> = Vec::with_capacity(req.lines.len());
         for (i, line) in req.lines.iter().enumerate() {
             let acct = &accounts[&line.account_id];
             let line_number = (i + 1) as i32;
             let journal_line_id = Uuid::new_v4();
-
-            // balance_change per normal-balance side; ledger stores raw non-negative sides.
-            let change = if acct.normal_balance == "debit" {
-                line.debit - line.credit
-            } else {
-                line.credit - line.debit
-            };
-            let before = *running.get(&line.account_id).unwrap();
-            let after = before + change;
-            running.insert(line.account_id, after);
-            let s = seq.get_mut(&line.account_id).unwrap();
-            *s += 1;
-            let sequence_number = *s;
 
             sqlx::query(
                 r#"INSERT INTO accounting.journal_lines
@@ -340,6 +356,9 @@ impl PostingService {
             .bind(line.debit)
             .bind(line.credit)
             .bind(&req.currency)
+            // base_debit_amount / base_credit_amount — base = IDR today; the GL is single-currency
+            // and producers must convert to base currency before posting (ADR-003). The columns are
+            // retained so a future FX layer can populate them without a schema change.
             .bind(line.debit)
             .bind(line.credit)
             .bind(&line.description)
@@ -352,66 +371,37 @@ impl PostingService {
             .execute(&mut *tx)
             .await?;
 
-            let ledger_id = Uuid::new_v4();
-            sqlx::query(
-                r#"INSERT INTO accounting.ledgers
-                    (id, company_id, account_id, account_number, account_name, account_type,
-                     normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
-                     posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, currency,
-                     debit_amount, credit_amount, balance_before, balance_after, balance_change,
-                     sequence_number, branch_id, party_type, party_id, cost_center_id, project_id,
-                     department_id, is_reversed)
-                   VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::normal_balance,$8,$9,$10,$11,$12,$13,
-                           $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25::party_type,$26,$27,$28,$29,$30)"#,
-            )
-            .bind(ledger_id)
-            .bind(req.company_id)
-            .bind(line.account_id)
-            .bind(&acct.number)
-            .bind(&acct.name)
-            .bind(&acct.account_type)
-            .bind(&acct.normal_balance)
-            .bind(journal_id)
-            .bind(&journal_number)
-            .bind(journal_line_id)
-            .bind(req.posting_date)
-            .bind(req.posting_date)
-            .bind(fiscal_period_id)
-            .bind(fiscal_year)
-            .bind(fiscal_month)
-            .bind(req.description.clone().unwrap_or_else(|| acct.name.clone()))
-            .bind(&req.currency)
-            .bind(line.debit)
-            .bind(line.credit)
-            .bind(before)
-            .bind(after)
-            .bind(change)
-            .bind(sequence_number)
-            .bind(req.branch_id)
-            .bind(&line.party_type)
-            .bind(line.party_id)
-            .bind(line.cost_center_id)
-            .bind(line.project_id)
-            .bind(line.department_id)
-            .bind(is_reversing)
-            .execute(&mut *tx)
-            .await?;
-
-            sqlx::query("UPDATE accounting.journal_lines SET ledger_id=$1 WHERE id=$2")
-                .bind(ledger_id)
-                .bind(journal_line_id)
-                .execute(&mut *tx)
-                .await?;
+            line_inputs.push(LedgerEntryInput {
+                journal_line_id,
+                account_id: line.account_id,
+                debit: line.debit,
+                credit: line.credit,
+                party_type: line.party_type.clone(),
+                party_id: line.party_id,
+                cost_center_id: line.cost_center_id,
+                project_id: line.project_id,
+                department_id: line.department_id,
+                description: line.description.clone(),
+            });
         }
 
-        // Persist updated running balances.
-        for (account_id, balance) in &running {
-            sqlx::query("UPDATE accounting.accounts SET current_balance=$1 WHERE id=$2")
-                .bind(balance)
-                .bind(account_id)
-                .execute(&mut *tx)
-                .await?;
-        }
+        let ledger_ctx = LedgerCtx {
+            company_id: req.company_id,
+            branch_id: req.branch_id,
+            journal_id,
+            journal_number: journal_number.clone(),
+            posting_date: req.posting_date,
+            fiscal_period_id,
+            fiscal_year,
+            fiscal_month,
+            currency: req.currency.clone(),
+            source_type: req.source_type.clone(),
+            source_id: req.source_id,
+            description: req.description.clone(),
+            is_reversing,
+            now,
+        };
+        Self::append_ledger_entries(&mut *tx, &ledger_ctx, &line_inputs, &accounts).await?;
 
         // The AccountingPost row (the contract record).
         let post_id = Uuid::new_v4();
@@ -491,6 +481,225 @@ impl PostingService {
             company_id: req.company_id,
             source_type: req.source_type.clone(),
             source_id: req.source_id,
+            total_debit,
+            total_credit,
+            occurred_at: now,
+        }));
+
+        Ok(PostingResult {
+            post_id,
+            journal_id,
+            posting_status: "posted".to_string(),
+            idempotent_reuse: false,
+        })
+    }
+
+    /// Post an existing **approved** manual journal to the ledger. Idempotent: a journal already
+    /// `posted` returns its existing post. This is the second caller of the shared
+    /// `append_ledger_entries` core — used by the journal approval workflow (approve → post). The
+    /// journal's lines were persisted at draft time (is_posted=false); this writes their immutable
+    /// ledger rows, flips the journal to `posted`, and records the `AccountingPost`.
+    pub async fn post_journal(
+        &self,
+        journal_id: Uuid,
+        company_id: Uuid,
+        posted_by: Option<Uuid>,
+    ) -> Result<PostingResult, PostingError> {
+        // Load the journal header (must exist + match tenant).
+        let journal = sqlx::query(
+            r#"SELECT journal_number, branch_id, posting_date, fiscal_period_id, fiscal_year,
+                      fiscal_month, currency, description, source_type::text AS source_type,
+                      source_id, status::text AS status
+               FROM accounting.journals
+               WHERE id=$1 AND company_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
+        )
+        .bind(journal_id)
+        .bind(company_id)
+        .fetch_optional(&self.db_pool)
+        .await?
+        .ok_or_else(|| PostingError::Conflict(format!("journal {journal_id} not found")))?;
+
+        let status: String = journal.get("status");
+        if status == "posted" {
+            // Idempotent: return the existing post for this journal, if any.
+            let existing: Option<Uuid> = sqlx::query_scalar(
+                "SELECT id FROM accounting.accounting_posts WHERE journal_id=$1 AND company_id=$2 AND posting_status='posted'::posting_status LIMIT 1",
+            )
+            .bind(journal_id)
+            .bind(company_id)
+            .fetch_optional(&self.db_pool)
+            .await?;
+            return Ok(PostingResult {
+                post_id: existing.unwrap_or_default(),
+                journal_id,
+                posting_status: "posted".to_string(),
+                idempotent_reuse: true,
+            });
+        }
+        if status != "approved" {
+            return Err(PostingError::Conflict(format!(
+                "journal {journal_id} is '{status}', must be 'approved' to post"
+            )));
+        }
+
+        let journal_number: String = journal.get("journal_number");
+        let branch_id: Option<Uuid> = journal.get("branch_id");
+        let posting_date: NaiveDate = journal.get("posting_date");
+        let fiscal_period_id: Option<Uuid> = journal.get("fiscal_period_id");
+        let fiscal_year: i32 = journal.get("fiscal_year");
+        let fiscal_month: i32 = journal.get("fiscal_month");
+        let currency: String = journal.get("currency");
+        let description: Option<String> = journal.get("description");
+        let source_type: String = journal
+            .get::<Option<String>, _>("source_type")
+            .unwrap_or_else(|| "manual".to_string());
+        let source_id: Uuid = journal.get::<Option<Uuid>, _>("source_id").unwrap_or(journal_id);
+
+        // Load lines (ordered) → validation request + ledger inputs.
+        let rows = sqlx::query(
+            r#"SELECT id, account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
+                      cost_center_id, project_id, department_id, description
+               FROM accounting.journal_lines
+               WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
+        )
+        .bind(journal_id)
+        .bind(company_id)
+        .fetch_all(&self.db_pool)
+        .await?;
+
+        let mut req = PostingRequest {
+            company_id,
+            branch_id,
+            source_type: source_type.clone(),
+            source_id,
+            source_reference: None,
+            posting_date,
+            currency: currency.clone(),
+            posting_type: "original".to_string(),
+            reverses_post_id: None,
+            description: description.clone(),
+            lines: Vec::new(),
+            idempotency_key: None,
+        };
+        let mut line_inputs: Vec<LedgerEntryInput> = Vec::with_capacity(rows.len());
+        for r in rows {
+            let debit: Decimal = r.get("debit_amount");
+            let credit: Decimal = r.get("credit_amount");
+            let account_id: Uuid = r.get("account_id");
+            let party_type: Option<String> = r.get("pt");
+            let party_id: Option<Uuid> = r.get("party_id");
+            let cost_center_id: Option<Uuid> = r.get("cost_center_id");
+            let project_id: Option<Uuid> = r.get("project_id");
+            let department_id: Option<Uuid> = r.get("department_id");
+            let line_desc: Option<String> = r.get("description");
+            req.lines.push(PostingLine {
+                account_id,
+                debit,
+                credit,
+                party_type: party_type.clone(),
+                party_id,
+                cost_center_id,
+                project_id,
+                department_id,
+                description: line_desc.clone(),
+            });
+            line_inputs.push(LedgerEntryInput {
+                journal_line_id: r.get("id"),
+                account_id,
+                debit,
+                credit,
+                party_type,
+                party_id,
+                cost_center_id,
+                project_id,
+                department_id,
+                description: line_desc,
+            });
+        }
+
+        // Validate (balance, ≥2 lines, party-for-AR/AP, postable, open period) on the stored lines.
+        if let Err(e) = self.validate(&req).await {
+            let _ = self.record_failed(&req, &e).await;
+            return Err(e);
+        }
+
+        let now = Utc::now();
+        let mut tx = self.db_pool.begin().await?;
+        let accounts = self.load_accounts_locked(&mut *tx, &req).await?;
+
+        let ctx = LedgerCtx {
+            company_id,
+            branch_id,
+            journal_id,
+            journal_number,
+            posting_date,
+            fiscal_period_id,
+            fiscal_year,
+            fiscal_month,
+            currency,
+            source_type: source_type.clone(),
+            source_id,
+            description,
+            is_reversing: false,
+            now,
+        };
+        let (total_debit, total_credit) =
+            Self::append_ledger_entries(&mut *tx, &ctx, &line_inputs, &accounts).await?;
+
+        // Flip the journal to posted; mark its lines posted.
+        sqlx::query(
+            "UPDATE accounting.journals SET status='posted'::journal_status, posted_at=$1, posted_by=$2 WHERE id=$3",
+        )
+        .bind(now)
+        .bind(posted_by)
+        .bind(journal_id)
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            "UPDATE accounting.journal_lines SET is_posted=TRUE, posted_at=$1 WHERE journal_id=$2",
+        )
+        .bind(now)
+        .bind(journal_id)
+        .execute(&mut *tx)
+        .await?;
+
+        // Record the AccountingPost (source_type=manual, source_id=journal_id) with a real per-post
+        // idempotency key so a replay collapses to this post.
+        let post_id = Uuid::new_v4();
+        let idem = format!("journal:{journal_id}");
+        sqlx::query(
+            r#"INSERT INTO accounting.accounting_posts
+                (id, company_id, branch_id, source_type, source_id, source_reference, journal_id,
+                 posting_type, posting_status, currency, total_debit, total_credit, posted_at,
+                 posted_by, idempotency_key)
+               VALUES ($1,$2,$3,$4::posting_source_type,$5,$6,$7,$8::posting_type,
+                       'posted'::posting_status,$9,$10,$11,$12,$13,$14)"#,
+        )
+        .bind(post_id)
+        .bind(company_id)
+        .bind(branch_id)
+        .bind(&source_type)
+        .bind(source_id)
+        .bind(Option::<String>::None)
+        .bind(journal_id)
+        .bind("original")
+        .bind(&req.currency)
+        .bind(total_debit)
+        .bind(total_credit)
+        .bind(now)
+        .bind(posted_by)
+        .bind(&idem)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        self.sink.publish(PostingEvent::AccountingPostPosted(AccountingPostPosted {
+            post_id,
+            journal_id,
+            company_id,
+            source_type,
+            source_id,
             total_debit,
             total_credit,
             occurred_at: now,
@@ -591,6 +800,166 @@ impl PostingService {
             );
         }
         Ok(map)
+    }
+
+    /// Same projection as `load_accounts`, but runs INSIDE the posting transaction and takes
+    /// `SELECT ... FOR UPDATE` on the affected account rows (visited in ascending id order so
+    /// concurrent multi-account posts can't deadlock). This is the concurrency fence: it makes the
+    /// `current_balance` + `MAX(sequence_number)` reads that follow authoritative and serialized
+    /// per account, so distinct-source posts to one account can't interleave.
+    async fn load_accounts_locked(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        req: &PostingRequest,
+    ) -> Result<HashMap<Uuid, AccountInfo>, PostingError> {
+        let mut ids: Vec<Uuid> = req.lines.iter().map(|l| l.account_id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        let rows = sqlx::query(
+            r#"SELECT id, account_number, name, account_type::text AS at,
+                      account_subtype::text AS st, normal_balance::text AS nb,
+                      is_detail, is_header, status::text AS status, current_balance
+               FROM accounting.accounts
+               WHERE company_id=$1 AND id = ANY($2) AND (metadata->>'deleted_at') IS NULL
+               ORDER BY id
+               FOR UPDATE"#,
+        )
+        .bind(req.company_id)
+        .bind(&ids)
+        .fetch_all(conn)
+        .await?;
+
+        let mut map = HashMap::new();
+        for row in rows {
+            let id: Uuid = row.get("id");
+            map.insert(
+                id,
+                AccountInfo {
+                    number: row.get("account_number"),
+                    name: row.get("name"),
+                    account_type: row.get("at"),
+                    subtype: row.get("st"),
+                    normal_balance: row.get("nb"),
+                    is_detail: row.get("is_detail"),
+                    is_header: row.get("is_header"),
+                    status: row.get("status"),
+                    current_balance: row.get("current_balance"),
+                },
+            );
+        }
+        Ok(map)
+    }
+
+    /// Shared ledger-write core: for each line, append an immutable `accounting.ledgers` row with
+    /// running balance + monotonic `sequence_number`, back-link the journal_line, and persist the
+    /// updated account balances. The accounts MUST already be locked (`FOR UPDATE`) by the caller
+    /// so the `MAX(sequence_number)` / `current_balance` reads are authoritative and serialized per
+    /// account. Used by both `post()` (fresh journal_lines) and `post_journal()` (existing draft
+    /// journal_lines). Returns `(total_debit, total_credit)`.
+    async fn append_ledger_entries(
+        tx: &mut sqlx::PgConnection,
+        ctx: &LedgerCtx,
+        lines: &[LedgerEntryInput],
+        accounts: &HashMap<Uuid, AccountInfo>,
+    ) -> Result<(Decimal, Decimal), PostingError> {
+        // Running balance + sequence per account (seeded from the locked accounts + existing ledger).
+        let mut running: HashMap<Uuid, Decimal> =
+            accounts.iter().map(|(id, a)| (*id, a.current_balance)).collect();
+        let mut seq: HashMap<Uuid, i32> = HashMap::new();
+        for id in accounts.keys() {
+            let max: i32 = sqlx::query_scalar(
+                "SELECT COALESCE(MAX(sequence_number),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2",
+            )
+            .bind(ctx.company_id)
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await?;
+            seq.insert(*id, max);
+        }
+
+        let mut total_debit = Decimal::ZERO;
+        let mut total_credit = Decimal::ZERO;
+
+        for line in lines {
+            total_debit += line.debit;
+            total_credit += line.credit;
+            let acct = &accounts[&line.account_id];
+
+            // balance_change per normal-balance side; ledger stores raw non-negative sides.
+            let change = if acct.normal_balance == "debit" {
+                line.debit - line.credit
+            } else {
+                line.credit - line.debit
+            };
+            let before = *running.get(&line.account_id).unwrap();
+            let after = before + change;
+            running.insert(line.account_id, after);
+            let s = seq.get_mut(&line.account_id).unwrap();
+            *s += 1;
+            let sequence_number = *s;
+
+            let ledger_id = Uuid::new_v4();
+            sqlx::query(
+                r#"INSERT INTO accounting.ledgers
+                    (id, company_id, account_id, account_number, account_name, account_type,
+                     normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
+                     posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, currency,
+                     debit_amount, credit_amount, balance_before, balance_after, balance_change,
+                     sequence_number, branch_id, party_type, party_id, cost_center_id, project_id,
+                     department_id, is_reversed)
+                   VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::normal_balance,$8,$9,$10,$11,$12,$13,
+                           $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25::party_type,$26,$27,$28,$29,$30)"#,
+            )
+            .bind(ledger_id)
+            .bind(ctx.company_id)
+            .bind(line.account_id)
+            .bind(&acct.number)
+            .bind(&acct.name)
+            .bind(&acct.account_type)
+            .bind(&acct.normal_balance)
+            .bind(ctx.journal_id)
+            .bind(&ctx.journal_number)
+            .bind(line.journal_line_id)
+            .bind(ctx.posting_date)
+            .bind(ctx.posting_date)
+            .bind(ctx.fiscal_period_id)
+            .bind(ctx.fiscal_year)
+            .bind(ctx.fiscal_month)
+            .bind(ctx.description.clone().unwrap_or_else(|| acct.name.clone()))
+            .bind(&ctx.currency)
+            .bind(line.debit)
+            .bind(line.credit)
+            .bind(before)
+            .bind(after)
+            .bind(change)
+            .bind(sequence_number)
+            .bind(ctx.branch_id)
+            .bind(&line.party_type)
+            .bind(line.party_id)
+            .bind(line.cost_center_id)
+            .bind(line.project_id)
+            .bind(line.department_id)
+            .bind(ctx.is_reversing)
+            .execute(&mut *tx)
+            .await?;
+
+            sqlx::query("UPDATE accounting.journal_lines SET ledger_id=$1 WHERE id=$2")
+                .bind(ledger_id)
+                .bind(line.journal_line_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        // Persist updated running balances.
+        for (account_id, balance) in &running {
+            sqlx::query("UPDATE accounting.accounts SET current_balance=$1 WHERE id=$2")
+                .bind(balance)
+                .bind(account_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        Ok((total_debit, total_credit))
     }
 
     async fn find_period_id(&self, req: &PostingRequest) -> Result<Option<Uuid>, PostingError> {

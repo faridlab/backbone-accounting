@@ -84,8 +84,98 @@ async fn concurrent_double_post_does_not_double_count() {
     assert_eq!(ar_balance, dec("1110000.00"), "A/R charged once, not twice");
 }
 
-// ── Probe 2: guarded composition does NOT expose write verbs on posted GL entities ──
+// ── Probe 2: DISTINCT sources posting concurrently to the SAME account cannot corrupt the
+//            running-balance chain (per-account FOR UPDATE fence). This is the case ADR-0010's
+//            probe did NOT cover — it only tested same-source dedup.
 #[tokio::test]
+async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
+    let pool = pool().await;
+    let company = Uuid::new_v4();
+    // Two accounts: Cash (debit-normal) and Revenue (credit-normal). 8 posts will hit BOTH.
+    let cash = Uuid::new_v4();
+    let rev = Uuid::new_v4();
+    for (id, code, name, at, st, nb) in [
+        (cash, "1100", "Cash", "asset", "cash", "debit"),
+        (rev, "4000", "Revenue", "revenue", "operating_revenue", "credit"),
+    ] {
+        sqlx::query(
+            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
+                account_subtype, normal_balance, is_detail, is_header, status)
+               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+        )
+        .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
+        .execute(&pool).await.unwrap();
+    }
+    let svc = PostingService::new(pool.clone());
+    let amount = dec("100000.00");
+    let n = 8;
+
+    // N posts, each with a DISTINCT source_id + idempotency_key, all hitting Cash + Revenue.
+    let mut handles = Vec::new();
+    for i in 0..n {
+        let svc = svc.clone();
+        let source = Uuid::new_v4();
+        handles.push(tokio::spawn(async move {
+            let mut r = PostingRequest::original(
+                company,
+                "order",
+                source,
+                chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+            )
+            .with_idempotency_key(format!("probe2-{i}"));
+            r.lines = vec![
+                PostingLine { account_id: cash, debit: amount, credit: Decimal::ZERO, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+                PostingLine { account_id: rev, debit: Decimal::ZERO, credit: amount, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+            ];
+            svc.post(r, None).await.unwrap()
+        }));
+    }
+    for h in handles {
+        h.await.unwrap();
+    }
+
+    let expected = dec("800000.00"); // 8 * 100000
+
+    // (a) No duplicate sequence_number per account — the running-balance chain is unbroken.
+    for acct in [cash, rev] {
+        let dups: i64 = sqlx::query_scalar(
+            r#"SELECT COUNT(*) FROM (
+                 SELECT sequence_number FROM accounting.ledgers
+                 WHERE company_id=$1 AND account_id=$2
+                 GROUP BY sequence_number HAVING COUNT(*) > 1
+               ) t"#,
+        )
+        .bind(company).bind(acct).fetch_one(&pool).await.unwrap();
+        assert_eq!(dups, 0, "account {acct} has duplicate sequence_number — balance chain corrupted");
+    }
+
+    // (b) balance_after, ordered by sequence_number, is strictly monotonic and continuous
+    //     (each row's balance_before == prior row's balance_after, first == 0).
+    for acct in [cash, rev] {
+        let rows: Vec<(Decimal, Decimal, Decimal)> = sqlx::query_as(
+            r#"SELECT balance_before, balance_change, balance_after FROM accounting.ledgers
+               WHERE company_id=$1 AND account_id=$2 ORDER BY sequence_number"#,
+        )
+        .bind(company).bind(acct).fetch_all(&pool).await.unwrap();
+        assert_eq!(rows.len() as i32, n, "expected {n} ledger rows per account");
+        let mut prev_after = Decimal::ZERO;
+        for (k, (before, change, after)) in rows.iter().enumerate() {
+            assert_eq!(before, &prev_after, "row {k}: balance_before != prior balance_after (chain broken)");
+            assert_eq!(*after, *before + *change, "row {k}: balance_after != before + change");
+            prev_after = *after;
+        }
+        assert_eq!(prev_after, expected, "final balance_after != expected sum");
+    }
+
+    // (c) Cached account balance agrees with the final ledger balance_after.
+    for acct in [cash, rev] {
+        let bal: Decimal = sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
+            .bind(acct).fetch_one(&pool).await.unwrap();
+        assert_eq!(bal, expected, "account {acct} current_balance drifted from ledger sum");
+    }
+}
+
+// ── Probe 3: guarded composition does NOT expose write verbs on posted GL entities ──#[tokio::test]
 async fn guarded_routes_lock_posted_gl_writes() {
     let pool = pool().await;
     let module = AccountingModule::builder().with_database(pool).build().unwrap();
