@@ -517,6 +517,9 @@ impl backbone_orm::EntityRepoMeta for Ledger {
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_name", "journal_number", "description", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("account", "accounts", "accountId"), ("journal", "journals", "journalId"), ("journalLine", "journal_lines", "journalLineId"), ("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("reconciliation", "reconciliations", "reconciliationId"), ("reversedBy", "ledgers", "reversedById"), ("reverses", "ledgers", "reversesId"), ("costCenter", "cost_centers", "costCenterId")]
     }

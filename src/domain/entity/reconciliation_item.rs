@@ -465,6 +465,9 @@ impl backbone_orm::EntityRepoMeta for ReconciliationItem {
     fn search_fields() -> &'static [&'static str] {
         &["source"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("reconciliation", "reconciliations", "reconciliationId"), ("ledger", "ledgers", "ledgerId"), ("journal", "journals", "journalId"), ("matchedWith", "reconciliation_items", "matchedWithId"), ("adjustmentJournal", "journals", "adjustmentJournalId")]
     }

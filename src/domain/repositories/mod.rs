@@ -78,7 +78,6 @@ pub use reconciliation_item_repository::{
     ReconciliationItemPaginatedResult,
     ReconciliationItemFilter,
 };
-
 // <<< CUSTOM
 // Hand-authored ports for the GL-posting contract (not schema-derived).
 pub mod posting_repository;

@@ -481,6 +481,9 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_name", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("journal", "journals", "journalId"), ("account", "accounts", "accountId"), ("relatedLine", "journal_lines", "relatedLineId"), ("reconciliation", "reconciliations", "reconciliationId"), ("ledger", "ledgers", "ledgerId"), ("costCenter", "cost_centers", "costCenterId")]
     }

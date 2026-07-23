@@ -527,6 +527,9 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
     fn search_fields() -> &'static [&'static str] {
         &["reconciliation_number", "account_number", "account_name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("account", "accounts", "accountId"), ("previousReconciliation", "reconciliations", "previousReconciliationId")]
     }

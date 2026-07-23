@@ -504,6 +504,9 @@ impl backbone_orm::EntityRepoMeta for Account {
     fn search_fields() -> &'static [&'static str] {
         &["account_number", "account_code", "name", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("parent", "accounts", "parentId"), ("source", "accounts", "sourceId"), ("taxAccount", "accounts", "taxAccountId")]
     }

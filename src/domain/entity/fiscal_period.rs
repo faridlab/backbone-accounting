@@ -482,6 +482,9 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
     fn search_fields() -> &'static [&'static str] {
         &["period_code", "name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("parent", "fiscal_periods", "parentId")]
     }

@@ -396,6 +396,9 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
     fn search_fields() -> &'static [&'static str] {
         &["currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("journal", "journals", "journalId"), ("reversesPost", "accounting_posts", "reversesPostId"), ("reversedByPost", "accounting_posts", "reversedByPostId")]
     }

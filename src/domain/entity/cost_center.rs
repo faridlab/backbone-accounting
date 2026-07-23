@@ -271,6 +271,9 @@ impl backbone_orm::EntityRepoMeta for CostCenter {
     fn search_fields() -> &'static [&'static str] {
         &["code", "name"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("parent", "cost_centers", "parentId")]
     }

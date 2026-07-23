@@ -601,6 +601,9 @@ impl backbone_orm::EntityRepoMeta for Journal {
     fn search_fields() -> &'static [&'static str] {
         &["journal_number", "description", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
         &[("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("reversedBy", "journals", "reversedById"), ("reverses", "journals", "reversesId")]
     }

@@ -778,6 +778,9 @@ impl backbone_orm::EntityRepoMeta for FinancialStatement {
     fn search_fields() -> &'static [&'static str] {
         &["statement_number", "name", "currency"]
     }
+    fn company_field() -> Option<&'static str> {
+        Some("company_id")
+    }
 }
 
 /// Builder for FinancialStatement entity
