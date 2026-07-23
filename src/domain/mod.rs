@@ -6,15 +6,14 @@ pub mod entity;
 pub mod repositories;
 pub mod services;
 pub mod specifications;
-pub mod value_objects;
 pub mod event;
 
 // Re-export commonly used types
 pub use repositories::*;
 pub use services::*;
 pub use specifications::*;
-pub use value_objects::*;
 pub use entity::*;
 
 // <<< CUSTOM
+pub mod gl_posting;
 // END CUSTOM

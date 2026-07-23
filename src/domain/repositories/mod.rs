@@ -78,3 +78,23 @@ pub use reconciliation_item_repository::{
     ReconciliationItemPaginatedResult,
     ReconciliationItemFilter,
 };
+
+// <<< CUSTOM
+// Hand-authored ports for the GL-posting contract (not schema-derived).
+pub mod posting_repository;
+pub mod journal_workflow_repository;
+pub mod period_close_repository;
+pub mod bank_reconciliation_repository;
+pub mod reporting_repository;
+pub use posting_repository::{
+    FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
+    PostingCommit, PostingRepository, PostingWrite, ReversalSource,
+};
+pub use journal_workflow_repository::{JournalStatusRow, JournalWorkflowRepository};
+pub use period_close_repository::{PeriodCloseRepository, PeriodRow, PlBalanceRow};
+pub use bank_reconciliation_repository::{
+    BankReconciliationRepository, BookEntryRow, MatchedPair, ReconciliationCommit, UnmatchedBook,
+    UnmatchedStatement,
+};
+pub use reporting_repository::{AccountSumRow, ReportingRepository};
+// END CUSTOM

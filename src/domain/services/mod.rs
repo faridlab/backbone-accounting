@@ -25,4 +25,5 @@ pub use reconciliation_domain_policy::ReconciliationDomainPolicy;
 pub use reconciliation_item_domain_policy::ReconciliationItemDomainPolicy;
 
 // <<< CUSTOM
+pub mod posting_rules;
 // END CUSTOM
