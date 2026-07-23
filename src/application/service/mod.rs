@@ -23,6 +23,7 @@ pub mod posting_service;
 pub mod reporting_service;
 pub mod bank_reconciliation_service;
 pub mod period_close_service;
+pub mod journal_workflow_service;
 // END CUSTOM
 
 pub use account_service::AccountService;
@@ -47,4 +48,5 @@ pub use bank_reconciliation_service::{
     BankReconciliationService, ReconcileError, ReconcileRequest, ReconcileResult, StatementLine,
 };
 pub use period_close_service::{PeriodCloseError, PeriodCloseResult, PeriodCloseService};
+pub use journal_workflow_service::{JournalWorkflowError, JournalWorkflowService};
 // END CUSTOM
