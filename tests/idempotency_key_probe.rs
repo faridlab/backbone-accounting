@@ -54,7 +54,7 @@ async fn ikp1_same_key_dedups() {
     let company = Uuid::new_v4();
     let exp = account(&pool, company, "5000-K", "expense", "operating_expense", "debit").await;
     let bank = account(&pool, company, "1000-K", "asset", "bank", "debit").await;
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
     let key = format!("run:{}", Uuid::new_v4());
 
     let a = svc.post(balanced(company, Uuid::new_v4(), exp, bank, dec("1000")).with_idempotency_key(&key), None).await.unwrap();
@@ -72,7 +72,7 @@ async fn ikp2_distinct_keys_same_source_id_both_post() {
     let company = Uuid::new_v4();
     let exp = account(&pool, company, "5000-K", "expense", "operating_expense", "debit").await;
     let bank = account(&pool, company, "1000-K", "asset", "bank", "debit").await;
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
     let one_document = Uuid::new_v4(); // e.g. a work order or a dividend — ONE source id, TWO posts
 
     let a = svc.post(balanced(company, one_document, exp, bank, dec("1000")).with_idempotency_key(format!("{one_document}:consume")), None).await.unwrap();
@@ -89,7 +89,7 @@ async fn ikp3_keyless_still_dedups_on_tuple() {
     let company = Uuid::new_v4();
     let exp = account(&pool, company, "5000-K", "expense", "operating_expense", "debit").await;
     let bank = account(&pool, company, "1000-K", "asset", "bank", "debit").await;
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
     let source = Uuid::new_v4();
 
     // No idempotency_key set — legacy tuple dedup applies.

@@ -17,6 +17,25 @@ user_owned:
   - "src/application/service/journal_workflow_service.rs"
   - "src/presentation/http/journal_workflow_handler.rs"
 
+  # GL-posting domain contract types (shared by ports, rules, and the service).
+  - "src/domain/gl_posting.rs"
+  # Pure posting-validation rules (no I/O).
+  - "src/domain/services/posting_rules.rs"
+
+  # Hand-authored repository ports (domain layer).
+  - "src/domain/repositories/posting_repository.rs"
+  - "src/domain/repositories/journal_workflow_repository.rs"
+  - "src/domain/repositories/period_close_repository.rs"
+  - "src/domain/repositories/bank_reconciliation_repository.rs"
+  - "src/domain/repositories/reporting_repository.rs"
+
+  # SQLx adapters for those ports (infrastructure layer) — all persistence lives here.
+  - "src/infrastructure/persistence/posting_repository.rs"
+  - "src/infrastructure/persistence/journal_workflow_repository.rs"
+  - "src/infrastructure/persistence/period_close_repository.rs"
+  - "src/infrastructure/persistence/bank_reconciliation_repository.rs"
+  - "src/infrastructure/persistence/reporting_repository.rs"
+
   # Financial-statement generation (Trial Balance / Balance Sheet / Income Statement).
   - "src/application/service/reporting_service.rs"
   - "src/presentation/http/reporting_handler.rs"

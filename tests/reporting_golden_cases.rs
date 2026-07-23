@@ -108,8 +108,8 @@ async fn post_purchase_invoice(svc: &PostingService, company: Uuid, a: &HashMap<
 async fn rgc1_after_sales_invoice() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let reports = ReportingService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
     post_sales_invoice(&posting, company, &a).await;
 
     let as_of = NaiveDate::from_ymd_opt(2026, 6, 30).unwrap();
@@ -141,8 +141,8 @@ async fn rgc1_after_sales_invoice() {
 async fn rgc2_after_sales_and_purchase() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let reports = ReportingService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
     post_sales_invoice(&posting, company, &a).await;
     post_purchase_invoice(&posting, company, &a).await;
 
@@ -170,8 +170,8 @@ async fn rgc2_after_sales_and_purchase() {
 async fn rgc3_period_filter() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let reports = ReportingService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
     post_sales_invoice(&posting, company, &a).await; // posted on 2026-06-15
 
     // A July period contains no activity → revenue 0.

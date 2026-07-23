@@ -33,7 +33,7 @@ pub struct PeriodQuery {
     pub period_end: NaiveDate,
 }
 
-fn err(e: sqlx::Error) -> (StatusCode, Json<serde_json::Value>) {
+fn err(e: anyhow::Error) -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(serde_json::json!({ "success": false, "error": e.to_string() })),

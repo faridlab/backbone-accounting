@@ -50,7 +50,7 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
 async fn concurrent_double_post_does_not_double_count() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
     let cust = Uuid::new_v4();
     let source = Uuid::new_v4(); // SAME source for both concurrent posts
 
@@ -106,7 +106,7 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
         .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
         .execute(&pool).await.unwrap();
     }
-    let svc = PostingService::new(pool.clone());
+    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
     let amount = dec("100000.00");
     let n = 8;
 

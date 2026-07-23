@@ -2,17 +2,22 @@
 //! entries on a bank account, mark the matches reconciled, and persist a Reconciliation +
 //! ReconciliationItems.
 //!
-//! Hand-authored behavior (user-owned; see `metaphor.codegen.yaml`). Proven by
-//! `tests/reconciliation_golden_cases.rs`. Matching is greedy by exact signed amount
-//! (ledger net = debit − credit for the bank asset account) — timing/partial matches are a
-//! later enhancement. Named `bank_reconciliation_service` to avoid the generated CRUD
-//! `reconciliation_service`.
+//! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Application orchestration over the
+//! `BankReconciliationRepository` port — no `sqlx`/`PgPool` here. Matching is greedy by exact
+//! signed amount; timing/partial matches are a later enhancement. Proven by
+//! `tests/reconciliation_golden_cases.rs`.
+
+use std::sync::Arc;
 
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
+
+use crate::domain::repositories::bank_reconciliation_repository::{
+    BankReconciliationRepository, MatchedPair, ReconciliationCommit, UnmatchedBook,
+    UnmatchedStatement,
+};
 
 /// One line imported from a bank statement.
 #[derive(Debug, Clone, Deserialize)]
@@ -47,201 +52,122 @@ pub struct ReconcileResult {
 #[derive(Debug)]
 pub enum ReconcileError {
     AccountNotFound(Uuid),
-    Db(sqlx::Error),
+    Internal(String),
 }
 impl std::fmt::Display for ReconcileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ReconcileError::AccountNotFound(id) => write!(f, "account_not_found: {id}"),
-            ReconcileError::Db(e) => write!(f, "db_error: {e}"),
+            ReconcileError::Internal(e) => write!(f, "internal_error: {e}"),
         }
     }
 }
 impl std::error::Error for ReconcileError {}
-impl From<sqlx::Error> for ReconcileError {
-    fn from(e: sqlx::Error) -> Self {
-        ReconcileError::Db(e)
-    }
+
+fn internal(e: anyhow::Error) -> ReconcileError {
+    ReconcileError::Internal(e.to_string())
 }
 
+/// One book entry during matching (mutable `matched` flag).
 struct BookEntry {
     ledger_id: Uuid,
-    amount: Decimal, // signed net (debit − credit)
+    amount: Decimal,
     reference: Option<String>,
     matched: bool,
 }
 
 #[derive(Clone)]
 pub struct BankReconciliationService {
-    db_pool: PgPool,
+    repo: Arc<dyn BankReconciliationRepository>,
 }
 
 impl BankReconciliationService {
-    pub fn new(db_pool: PgPool) -> Self {
-        Self { db_pool }
+    pub fn new(repo: Arc<dyn BankReconciliationRepository>) -> Self {
+        Self { repo }
     }
 
     pub async fn reconcile(&self, req: ReconcileRequest) -> Result<ReconcileResult, ReconcileError> {
-        // Account (denormalized fields for the Reconciliation record).
-        let acct = sqlx::query("SELECT account_number, name FROM accounting.accounts WHERE id=$1 AND company_id=$2")
-            .bind(req.account_id)
-            .bind(req.company_id)
-            .fetch_optional(&self.db_pool)
-            .await?
-            .ok_or(ReconcileError::AccountNotFound(req.account_id))?;
-        let account_number: String = acct.get("account_number");
-        let account_name: String = acct.get("name");
+        let Some((account_number, account_name)) = self
+            .repo
+            .find_bank_account(req.account_id, req.company_id)
+            .await
+            .map_err(internal)?
+        else {
+            return Err(ReconcileError::AccountNotFound(req.account_id));
+        };
 
-        // Unreconciled book entries in the period.
-        let rows = sqlx::query(
-            r#"SELECT id, debit_amount, credit_amount, reference
-               FROM accounting.ledgers
-               WHERE company_id=$1 AND account_id=$2 AND is_reconciled=FALSE
-                 AND posting_date BETWEEN $3 AND $4
-               ORDER BY posting_date, sequence_number"#,
-        )
-        .bind(req.company_id)
-        .bind(req.account_id)
-        .bind(req.period_start)
-        .bind(req.statement_date)
-        .fetch_all(&self.db_pool)
-        .await?;
+        let rows = self
+            .repo
+            .find_unreconciled_book(req.company_id, req.account_id, req.period_start, req.statement_date)
+            .await
+            .map_err(internal)?;
         let mut book: Vec<BookEntry> = rows
             .into_iter()
-            .map(|r| {
-                let d: Decimal = r.get("debit_amount");
-                let c: Decimal = r.get("credit_amount");
-                BookEntry { ledger_id: r.get("id"), amount: d - c, reference: r.get("reference"), matched: false }
-            })
+            .map(|r| BookEntry { ledger_id: r.ledger_id, amount: r.amount, reference: r.reference, matched: false })
             .collect();
 
         // Greedy match: each statement line to the first unmatched book entry of equal amount.
-        let mut matched: Vec<(Uuid, StatementLine)> = Vec::new();
-        let mut unmatched_stmt: Vec<StatementLine> = Vec::new();
+        let mut matched: Vec<MatchedPair> = Vec::new();
+        let mut unmatched_stmt: Vec<UnmatchedStatement> = Vec::new();
         for line in &req.statement_lines {
             match book.iter_mut().find(|b| !b.matched && b.amount == line.amount) {
                 Some(b) => {
                     b.matched = true;
-                    matched.push((b.ledger_id, line.clone()));
+                    matched.push(MatchedPair { ledger_id: b.ledger_id, statement_reference: line.reference.clone() });
                 }
-                None => unmatched_stmt.push(line.clone()),
+                None => unmatched_stmt.push(UnmatchedStatement { reference: line.reference.clone(), amount: line.amount }),
             }
         }
-        let unmatched_book: Vec<&BookEntry> = book.iter().filter(|b| !b.matched).collect();
+        let unmatched_book: Vec<UnmatchedBook> = book
+            .iter()
+            .filter(|b| !b.matched)
+            .map(|b| UnmatchedBook { ledger_id: b.ledger_id, amount: b.amount })
+            .collect();
 
-        // Balances.
-        let closing_book_balance: Decimal = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(debit_amount - credit_amount),0) FROM accounting.ledgers WHERE company_id=$1 AND account_id=$2 AND posting_date <= $3",
-        )
-        .bind(req.company_id)
-        .bind(req.account_id)
-        .bind(req.statement_date)
-        .fetch_one(&self.db_pool)
-        .await?;
+        let closing_book_balance = self
+            .repo
+            .closing_book_balance(req.company_id, req.account_id, req.statement_date)
+            .await
+            .map_err(internal)?;
         let closing_statement_balance: Decimal = req.statement_lines.iter().map(|l| l.amount).sum();
         let difference = closing_book_balance - closing_statement_balance;
         let is_balanced = unmatched_book.is_empty() && unmatched_stmt.is_empty();
 
-        // Persist (transaction).
-        let mut tx = self.db_pool.begin().await?;
-        let now = Utc::now();
-        let reconciliation_id = Uuid::new_v4();
+        // Capture counts before the vectors move into the commit.
+        let matched_count = matched.len() as i32;
+        let unmatched_book_count = unmatched_book.len() as i32;
+        let unmatched_statement_count = unmatched_stmt.len() as i32;
+
         let number = format!("REC-{}-{}", req.statement_date.format("%Y%m%d"), &Uuid::new_v4().to_string()[..8]);
         let status = if is_balanced { "completed" } else { "in_progress" };
 
-        sqlx::query(
-            r#"INSERT INTO accounting.reconciliations
-                (id, company_id, reconciliation_number, account_id, account_number, account_name,
-                 period_start, period_end, statement_date, opening_book_balance,
-                 opening_statement_balance, closing_book_balance, closing_statement_balance,
-                 matched_count, difference, is_balanced, status)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,0,$10,$11,$12,$13,$14,$15::reconciliation_status)"#,
-        )
-        .bind(reconciliation_id)
-        .bind(req.company_id)
-        .bind(&number)
-        .bind(req.account_id)
-        .bind(&account_number)
-        .bind(&account_name)
-        .bind(req.period_start)
-        .bind(req.period_end)
-        .bind(req.statement_date)
-        .bind(closing_book_balance)
-        .bind(closing_statement_balance)
-        .bind(matched.len() as i32)
-        .bind(difference)
-        .bind(is_balanced)
-        .bind(status)
-        .execute(&mut *tx)
-        .await?;
-
-        let mut item_number = 0i32;
-        for (ledger_id, line) in &matched {
-            item_number += 1;
-            sqlx::query(
-                r#"INSERT INTO accounting.reconciliation_items
-                    (id, reconciliation_id, company_id, item_number, source, ledger_id,
-                     statement_reference, status, difference_amount)
-                   VALUES ($1,$2,$3,$4,'matched',$5,$6,'matched'::reconciliation_item_status,0)"#,
-            )
-            .bind(Uuid::new_v4())
-            .bind(reconciliation_id)
-            .bind(req.company_id)
-            .bind(item_number)
-            .bind(ledger_id)
-            .bind(&line.reference)
-            .execute(&mut *tx)
-            .await?;
-
-            sqlx::query("UPDATE accounting.ledgers SET is_reconciled=TRUE, reconciliation_id=$1, reconciled_at=$2 WHERE id=$3")
-                .bind(reconciliation_id)
-                .bind(now)
-                .bind(ledger_id)
-                .execute(&mut *tx)
-                .await?;
-        }
-        for b in &unmatched_book {
-            item_number += 1;
-            sqlx::query(
-                r#"INSERT INTO accounting.reconciliation_items
-                    (id, reconciliation_id, company_id, item_number, source, ledger_id, status,
-                     difference_amount, is_outstanding)
-                   VALUES ($1,$2,$3,$4,'book',$5,'unmatched'::reconciliation_item_status,$6,TRUE)"#,
-            )
-            .bind(Uuid::new_v4())
-            .bind(reconciliation_id)
-            .bind(req.company_id)
-            .bind(item_number)
-            .bind(b.ledger_id)
-            .bind(b.amount)
-            .execute(&mut *tx)
-            .await?;
-        }
-        for line in &unmatched_stmt {
-            item_number += 1;
-            sqlx::query(
-                r#"INSERT INTO accounting.reconciliation_items
-                    (id, reconciliation_id, company_id, item_number, source, statement_reference,
-                     status, difference_amount, is_outstanding)
-                   VALUES ($1,$2,$3,$4,'statement',$5,'unmatched'::reconciliation_item_status,$6,TRUE)"#,
-            )
-            .bind(Uuid::new_v4())
-            .bind(reconciliation_id)
-            .bind(req.company_id)
-            .bind(item_number)
-            .bind(&line.reference)
-            .bind(line.amount)
-            .execute(&mut *tx)
-            .await?;
-        }
-
-        tx.commit().await?;
+        let commit = ReconciliationCommit {
+            company_id: req.company_id,
+            account_id: req.account_id,
+            account_number,
+            account_name,
+            reconciliation_number: number,
+            period_start: req.period_start,
+            period_end: req.period_end,
+            statement_date: req.statement_date,
+            closing_book_balance,
+            closing_statement_balance,
+            matched_count,
+            difference,
+            is_balanced,
+            status: status.to_string(),
+            matched,
+            unmatched_book,
+            unmatched_statement: unmatched_stmt,
+            now: Utc::now(),
+        };
+        let reconciliation_id = self.repo.commit_reconciliation(commit).await.map_err(internal)?;
 
         Ok(ReconcileResult {
             reconciliation_id,
-            matched_count: matched.len() as i32,
-            unmatched_book: unmatched_book.len() as i32,
-            unmatched_statement: unmatched_stmt.len() as i32,
+            matched_count,
+            unmatched_book: unmatched_book_count,
+            unmatched_statement: unmatched_statement_count,
             closing_book_balance,
             closing_statement_balance,
             difference,

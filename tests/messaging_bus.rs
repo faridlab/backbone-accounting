@@ -95,7 +95,7 @@ async fn posting_service_publishes_to_bus() {
     }
 
     let bus = Arc::new(IntegrationEventBus::new());
-    let svc = PostingService::with_sink(pool.clone(), Arc::new(MessagingSink::new(bus.clone())));
+    let svc = PostingService::with_sink(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), Arc::new(MessagingSink::new(bus.clone())));
 
     let mut req = PostingRequest::original(company, "order", Uuid::new_v4(), chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
     req.lines = vec![

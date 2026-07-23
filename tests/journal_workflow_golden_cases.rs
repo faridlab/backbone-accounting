@@ -135,7 +135,7 @@ async fn approve_posts_draft_journal() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(pool.clone());
+    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
 
     svc.submit(j, company).await.unwrap();
     let result = svc.approve(j, company, None).await.unwrap();
@@ -173,7 +173,7 @@ async fn reject_keeps_ledger_empty() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(pool.clone());
+    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
 
     svc.submit(j, company).await.unwrap();
     svc.reject(j, company, "does not look right".into(), None)
@@ -196,7 +196,7 @@ async fn void_reverses_to_zero() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(pool.clone());
+    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
 
     svc.submit(j, company).await.unwrap();
     svc.approve(j, company, None).await.unwrap();
@@ -235,7 +235,7 @@ async fn submit_rejects_non_draft() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(pool.clone());
+    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
 
     svc.submit(j, company).await.unwrap(); // draft → pending_approval
     // A second submit must fail (now pending_approval, not draft).

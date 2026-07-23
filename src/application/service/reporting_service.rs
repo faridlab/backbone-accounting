@@ -1,36 +1,30 @@
 //! Financial-statement generation — Trial Balance, Balance Sheet, Income Statement.
 //!
-//! Hand-authored behavior (user-owned; see `metaphor.codegen.yaml`). Computes statements from
-//! the immutable `ledgers` table (never from cached `accounts.current_balance`, so any as-of
-//! date / period works). Proven by `tests/reporting_golden_cases.rs`.
+//! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Application orchestration over the
+//! `ReportingRepository` port — no `sqlx`/`PgPool` here. Computes statements from the immutable
+//! `ledgers` table (never from cached `accounts.current_balance`, so any as-of date / period
+//! works). Proven by `tests/reporting_golden_cases.rs`.
 //!
-//! Sign convention (matches posting_service): a debit-normal account's balance = Σdebit−Σcredit;
-//! a credit-normal account's balance = Σcredit−Σdebit. The global ledger is always balanced
-//! (Σdebit = Σcredit), so a Trial Balance always foots and a Balance Sheet always balances via
-//! `Assets = Liabilities + Equity + CurrentEarnings` (retained earnings are not closed here —
-//! period-close is a separate concern).
+//! Sign convention: a debit-normal account's balance = Σdebit−Σcredit; a credit-normal account's
+//! balance = Σcredit−Σdebit. The global ledger is always balanced (Σdebit = Σcredit), so a Trial
+//! Balance always foots and a Balance Sheet always balances via
+//! `Assets = Liabilities + Equity + CurrentEarnings`.
+
+use std::sync::Arc;
 
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use serde::Serialize;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-/// One account's activity within a date window.
-struct AcctSum {
-    account_type: String,
-    account_number: String,
-    name: String,
-    debit: Decimal,
-    credit: Decimal,
-}
+use crate::domain::repositories::reporting_repository::ReportingRepository;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TrialBalanceLine {
     pub account_number: String,
     pub name: String,
     pub account_type: String,
-    pub debit: Decimal,  // balance shown on its normal side
+    pub debit: Decimal,
     pub credit: Decimal,
 }
 
@@ -51,7 +45,6 @@ pub struct BalanceSheet {
     pub assets: Decimal,
     pub liabilities: Decimal,
     pub equity: Decimal,
-    /// Undistributed profit/loss since inception (Revenue − Expenses), not yet closed to equity.
     pub current_earnings: Decimal,
     pub total_liabilities_and_equity: Decimal,
     pub balanced: bool,
@@ -73,52 +66,12 @@ pub struct IncomeStatement {
 /// Report generator over the GL.
 #[derive(Clone)]
 pub struct ReportingService {
-    db_pool: PgPool,
+    repo: Arc<dyn ReportingRepository>,
 }
 
 impl ReportingService {
-    pub fn new(db_pool: PgPool) -> Self {
-        Self { db_pool }
-    }
-
-    /// Per-detail-account debit/credit sums over `[lo, hi]` (lo = None → since inception).
-    async fn account_sums(
-        &self,
-        company_id: Uuid,
-        lo: Option<NaiveDate>,
-        hi: NaiveDate,
-    ) -> Result<Vec<AcctSum>, sqlx::Error> {
-        let rows = sqlx::query(
-            r#"SELECT a.account_type::text AS at, a.account_number AS num, a.name AS name,
-                      COALESCE(SUM(l.debit_amount),0) AS dr,
-                      COALESCE(SUM(l.credit_amount),0) AS cr
-               FROM accounting.accounts a
-               LEFT JOIN accounting.ledgers l
-                 ON l.account_id = a.id
-                AND l.posting_date <= $2
-                AND ($3::date IS NULL OR l.posting_date >= $3)
-               WHERE a.company_id = $1
-                 AND a.is_detail = TRUE
-                 AND (a.metadata->>'deleted_at') IS NULL
-               GROUP BY a.id, a.account_type, a.account_number, a.name
-               ORDER BY a.account_number"#,
-        )
-        .bind(company_id)
-        .bind(hi)
-        .bind(lo)
-        .fetch_all(&self.db_pool)
-        .await?;
-
-        Ok(rows
-            .into_iter()
-            .map(|r| AcctSum {
-                account_type: r.get("at"),
-                account_number: r.get("num"),
-                name: r.get("name"),
-                debit: r.get("dr"),
-                credit: r.get("cr"),
-            })
-            .collect())
+    pub fn new(repo: Arc<dyn ReportingRepository>) -> Self {
+        Self { repo }
     }
 
     /// Signed balance on the account's normal side.
@@ -133,15 +86,15 @@ impl ReportingService {
         &self,
         company_id: Uuid,
         as_of: NaiveDate,
-    ) -> Result<TrialBalance, sqlx::Error> {
-        let sums = self.account_sums(company_id, None, as_of).await?;
+    ) -> anyhow::Result<TrialBalance> {
+        let sums = self.repo.account_sums(company_id, None, as_of).await?;
         let mut lines = Vec::new();
         let mut total_debit = Decimal::ZERO;
         let mut total_credit = Decimal::ZERO;
         for s in &sums {
-            let net = s.debit - s.credit; // positive → net debit
+            let net = s.debit - s.credit;
             if net == Decimal::ZERO {
-                continue; // omit zero-activity accounts
+                continue;
             }
             let (debit, credit) = if net > Decimal::ZERO {
                 (net, Decimal::ZERO)
@@ -172,8 +125,8 @@ impl ReportingService {
         &self,
         company_id: Uuid,
         as_of: NaiveDate,
-    ) -> Result<BalanceSheet, sqlx::Error> {
-        let sums = self.account_sums(company_id, None, as_of).await?;
+    ) -> anyhow::Result<BalanceSheet> {
+        let sums = self.repo.account_sums(company_id, None, as_of).await?;
         let mut assets = Decimal::ZERO;
         let mut liabilities = Decimal::ZERO;
         let mut equity = Decimal::ZERO;
@@ -184,9 +137,6 @@ impl ReportingService {
                 "asset" => assets += bal,
                 "liability" => liabilities += bal,
                 "equity" => equity += bal,
-                // Current earnings = Revenue − Expenses. `bal` is the account's normal-side
-                // magnitude (revenue → cr−dr, expense → dr−cr), so revenue adds and expenses
-                // subtract.
                 "revenue" | "other_income" => current_earnings += bal,
                 "expense" | "cogs" | "other_expense" => current_earnings -= bal,
                 _ => {}
@@ -210,8 +160,9 @@ impl ReportingService {
         company_id: Uuid,
         period_start: NaiveDate,
         period_end: NaiveDate,
-    ) -> Result<IncomeStatement, sqlx::Error> {
+    ) -> anyhow::Result<IncomeStatement> {
         let sums = self
+            .repo
             .account_sums(company_id, Some(period_start), period_end)
             .await?;
         let mut revenue = Decimal::ZERO;

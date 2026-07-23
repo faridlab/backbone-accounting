@@ -77,8 +77,8 @@ fn req(company: Uuid, bank: Uuid, lines: Vec<StatementLine>) -> ReconcileRequest
 async fn rcg1_partial_match() {
     let pool = pool().await;
     let (company, bank, revenue) = seed(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let recon = BankReconciliationService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let recon = BankReconciliationService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(pool.clone())));
 
     receipt(&posting, company, bank, revenue, "100.00").await;
     receipt(&posting, company, bank, revenue, "200.00").await;
@@ -102,8 +102,8 @@ async fn rcg1_partial_match() {
 async fn rcg2_full_match() {
     let pool = pool().await;
     let (company, bank, revenue) = seed(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let recon = BankReconciliationService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let recon = BankReconciliationService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(pool.clone())));
 
     receipt(&posting, company, bank, revenue, "100.00").await;
     receipt(&posting, company, bank, revenue, "200.00").await;

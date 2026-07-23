@@ -78,8 +78,8 @@ async fn period_status(pool: &PgPool, id: Uuid) -> String {
 async fn pcg1_close_rolls_net_income() {
     let pool = pool().await;
     let s = seed(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let closer = PeriodCloseService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let closer = PeriodCloseService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPeriodCloseRepository::new(pool.clone())));
 
     post(&posting, s.company, vec![line(s.bank, "1000000.00", "0"), line(s.revenue, "0", "1000000.00")]).await;
     post(&posting, s.company, vec![line(s.expense, "400000.00", "0"), line(s.bank, "0", "400000.00")]).await;
@@ -103,8 +103,8 @@ async fn pcg1_close_rolls_net_income() {
 async fn pcg2_double_close_rejected() {
     let pool = pool().await;
     let s = seed(&pool).await;
-    let posting = PostingService::new(pool.clone());
-    let closer = PeriodCloseService::new(pool.clone());
+    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let closer = PeriodCloseService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPeriodCloseRepository::new(pool.clone())));
     post(&posting, s.company, vec![line(s.bank, "500000.00", "0"), line(s.revenue, "0", "500000.00")]).await;
 
     closer.close_period(s.company, s.period, s.retained).await.unwrap();

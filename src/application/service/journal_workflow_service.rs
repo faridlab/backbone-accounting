@@ -1,21 +1,20 @@
 //! Manual-journal approval workflow — the draft → submit → approve → post → void lifecycle.
 //!
-//! Hand-authored behavior (user-owned; survives regeneration). Composes `PostingService` for the
-//! actual ledger write: `approve` flips the journal to `approved` then calls `PostingService::
-//! post_journal` (which writes the immutable ledger rows atomically); `void` builds a reversal
-//! `PostingRequest` and posts it through `PostingService::post` (debit/credit swapped, linked both
-//! ways), then stamps the original journal voided. No new write paths — everything flows through the
-//! audited posting core.
+//! Hand-authored (user-owned; survives regeneration). Application orchestration over two ports:
+//! `JournalWorkflowRepository` for the journal status machine, and `PostingService` (backed by
+//! `PostingRepository`) for the actual ledger write. No `sqlx` / `PgPool` here.
 //!
 //! See `docs/business-flows/gl-posting.md` (manual-journal flow) and BRD §3.
 
+use std::sync::Arc;
+
 use chrono::Utc;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::application::service::posting_service::{
-    PostingError, PostingRequest, PostingResult, PostingService,
-};
+use crate::domain::gl_posting::{PostingError, PostingRequest};
+use crate::domain::repositories::journal_workflow_repository::JournalWorkflowRepository;
+use crate::domain::repositories::posting_repository::PostingRepository;
+use crate::application::service::posting_service::PostingService;
 
 /// Typed workflow failure. `code()` is the stable error string.
 #[derive(Debug)]
@@ -24,7 +23,7 @@ pub enum JournalWorkflowError {
     InvalidState { id: Uuid, current: String, expected: &'static str },
     NotPosted(Uuid),
     Posting(PostingError),
-    Db(sqlx::Error),
+    Internal(String),
 }
 
 impl JournalWorkflowError {
@@ -34,13 +33,13 @@ impl JournalWorkflowError {
             Self::InvalidState { .. } => "invalid_journal_state",
             Self::NotPosted(_) => "journal_not_posted",
             Self::Posting(_) => "posting_error",
-            Self::Db(_) => "internal_error",
+            Self::Internal(_) => "internal_error",
         }
     }
     pub fn http_status(&self) -> u16 {
         match self {
             Self::NotFound(_) => 404,
-            Self::Db(_) => 500,
+            Self::Internal(_) => 500,
             Self::Posting(e) => e.http_status(),
             _ => 422,
         }
@@ -56,78 +55,62 @@ impl std::fmt::Display for JournalWorkflowError {
             }
             Self::NotPosted(id) => write!(f, "journal_not_posted: {id}"),
             Self::Posting(e) => write!(f, "posting_error: {e}"),
-            Self::Db(e) => write!(f, "db_error: {e}"),
+            Self::Internal(e) => write!(f, "internal_error: {e}"),
         }
     }
 }
 impl std::error::Error for JournalWorkflowError {}
-impl From<sqlx::Error> for JournalWorkflowError {
-    fn from(e: sqlx::Error) -> Self {
-        Self::Db(e)
-    }
-}
 impl From<PostingError> for JournalWorkflowError {
     fn from(e: PostingError) -> Self {
         Self::Posting(e)
     }
 }
 
-/// The manual-journal workflow service. Owns a pool + a `PostingService` for ledger writes.
+fn internal(e: anyhow::Error) -> JournalWorkflowError {
+    JournalWorkflowError::Internal(e.to_string())
+}
+
+/// The manual-journal workflow service.
 #[derive(Clone)]
 pub struct JournalWorkflowService {
-    db_pool: PgPool,
+    workflow: Arc<dyn JournalWorkflowRepository>,
     posting: PostingService,
 }
 
 impl JournalWorkflowService {
-    pub fn new(db_pool: PgPool) -> Self {
+    pub fn new(posting_repo: Arc<dyn PostingRepository>, workflow: Arc<dyn JournalWorkflowRepository>) -> Self {
         Self {
-            posting: PostingService::new(db_pool.clone()),
-            db_pool,
+            posting: PostingService::new(posting_repo),
+            workflow,
         }
     }
 
     /// `draft → pending_approval`. Rejects if the journal is not `draft`.
     pub async fn submit(&self, journal_id: Uuid, company_id: Uuid) -> Result<(), JournalWorkflowError> {
-        let res = sqlx::query(
-            "UPDATE accounting.journals SET status='pending_approval'::journal_status \
-             WHERE id=$1 AND company_id=$2 AND status='draft'::journal_status \
-             AND (metadata->>'deleted_at') IS NULL",
-        )
-        .bind(journal_id)
-        .bind(company_id)
-        .execute(&self.db_pool)
-        .await?;
-        if res.rows_affected() == 0 {
+        let ok = self.workflow.submit(journal_id, company_id).await.map_err(internal)?;
+        if !ok {
             return Err(self.state_error(journal_id, company_id, "draft").await);
         }
         Ok(())
     }
 
-    /// `pending_approval → approved`, then post the journal through `PostingService::post_journal`
-    /// (writes the ledger, flips the journal to `posted`). Returns the posting result.
+    /// `pending_approval → approved`, then post the journal through `PostingService` (writes the
+    /// ledger, flips the journal to `posted`). Returns the posting result.
     pub async fn approve(
         &self,
         journal_id: Uuid,
         company_id: Uuid,
         approved_by: Option<Uuid>,
-    ) -> Result<PostingResult, JournalWorkflowError> {
+    ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
         let now = Utc::now();
-        let res = sqlx::query(
-            "UPDATE accounting.journals SET status='approved'::journal_status, approved_at=$1, approved_by=$2 \
-             WHERE id=$3 AND company_id=$4 AND status='pending_approval'::journal_status \
-             AND (metadata->>'deleted_at') IS NULL",
-        )
-        .bind(now)
-        .bind(approved_by)
-        .bind(journal_id)
-        .bind(company_id)
-        .execute(&self.db_pool)
-        .await?;
-        if res.rows_affected() == 0 {
+        let ok = self
+            .workflow
+            .approve(journal_id, company_id, approved_by, now)
+            .await
+            .map_err(internal)?;
+        if !ok {
             return Err(self.state_error(journal_id, company_id, "pending_approval").await);
         }
-        // Post the now-approved journal to the ledger (atomic; flips status → posted).
         Ok(self.posting.post_journal(journal_id, company_id, approved_by).await?)
     }
 
@@ -140,69 +123,40 @@ impl JournalWorkflowService {
         rejected_by: Option<Uuid>,
     ) -> Result<(), JournalWorkflowError> {
         let now = Utc::now();
-        let res = sqlx::query(
-            "UPDATE accounting.journals SET status='rejected'::journal_status, rejected_at=$1, \
-             rejected_by=$2, rejection_reason=$3 \
-             WHERE id=$4 AND company_id=$5 AND status IN ('draft','pending_approval') \
-             AND (metadata->>'deleted_at') IS NULL",
-        )
-        .bind(now)
-        .bind(rejected_by)
-        .bind(&reason)
-        .bind(journal_id)
-        .bind(company_id)
-        .execute(&self.db_pool)
-        .await?;
-        if res.rows_affected() == 0 {
+        let ok = self
+            .workflow
+            .reject(journal_id, company_id, &reason, rejected_by, now)
+            .await
+            .map_err(internal)?;
+        if !ok {
             return Err(self.state_error(journal_id, company_id, "draft or pending_approval").await);
         }
         Ok(())
     }
 
-    /// `posted → voided`: posts a reversal (debit/credit swapped, linked both ways) through
-    /// `PostingService::post`, then stamps the original journal voided. Per R7 the reversal lands in
-    /// the current open period, not the original's.
+    /// `posted → voided`: posts a reversal through `PostingService`, then stamps the journal voided.
     pub async fn void(
         &self,
         journal_id: Uuid,
         company_id: Uuid,
         voided_by: Option<Uuid>,
         reason: String,
-    ) -> Result<PostingResult, JournalWorkflowError> {
-        // Must be posted.
-        let row = sqlx::query(
-            r#"SELECT status::text AS status, currency FROM accounting.journals
-               WHERE id=$1 AND company_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
-        )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_optional(&self.db_pool)
-        .await?;
-        let row = row.ok_or(JournalWorkflowError::NotFound(journal_id))?;
-        let status: String = row.get("status");
-        if status != "posted" {
+    ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
+        let Some(status) = self.workflow.find_status(journal_id, company_id).await.map_err(internal)? else {
+            return Err(JournalWorkflowError::NotFound(journal_id));
+        };
+        if status.status != "posted" {
             return Err(JournalWorkflowError::InvalidState {
                 id: journal_id,
-                current: status,
+                current: status.status,
                 expected: "posted",
             });
         }
-        let currency: String = row.get("currency");
 
-        // Locate the original posted accounting_post to reverse.
-        let orig_post_id: Uuid = sqlx::query_scalar(
-            r#"SELECT id FROM accounting.accounting_posts
-               WHERE journal_id=$1 AND company_id=$2 AND posting_status='posted'::posting_status
-                 AND posting_type='original' LIMIT 1"#,
-        )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_optional(&self.db_pool)
-        .await?
-        .ok_or(JournalWorkflowError::NotPosted(journal_id))?;
+        let Some(orig_post_id) = self.workflow.original_post(journal_id, company_id).await.map_err(internal)? else {
+            return Err(JournalWorkflowError::NotPosted(journal_id));
+        };
 
-        // Build + post the reversal. build_reversal_lines swaps debit/credit off the original
-        // journal's lines and links both ways.
         let req = PostingRequest {
             company_id,
             branch_id: None,
@@ -210,55 +164,38 @@ impl JournalWorkflowService {
             source_id: journal_id,
             source_reference: None,
             posting_date: Utc::now().date_naive(),
-            currency,
+            currency: status.currency,
             posting_type: "reversal".to_string(),
             reverses_post_id: Some(orig_post_id),
             description: Some(format!("Void of journal {journal_id}: {reason}")),
-            lines: Vec::new(), // populated by build_reversal_lines inside post()
+            lines: Vec::new(), // populated by the reversal source read inside post()
             idempotency_key: Some(format!("void:{journal_id}")),
         };
         let result = self.posting.post(req, voided_by).await?;
 
-        // Stamp the original journal voided.
         let now = Utc::now();
-        sqlx::query(
-            "UPDATE accounting.journals SET status='voided'::journal_status, is_voided=TRUE, \
-             voided_at=$1, voided_by=$2, void_reason=$3 WHERE id=$4 AND company_id=$5",
-        )
-        .bind(now)
-        .bind(voided_by)
-        .bind(&reason)
-        .bind(journal_id)
-        .bind(company_id)
-        .execute(&self.db_pool)
-        .await?;
-
+        self.workflow
+            .mark_voided(journal_id, company_id, voided_by, &reason, now)
+            .await
+            .map_err(internal)?;
         Ok(result)
     }
 
-    /// Resolve a zero-rows-affected UPDATE into a precise error: not-found vs wrong-state.
+    /// Resolve a falsy transition into a precise error: not-found vs wrong-state.
     async fn state_error(
         &self,
         journal_id: Uuid,
         company_id: Uuid,
         expected: &'static str,
     ) -> JournalWorkflowError {
-        let exists: Option<String> = sqlx::query_scalar(
-            "SELECT status::text FROM accounting.journals WHERE id=$1 AND company_id=$2 AND (metadata->>'deleted_at') IS NULL",
-        )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_optional(&self.db_pool)
-        .await
-        .ok()
-        .flatten();
-        match exists {
-            None => JournalWorkflowError::NotFound(journal_id),
-            Some(current) => JournalWorkflowError::InvalidState {
+        match self.workflow.current_status(journal_id, company_id).await {
+            Ok(None) => JournalWorkflowError::NotFound(journal_id),
+            Ok(Some(current)) => JournalWorkflowError::InvalidState {
                 id: journal_id,
                 current,
                 expected,
             },
+            Err(e) => internal(e),
         }
     }
 }
