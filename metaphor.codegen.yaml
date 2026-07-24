@@ -63,6 +63,7 @@ user_owned:
   - "tests/messaging_bus.rs"
   - "tests/integrity_probes.rs"
   - "tests/journal_workflow_golden_cases.rs"
+  - "tests/rls_probe.rs"
   - "tests/features/**"
 
   # Hand-authored module documentation (PRD/BRD/FSD, business flows, ADRs).
