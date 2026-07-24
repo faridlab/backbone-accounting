@@ -89,6 +89,9 @@ pub struct PostingResult {
 pub enum PostingError {
     TooFewLines,
     Unbalanced,
+    /// A line's debit/credit are not valid: negative, both non-zero, or both zero.
+    /// A clean line has exactly one side strictly positive and both non-negative (R1a).
+    InvalidLineAmount,
     NonPostableAccount(String),
     AccountNotFound(Uuid),
     PartyRequired(String),
@@ -103,6 +106,7 @@ impl PostingError {
         match self {
             PostingError::TooFewLines => "too_few_lines",
             PostingError::Unbalanced => "unbalanced",
+            PostingError::InvalidLineAmount => "invalid_line_amount",
             PostingError::NonPostableAccount(_) => "non_postable_account",
             PostingError::AccountNotFound(_) => "account_not_found",
             PostingError::PartyRequired(_) => "party_required",
