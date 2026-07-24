@@ -75,7 +75,13 @@ async fn post_handler(
     State(service): State<Arc<PostingService>>,
     Json(dto): Json<PostingRequestDto>,
 ) -> impl IntoResponse {
-    let req = PostingRequest {
+    let posted_by = dto.posted_by;
+    run_post(service, posting_request_from_dto(dto), posted_by).await
+}
+
+/// Map the wire DTO to the domain `PostingRequest`.
+fn posting_request_from_dto(dto: PostingRequestDto) -> PostingRequest {
+    PostingRequest {
         company_id: dto.company_id,
         branch_id: dto.branch_id,
         source_type: dto.source_type,
@@ -102,9 +108,16 @@ async fn post_handler(
             })
             .collect(),
         idempotency_key: dto.idempotency_key,
-    };
+    }
+}
 
-    match service.post(req, dto.posted_by).await {
+/// Shared post execution + response mapping for the open and protected handlers.
+async fn run_post(
+    service: Arc<PostingService>,
+    req: PostingRequest,
+    posted_by: Option<Uuid>,
+) -> axum::response::Response {
+    match service.post(req, posted_by).await {
         Ok(r) => (
             StatusCode::OK,
             Json(PostingResponse {
@@ -115,7 +128,8 @@ async fn post_handler(
                 idempotent_reuse: Some(r.idempotent_reuse),
                 error_code: None,
             }),
-        ),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::from_u16(e.http_status()).unwrap_or(StatusCode::UNPROCESSABLE_ENTITY),
             Json(PostingResponse {
@@ -126,7 +140,8 @@ async fn post_handler(
                 idempotent_reuse: None,
                 error_code: Some(e.code().to_string()),
             }),
-        ),
+        )
+            .into_response(),
     }
 }
 
@@ -135,4 +150,72 @@ pub fn create_posting_routes(service: Arc<PostingService>) -> Router {
     Router::new()
         .route("/accounting/posts", post(post_handler))
         .with_state(service)
+}
+
+// =============================================================================
+// Authenticated variant — derives `posted_by` from the verified principal
+// =============================================================================
+//
+// Use this in hosts that mount an auth middleware: `posted_by` is taken from the `AuthContext`
+// (non-repudiable audit trail) rather than trusted from the request body. `company_id` still comes
+// from the body (AuthContext carries no tenant); cross-tenant isolation is RLS-enforced — see
+// ADR-0011 for the host role/`app.company_id` contract.
+
+#[cfg(feature = "auth")]
+use axum::Extension;
+
+#[cfg(feature = "auth")]
+use backbone_auth::{middleware::AuthContext, AuthMiddleware};
+
+#[cfg(feature = "auth")]
+async fn post_handler_protected(
+    State(service): State<Arc<PostingService>>,
+    Extension(auth): Extension<AuthContext>,
+    Json(dto): Json<PostingRequestDto>,
+) -> impl IntoResponse {
+    let req = posting_request_from_dto(dto);
+    // The auditor is the authenticated principal, not a body field.
+    let posted_by = uuid::Uuid::parse_str(&auth.user_id).ok();
+    run_post(service, req, posted_by).await
+}
+
+#[cfg(feature = "auth")]
+/// Authenticated route: `POST /accounting/posts` with `posted_by` derived from the principal.
+/// Requires the `auth` feature; wrap with a host that supplies a bearer token.
+pub fn create_protected_posting_routes<A: AuthMiddleware + Send + Sync + 'static>(
+    service: Arc<PostingService>,
+    auth: Arc<A>,
+) -> Router {
+    use axum::{middleware, Extension, response::IntoResponse};
+
+    let auth_layer = auth.clone();
+    Router::new()
+        .route("/accounting/posts", post(post_handler_protected))
+        .with_state(service)
+        .layer(middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+            let auth = auth_layer.clone();
+            async move {
+                let token = req
+                    .headers()
+                    .get(axum::http::header::AUTHORIZATION)
+                    .and_then(|h| h.to_str().ok())
+                    .and_then(|raw| raw.strip_prefix("Bearer ").or_else(|| raw.strip_prefix("bearer ")))
+                    .unwrap_or("");
+                match auth.authenticate(token).await {
+                    Ok(ctx) => {
+                        req.extensions_mut().insert(ctx);
+                        next.run(req).await
+                    }
+                    Err(_) => (
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        axum::Json(serde_json::json!({
+                            "success": false,
+                            "error": "unauthorized",
+                            "message": "Authentication required"
+                        })),
+                    )
+                        .into_response(),
+                }
+            }
+        }))
 }

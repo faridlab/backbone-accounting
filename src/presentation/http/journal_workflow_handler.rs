@@ -85,7 +85,30 @@ async fn approve(
     Path(id): Path<Uuid>,
     Json(body): Json<ApproveBody>,
 ) -> impl IntoResponse {
-    match svc.approve(id, body.company_id, body.approved_by).await {
+    run_approve(svc, id, body.company_id, body.approved_by).await
+}
+
+async fn reject(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RejectBody>,
+) -> impl IntoResponse {
+    run_reject(svc, id, body.company_id, body.reason, body.rejected_by).await
+}
+
+async fn void(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<VoidBody>,
+) -> impl IntoResponse {
+    run_void(svc, id, body.company_id, body.voided_by, body.reason).await
+}
+
+/// Shared execution for approve (open + protected variants).
+async fn run_approve(
+    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, approved_by: Option<Uuid>,
+) -> axum::response::Response {
+    match svc.approve(id, company_id, approved_by).await {
         Ok(r) => Json(WorkflowResponse {
             success: true, journal_id: r.journal_id, status: "posted",
             post_id: Some(r.post_id), idempotent_reuse: Some(r.idempotent_reuse),
@@ -94,12 +117,11 @@ async fn approve(
     }
 }
 
-async fn reject(
-    State(svc): State<Arc<JournalWorkflowService>>,
-    Path(id): Path<Uuid>,
-    Json(body): Json<RejectBody>,
-) -> impl IntoResponse {
-    match svc.reject(id, body.company_id, body.reason, body.rejected_by).await {
+/// Shared execution for reject.
+async fn run_reject(
+    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, reason: String, rejected_by: Option<Uuid>,
+) -> axum::response::Response {
+    match svc.reject(id, company_id, reason, rejected_by).await {
         Ok(()) => Json(WorkflowResponse {
             success: true, journal_id: id, status: "rejected",
             post_id: None, idempotent_reuse: None,
@@ -108,12 +130,11 @@ async fn reject(
     }
 }
 
-async fn void(
-    State(svc): State<Arc<JournalWorkflowService>>,
-    Path(id): Path<Uuid>,
-    Json(body): Json<VoidBody>,
-) -> impl IntoResponse {
-    match svc.void(id, body.company_id, body.voided_by, body.reason).await {
+/// Shared execution for void.
+async fn run_void(
+    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, voided_by: Option<Uuid>, reason: String,
+) -> axum::response::Response {
+    match svc.void(id, company_id, voided_by, reason).await {
         Ok(r) => Json(WorkflowResponse {
             success: true, journal_id: id, status: "voided",
             post_id: Some(r.post_id), idempotent_reuse: Some(r.idempotent_reuse),
@@ -130,4 +151,93 @@ pub fn create_journal_workflow_routes(service: Arc<JournalWorkflowService>) -> R
         .route("/journals/:id/reject", post(reject))
         .route("/journals/:id/void", post(void))
         .with_state(service)
+}
+
+// =============================================================================
+// Authenticated variant — derives approve/reject/void actors from the principal
+// =============================================================================
+//
+// `company_id` still comes from the body (AuthContext carries no tenant; cross-tenant isolation
+// is RLS-enforced — see ADR-0011). The actor fields (`approved_by`/`rejected_by`/`voided_by`) are
+// taken from the verified `AuthContext`, making the audit trail non-repudiable.
+
+#[cfg(feature = "auth")]
+use axum::Extension;
+
+#[cfg(feature = "auth")]
+use backbone_auth::{middleware::AuthContext, AuthMiddleware};
+
+#[cfg(feature = "auth")]
+fn principal(auth: &AuthContext) -> Option<Uuid> {
+    Uuid::parse_str(&auth.user_id).ok()
+}
+
+#[cfg(feature = "auth")]
+async fn approve_protected(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Extension(auth): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ApproveBody>,
+) -> impl IntoResponse {
+    run_approve(svc, id, body.company_id, principal(&auth)).await
+}
+
+#[cfg(feature = "auth")]
+async fn reject_protected(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Extension(auth): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RejectBody>,
+) -> impl IntoResponse {
+    run_reject(svc, id, body.company_id, body.reason, principal(&auth)).await
+}
+
+#[cfg(feature = "auth")]
+async fn void_protected(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Extension(auth): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<VoidBody>,
+) -> impl IntoResponse {
+    run_void(svc, id, body.company_id, principal(&auth), body.reason).await
+}
+
+#[cfg(feature = "auth")]
+/// Authenticated workflow routes: actors derived from the principal. Requires the `auth` feature.
+pub fn create_protected_journal_workflow_routes<A: AuthMiddleware + Send + Sync + 'static>(
+    service: Arc<JournalWorkflowService>,
+    auth: Arc<A>,
+) -> Router {
+    use axum::{middleware, response::IntoResponse};
+
+    let auth_layer = auth.clone();
+    Router::new()
+        .route("/journals/:id/submit", post(submit))
+        .route("/journals/:id/approve", post(approve_protected))
+        .route("/journals/:id/reject", post(reject_protected))
+        .route("/journals/:id/void", post(void_protected))
+        .with_state(service)
+        .layer(middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+            let auth = auth_layer.clone();
+            async move {
+                let token = req
+                    .headers()
+                    .get(axum::http::header::AUTHORIZATION)
+                    .and_then(|h| h.to_str().ok())
+                    .and_then(|raw| raw.strip_prefix("Bearer ").or_else(|| raw.strip_prefix("bearer ")))
+                    .unwrap_or("");
+                match auth.authenticate(token).await {
+                    Ok(ctx) => {
+                        req.extensions_mut().insert(ctx);
+                        next.run(req).await
+                    }
+                    Err(_) => (
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        axum::Json(serde_json::json!({
+                            "success": false, "error": "unauthorized", "message": "Authentication required"
+                        })),
+                    ).into_response(),
+                }
+            }
+        }))
 }
