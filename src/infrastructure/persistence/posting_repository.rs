@@ -4,12 +4,23 @@
 //! `commit_posting` / `commit_manual_journal` methods open their own transaction and take the
 //! per-account `FOR UPDATE` lock internally, so the cross-table write stays atomic and
 //! concurrency-safe. SQL is moved verbatim from the former service implementation.
+//!
+//! Fence discipline: reads and standalone writes ride the company-scoped helpers (request
+//! connection → task-local bind → plain pool, in that order), and both atomic commits bind the
+//! tenant on their transaction before any statement — so under the strict fence (the app connects
+//! as a non-superuser) the statements see and accept exactly the caller's company rows. Belt and
+//! braces, every statement already carries an explicit `company_id` predicate.
 
 use std::collections::HashMap;
 
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
+
+use backbone_orm::company_scope::{
+    self, execute_scoped, fetch_all_rows_scoped, fetch_one_scalar_scoped,
+    fetch_optional_row_scoped, fetch_optional_scalar_scoped,
+};
 use uuid::Uuid;
 
 use crate::domain::gl_posting::{map_source, PostingLine};
@@ -68,27 +79,33 @@ impl PostingRepository for SqlxPostingRepository {
         idempotency_key: Option<&str>,
     ) -> anyhow::Result<Option<(Uuid, Uuid)>> {
         let row = if let Some(key) = idempotency_key {
-            sqlx::query(
-                r#"SELECT id, journal_id FROM accounting.accounting_posts
-                   WHERE company_id=$1 AND idempotency_key=$2 AND posting_status='posted'::posting_status
-                   LIMIT 1"#,
+            fetch_optional_row_scoped(
+
+                &self.pool,
+    sqlx::query(
+                    r#"SELECT id, journal_id FROM accounting.accounting_posts
+                       WHERE company_id=$1 AND idempotency_key=$2 AND posting_status='posted'::posting_status
+                       LIMIT 1"#,
+                )
+                .bind(company_id)
+                .bind(key),
             )
-            .bind(company_id)
-            .bind(key)
-            .fetch_optional(&self.pool)
             .await?
         } else {
-            sqlx::query(
-                r#"SELECT id, journal_id FROM accounting.accounting_posts
-                   WHERE company_id=$1 AND source_type=$2::posting_source_type AND source_id=$3
-                     AND posting_type=$4::posting_type AND posting_status='posted'::posting_status
-                   LIMIT 1"#,
+            fetch_optional_row_scoped(
+
+                &self.pool,
+    sqlx::query(
+                    r#"SELECT id, journal_id FROM accounting.accounting_posts
+                       WHERE company_id=$1 AND source_type=$2::posting_source_type AND source_id=$3
+                         AND posting_type=$4::posting_type AND posting_status='posted'::posting_status
+                       LIMIT 1"#,
+                )
+                .bind(company_id)
+                .bind(source_type)
+                .bind(source_id)
+                .bind(posting_type),
             )
-            .bind(company_id)
-            .bind(source_type)
-            .bind(source_id)
-            .bind(posting_type)
-            .fetch_optional(&self.pool)
             .await?
         };
         Ok(row.and_then(|r| {
@@ -103,30 +120,38 @@ impl PostingRepository for SqlxPostingRepository {
         company_id: Uuid,
         ids: &[Uuid],
     ) -> anyhow::Result<Vec<PostableAccount>> {
-        let rows = sqlx::query(
-            r#"SELECT id, account_number, name, account_type::text AS at,
-                      account_subtype::text AS st, normal_balance::text AS nb,
-                      is_detail, is_header, status::text AS status, current_balance
-               FROM accounting.accounts
-               WHERE company_id=$1 AND id = ANY($2) AND (metadata->>'deleted_at') IS NULL"#,
+        let rows = fetch_all_rows_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT id, account_number, name, account_type::text AS at,
+                          account_subtype::text AS st, normal_balance::text AS nb,
+                          is_detail, is_header, status::text AS status, current_balance
+                   FROM accounting.accounts
+                   WHERE company_id=$1 AND id = ANY($2) AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(company_id)
+            .bind(ids),
         )
-        .bind(company_id)
-        .bind(ids)
-        .fetch_all(&self.pool)
         .await?;
-        Ok(rows.iter().map(Self::row_to_account).map(|(_, a)| a).collect())
+        Ok(rows
+            .iter()
+            .map(Self::row_to_account)
+            .map(|(_, a)| a)
+            .collect())
     }
 
     async fn is_period_closed(&self, company_id: Uuid, date: NaiveDate) -> anyhow::Result<bool> {
-        let blocked: Option<bool> = sqlx::query_scalar(
-            r#"SELECT bool_or(status IN ('closed','locked'))
-               FROM accounting.fiscal_periods
-               WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
-                 AND (metadata->>'deleted_at') IS NULL"#,
+        let blocked: Option<bool> = fetch_one_scalar_scoped(
+            &self.pool,
+            sqlx::query_scalar(
+                r#"SELECT bool_or(status IN ('closed','locked'))
+                   FROM accounting.fiscal_periods
+                   WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
+                     AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(company_id)
+            .bind(date),
         )
-        .bind(company_id)
-        .bind(date)
-        .fetch_one(&self.pool)
         .await?;
         Ok(blocked == Some(true))
     }
@@ -136,15 +161,17 @@ impl PostingRepository for SqlxPostingRepository {
         company_id: Uuid,
         date: NaiveDate,
     ) -> anyhow::Result<Option<Uuid>> {
-        let id: Option<Uuid> = sqlx::query_scalar(
-            r#"SELECT id FROM accounting.fiscal_periods
-               WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
-                 AND (metadata->>'deleted_at') IS NULL
-               ORDER BY (end_date - start_date) ASC LIMIT 1"#,
+        let id: Option<Uuid> = fetch_optional_scalar_scoped(
+            &self.pool,
+            sqlx::query_scalar(
+                r#"SELECT id FROM accounting.fiscal_periods
+                   WHERE company_id=$1 AND start_date<=$2 AND end_date>=$2
+                     AND (metadata->>'deleted_at') IS NULL
+                   ORDER BY (end_date - start_date) ASC LIMIT 1"#,
+            )
+            .bind(company_id)
+            .bind(date),
         )
-        .bind(company_id)
-        .bind(date)
-        .fetch_optional(&self.pool)
         .await?;
         Ok(id)
     }
@@ -154,25 +181,29 @@ impl PostingRepository for SqlxPostingRepository {
         orig_post_id: Uuid,
         company_id: Uuid,
     ) -> anyhow::Result<Option<ReversalSource>> {
-        let orig_journal_id: Option<Uuid> = sqlx::query_scalar(
-            "SELECT journal_id FROM accounting.accounting_posts WHERE id=$1 AND company_id=$2 AND posting_status='posted'::posting_status",
+        let orig_journal_id: Option<Uuid> = fetch_optional_scalar_scoped(
+    &self.pool,
+    sqlx::query_scalar(
+                "SELECT journal_id FROM accounting.accounting_posts WHERE id=$1 AND company_id=$2 AND posting_status='posted'::posting_status",
+            )
+            .bind(orig_post_id)
+            .bind(company_id),
         )
-        .bind(orig_post_id)
-        .bind(company_id)
-        .fetch_optional(&self.pool)
         .await?;
         let Some(orig_journal_id) = orig_journal_id else {
             return Ok(None);
         };
 
-        let rows = sqlx::query(
-            r#"SELECT account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
-                      cost_center_id, project_id, department_id
-               FROM accounting.journal_lines WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
+        let rows = fetch_all_rows_scoped(
+    &self.pool,
+    sqlx::query(
+                r#"SELECT account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
+                          cost_center_id, project_id, department_id
+                   FROM accounting.journal_lines WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
+            )
+            .bind(orig_journal_id)
+            .bind(company_id),
         )
-        .bind(orig_journal_id)
-        .bind(company_id)
-        .fetch_all(&self.pool)
         .await?;
 
         let lines = rows
@@ -189,12 +220,19 @@ impl PostingRepository for SqlxPostingRepository {
                 description: Some("Reversal".to_string()),
             })
             .collect();
-        Ok(Some(ReversalSource { journal_id: orig_journal_id, lines }))
+        Ok(Some(ReversalSource {
+            journal_id: orig_journal_id,
+            lines,
+        }))
     }
 
     async fn commit_posting(&self, write: PostingWrite) -> anyhow::Result<PostingCommit> {
         let now = write.now;
         let mut tx = self.pool.begin().await?;
+        // Bind the tenant for the whole transaction: under the strict fence (a non-superuser
+        // app role) these INSERTs need `app.company_id` set for the RLS WITH CHECK to accept
+        // them, and the SELECTs inside need it to see rows at all.
+        company_scope::bind_company_on(&mut tx, write.company_id).await?;
 
         let total_debit: Decimal = write.lines.iter().map(|l| l.debit).sum();
         let total_credit: Decimal = write.lines.iter().map(|l| l.credit).sum();
@@ -228,7 +266,12 @@ impl PostingRepository for SqlxPostingRepository {
         .bind(write.fiscal_period_id)
         .bind(write.fiscal_year)
         .bind(write.fiscal_month)
-        .bind(write.description.clone().unwrap_or_else(|| format!("{} posting", write.source_type)))
+        .bind(
+            write
+                .description
+                .clone()
+                .unwrap_or_else(|| format!("{} posting", write.source_type)),
+        )
         .bind(&write.currency)
         .bind(total_debit)
         .bind(total_credit)
@@ -339,7 +382,10 @@ impl PostingRepository for SqlxPostingRepository {
         // Concurrency guard: the partial unique index is the real arbiter. On a race loss, roll
         // everything back (no partial write) and return the winner.
         if let Err(ref e) = post_result {
-            if e.as_database_error().map(|d| d.is_unique_violation()).unwrap_or(false) {
+            if e.as_database_error()
+                .map(|d| d.is_unique_violation())
+                .unwrap_or(false)
+            {
                 drop(tx);
                 if let Some((existing_post, existing_journal)) = self
                     .find_existing_post(
@@ -366,11 +412,13 @@ impl PostingRepository for SqlxPostingRepository {
 
         if is_reversing {
             if let Some(orig_post) = write.reverses_post_id {
-                sqlx::query("UPDATE accounting.accounting_posts SET reversed_by_post_id=$1 WHERE id=$2")
-                    .bind(post_id)
-                    .bind(orig_post)
-                    .execute(&mut *tx)
-                    .await?;
+                sqlx::query(
+                    "UPDATE accounting.accounting_posts SET reversed_by_post_id=$1 WHERE id=$2",
+                )
+                .bind(post_id)
+                .bind(orig_post)
+                .execute(&mut *tx)
+                .await?;
             }
             if let Some(orig_journal) = write.reverses_journal_id {
                 sqlx::query(
@@ -386,7 +434,13 @@ impl PostingRepository for SqlxPostingRepository {
 
         tx.commit().await?;
 
-        Ok(PostingCommit { post_id, journal_id, total_debit, total_credit, reused: false })
+        Ok(PostingCommit {
+            post_id,
+            journal_id,
+            total_debit,
+            total_credit,
+            reused: false,
+        })
     }
 
     async fn find_manual_journal_for_post(
@@ -394,30 +448,34 @@ impl PostingRepository for SqlxPostingRepository {
         journal_id: Uuid,
         company_id: Uuid,
     ) -> anyhow::Result<Option<ManualJournalForPost>> {
-        let journal = sqlx::query(
-            r#"SELECT journal_number, branch_id, posting_date, fiscal_period_id, fiscal_year,
-                      fiscal_month, currency, description, source_type::text AS source_type,
-                      source_id, status::text AS status
-               FROM accounting.journals
-               WHERE id=$1 AND company_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
+        let journal = fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"SELECT journal_number, branch_id, posting_date, fiscal_period_id, fiscal_year,
+                          fiscal_month, currency, description, source_type::text AS source_type,
+                          source_id, status::text AS status
+                   FROM accounting.journals
+                   WHERE id=$1 AND company_id=$2 AND (metadata->>'deleted_at') IS NULL"#,
+            )
+            .bind(journal_id)
+            .bind(company_id),
         )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_optional(&self.pool)
         .await?;
         let Some(journal) = journal else {
             return Ok(None);
         };
 
-        let rows = sqlx::query(
-            r#"SELECT id, account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
-                      cost_center_id, project_id, department_id, description
-               FROM accounting.journal_lines
-               WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
+        let rows = fetch_all_rows_scoped(
+    &self.pool,
+    sqlx::query(
+                r#"SELECT id, account_id, debit_amount, credit_amount, party_type::text AS pt, party_id,
+                          cost_center_id, project_id, department_id, description
+                   FROM accounting.journal_lines
+                   WHERE journal_id=$1 AND company_id=$2 ORDER BY line_number"#,
+            )
+            .bind(journal_id)
+            .bind(company_id),
         )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_all(&self.pool)
         .await?;
 
         let lines = rows
@@ -463,23 +521,28 @@ impl PostingRepository for SqlxPostingRepository {
         journal_id: Uuid,
         company_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>> {
-        let id: Option<Uuid> = sqlx::query_scalar(
-            "SELECT id FROM accounting.accounting_posts WHERE journal_id=$1 AND company_id=$2 AND posting_status='posted'::posting_status LIMIT 1",
+        let id: Option<Uuid> = fetch_optional_scalar_scoped(
+    &self.pool,
+    sqlx::query_scalar(
+                "SELECT id FROM accounting.accounting_posts WHERE journal_id=$1 AND company_id=$2 AND posting_status='posted'::posting_status LIMIT 1",
+            )
+            .bind(journal_id)
+            .bind(company_id),
         )
-        .bind(journal_id)
-        .bind(company_id)
-        .fetch_optional(&self.pool)
         .await?;
         Ok(id)
     }
 
-    async fn commit_manual_journal(
-        &self,
-        c: ManualJournalCommit,
-    ) -> anyhow::Result<PostingCommit> {
+    async fn commit_manual_journal(&self, c: ManualJournalCommit) -> anyhow::Result<PostingCommit> {
         let now = c.now;
         let mut tx = self.pool.begin().await?;
-        let accounts = load_accounts_locked(&mut tx, c.company_id, &c.lines.iter().map(|l| &l.line).cloned().collect::<Vec<_>>()).await?;
+        company_scope::bind_company_on(&mut tx, c.company_id).await?;
+        let accounts = load_accounts_locked(
+            &mut tx,
+            c.company_id,
+            &c.lines.iter().map(|l| &l.line).cloned().collect::<Vec<_>>(),
+        )
+        .await?;
 
         let (total_debit, total_credit) = append_ledger_entries(
             &mut tx,
@@ -544,31 +607,40 @@ impl PostingRepository for SqlxPostingRepository {
 
         tx.commit().await?;
 
-        Ok(PostingCommit { post_id, journal_id: c.journal_id, total_debit, total_credit, reused: false })
+        Ok(PostingCommit {
+            post_id,
+            journal_id: c.journal_id,
+            total_debit,
+            total_credit,
+            reused: false,
+        })
     }
 
     async fn record_failed(&self, failed: FailedPost) -> anyhow::Result<()> {
-        sqlx::query(
-            r#"INSERT INTO accounting.accounting_posts
-                (id, company_id, branch_id, source_type, source_id, source_reference, posting_type,
-                 posting_status, currency, total_debit, total_credit, failed_at, error_code, error_message)
-               VALUES ($1,$2,$3,$4::posting_source_type,$5,$6,$7::posting_type,
-                       'failed'::posting_status,$8,$9,$10,$11,$12,$13)"#,
+        execute_scoped(
+
+            &self.pool,
+    sqlx::query(
+                r#"INSERT INTO accounting.accounting_posts
+                    (id, company_id, branch_id, source_type, source_id, source_reference, posting_type,
+                     posting_status, currency, total_debit, total_credit, failed_at, error_code, error_message)
+                   VALUES ($1,$2,$3,$4::posting_source_type,$5,$6,$7::posting_type,
+                           'failed'::posting_status,$8,$9,$10,$11,$12,$13)"#,
+            )
+            .bind(Uuid::new_v4())
+            .bind(failed.company_id)
+            .bind(failed.branch_id)
+            .bind(&failed.source_type)
+            .bind(failed.source_id)
+            .bind(&failed.source_reference)
+            .bind(&failed.posting_type)
+            .bind(&failed.currency)
+            .bind(failed.total_debit)
+            .bind(failed.total_credit)
+            .bind(failed.failed_at)
+            .bind(&failed.error_code)
+            .bind(&failed.error_message),
         )
-        .bind(Uuid::new_v4())
-        .bind(failed.company_id)
-        .bind(failed.branch_id)
-        .bind(&failed.source_type)
-        .bind(failed.source_id)
-        .bind(&failed.source_reference)
-        .bind(&failed.posting_type)
-        .bind(&failed.currency)
-        .bind(failed.total_debit)
-        .bind(failed.total_credit)
-        .bind(failed.failed_at)
-        .bind(&failed.error_code)
-        .bind(&failed.error_message)
-        .execute(&self.pool)
         .await?;
         Ok(())
     }
@@ -635,8 +707,10 @@ async fn append_ledger_entries(
     lines: &[LedgerEntryInput],
     accounts: &HashMap<Uuid, AccountInfo>,
 ) -> anyhow::Result<(Decimal, Decimal)> {
-    let mut running: HashMap<Uuid, Decimal> =
-        accounts.iter().map(|(id, a)| (*id, a.current_balance)).collect();
+    let mut running: HashMap<Uuid, Decimal> = accounts
+        .iter()
+        .map(|(id, a)| (*id, a.current_balance))
+        .collect();
     let mut seq: HashMap<Uuid, i32> = HashMap::new();
     for id in accounts.keys() {
         let max: i32 = sqlx::query_scalar(
