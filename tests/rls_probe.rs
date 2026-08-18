@@ -22,10 +22,18 @@ async fn admin() -> PgPool {
     PgPool::connect(&url).await.expect("connect admin")
 }
 
+/// Shed the role's grants, then drop it. Leftover grants (from a run whose teardown never
+/// reached the drop, or whose drop was swallowed) make plain DROP ROLE fail with 2BP01 —
+/// DROP OWNED BY first keeps both bootstrap and teardown idempotent across runs.
+async fn drop_role(admin: &PgPool) {
+    let _ = sqlx::query(&format!("DROP OWNED BY {ROLE}")).execute(admin).await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {ROLE}")).execute(admin).await;
+}
+
 async fn bootstrap_role(admin: &PgPool) {
     // Restricted role: NOSUPERUSER, NOBYPASSRLS — the posture ADR-0011 demands of the host.
+    drop_role(admin).await;
     for stmt in [
-        format!("DROP ROLE IF EXISTS {ROLE}"),
         format!("CREATE ROLE {ROLE} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
         format!("GRANT USAGE ON SCHEMA accounting TO {ROLE}"),
         format!("GRANT USAGE ON SCHEMA public TO {ROLE}"),
@@ -41,7 +49,7 @@ async fn restricted() -> PgPool {
 }
 
 async fn teardown_role(admin: &PgPool) {
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {ROLE}")).execute(admin).await;
+    drop_role(admin).await;
 }
 
 /// Insert a minimal accounts row for `company`. Returns the account id (or errors under RLS).
