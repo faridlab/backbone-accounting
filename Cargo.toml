@@ -1,6 +1,6 @@
 [package]
 name = "backbone-accounting"
-version = "0.4.2"
+version = "0.5.0"
 edition = "2021"
 description = "GL, journals, ledger, reconciliation (extracted from bersihir)"
 

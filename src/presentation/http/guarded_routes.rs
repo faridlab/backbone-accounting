@@ -36,4 +36,9 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
         .merge(create_journal_line_read_routes(m.journal_line_service.clone()))
         .merge(create_ledger_read_routes(m.ledger_service.clone()))
         .merge(create_accounting_post_read_routes(m.accounting_post_service.clone()))
+        // Reconciliation verbs — the ONLY write surface onto the reconciliation graph.
+        // The graph tables themselves mount nothing here (and are `enabled: false`).
+        .merge(crate::presentation::http::reconcile_handler::create_reconcile_verb_routes(
+            m.reconcile_write_service(),
+        ))
 }

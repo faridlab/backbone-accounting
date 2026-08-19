@@ -52,12 +52,21 @@ user_owned:
   - "src/presentation/http/accounting_ops_handler.rs"
   - "src/presentation/http/guarded_routes.rs"
 
+  # Reconciliation graph — Odoo-shaped edges + groups, side-effecting unlink.
+  - "src/domain/reconcile_graph.rs"
+  - "src/domain/services/reconcile_rules.rs"
+  - "src/domain/repositories/reconcile_graph_repository.rs"
+  - "src/infrastructure/persistence/reconcile_graph_repository.rs"
+  - "src/application/service/reconcile_write_service.rs"
+  - "src/presentation/http/reconcile_handler.rs"
+
   # Message-bus adapter (publishes posting events to backbone-messaging).
   - "src/infrastructure/messaging/**"
 
   # Behavior tests + BDD oracle (the golden cases).
   - "tests/posting_golden_cases.rs"
   - "tests/reporting_golden_cases.rs"
+  - "tests/reconciliation_graph_golden_cases.rs"
   - "tests/reconciliation_golden_cases.rs"
   - "tests/period_close_golden_cases.rs"
   - "tests/messaging_bus.rs"

@@ -6,6 +6,16 @@
 
 ## Bank reconciliation matching
 
+> **Deprecated** (ADR-0025): this worksheet-style service is superseded by the
+> [reconciliation graph](./reconciliation-graph.md) — first-class partial edges over journal lines
+> with computed residuals and side-effecting unreconciliation. This service keeps working (it
+> flags `ledgers` rows, disjoint from the graph) but new integrations must use the graph verbs;
+> the table/route drop is deferred to the convergence pass. Note: its
+> `POST /accounting/reconcile` route now collides with the graph verb of the same path — the
+> guarded composition mounts only the graph verb, and a host must not mount both
+> (`create_bank_reconciliation_routes` + `create_guarded_accounting_routes`) or the router
+> panics at boot.
+
 Match imported bank-statement lines against unreconciled `ledgers` rows on a bank account.
 
 - Endpoint: `POST /accounting/reconcile` (body = `ReconcileRequest`).

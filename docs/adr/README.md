@@ -12,6 +12,9 @@
 |-----|-------|--------|------|------------|
 | [001](./ADR-001-gl-core-boundary.md) | GL-core boundary, posting contract, and tenancy | Accepted — applied to schema 2026-06-30 | 2026-06-30 | — |
 | [002](./ADR-002-ledger-write-path-integrity.md) | Ledger write-path integrity (idempotency constraint + guarded CRUD) | Accepted — applied 2026-07-01 | 2026-07-01 | extends 001 |
+| [003](./ADR-003-deferred-scope.md) | Deferred scope — single-currency GL, and what the module will NOT own at v0.3 | Accepted — applied 2026-07-23 | 2026-07-23 | extends 001 |
+| [0011](./ADR-0011-host-auth-role-contract.md) | Host auth/role contract (tenant + identity boundary) | Accepted — applied 2026-07-24 | 2026-07-24 | extends 0008, 0010 |
+| [0025](./ADR-0025-reconciliation-graph.md) | Reconciliation graph — partial edges + full groups replace invoice-level settlement bookkeeping | Accepted — applied 2026-08-19 | 2026-08-19 | extends 0008, 0014, 0011 |
 
 ## What each one settled
 
@@ -28,6 +31,15 @@
   mounts the posted GL entities **read-only** via `create_guarded_accounting_routes` so the only
   sanctioned GL writer is `POST /accounting/posts`. Both fixes are in the schema SSoT / route
   composition, so regeneration reproduces them.
+
+- **[ADR-0025](./ADR-0025-reconciliation-graph.md)** replaces invoice-level settlement bookkeeping
+  with the reconciliation graph: `partial_reconciles` edges + `full_reconciles` groups, residual
+  always **computed** (never a stored second owner), the matching number a **read** (union-find over
+  the edges), side-effecting unreconciliation per AF12/TF13 (unlink reverses the exchange move — and
+  whatever later rides the same source identity — never a plain DELETE), pure write guards, zero
+  CRUD routes on the graph tables, and a `ReconcileSink` port in `backbone-gl-posting` so producers
+  (settlement, reversal, banking clearing) commit edges inside their own transactions without a
+  Cargo edge into this crate. Deprecates the ERPNext-shaped `reconciliations` worksheet in docs.
 
 ## Open items tracked by the ADRs
 

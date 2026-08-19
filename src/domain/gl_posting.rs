@@ -184,6 +184,8 @@ pub fn map_source(source_type: &str, posting_type: &str) -> (&'static str, &'sta
         "refund" => ("general", "adjustment"),
         "expense" => ("purchase", "adjustment"),
         "inventory" => ("general", "system"),
+        // Reconciliation-generated moves (exchange difference now, cash-basis tax later).
+        "reconciliation" => ("general", "system"),
         _ => ("general", "manual"),
     }
 }

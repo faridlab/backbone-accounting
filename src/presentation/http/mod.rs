@@ -15,7 +15,6 @@ pub mod journal_line_handler;
 pub mod ledger_handler;
 pub mod reconciliation_handler;
 pub mod reconciliation_item_handler;
-
 // <<< CUSTOM
 pub mod posting_handler;
 pub mod reporting_handler;
@@ -23,6 +22,12 @@ pub mod accounting_ops_handler;
 pub mod journal_workflow_handler;
 pub mod hierarchy_handler;
 pub mod guarded_routes;
+pub mod reconcile_handler;
+// END CUSTOM
+pub mod full_reconcile_handler;
+pub mod partial_reconcile_handler;
+
+// <<< CUSTOM
 // END CUSTOM
 
 // Re-exports
@@ -43,4 +48,9 @@ pub use accounting_ops_handler::{create_bank_reconciliation_routes, create_perio
 pub use journal_workflow_handler::create_journal_workflow_routes;
 pub use hierarchy_handler::create_hierarchy_routes;
 pub use guarded_routes::create_guarded_accounting_routes;
+pub use reconcile_handler::create_reconcile_verb_routes;
+// END CUSTOM
+pub use full_reconcile_handler::{create_full_reconcile_routes, create_full_reconcile_read_routes, create_full_reconcile_write_routes};
+pub use partial_reconcile_handler::{create_partial_reconcile_routes, create_partial_reconcile_read_routes, create_partial_reconcile_write_routes};
+// <<< CUSTOM
 // END CUSTOM

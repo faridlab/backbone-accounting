@@ -204,4 +204,34 @@ async fn guarded_routes_lock_posted_gl_writes() {
             "POST {path} must be locked (405), got {}", resp.status()
         );
     }
+
+    // The reconciliation graph carries NO CRUD routes at all — its only writes are the
+    // reconcile verbs, so even the collection GET must not exist.
+    for path in ["/partial_reconciles", "/full_reconciles"] {
+        for method in [reqwest::Method::GET, reqwest::Method::POST] {
+            let resp = client.request(method.clone(), format!("{base}{path}"))
+                .json(&serde_json::json!({}))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(
+                resp.status().as_u16(), 404,
+                "{method} {path} must not be mounted, got {}", resp.status()
+            );
+        }
+    }
+
+    // …while the reconcile verbs themselves ARE mounted (any non-404 proves presence;
+    // the empty body lands in extractor rejection, not routing).
+    let resp = client.post(format!("{base}/accounting/reconcile"))
+        .json(&serde_json::json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_ne!(resp.status().as_u16(), 404, "POST /accounting/reconcile must be mounted");
+    let resp = client.get(format!("{base}/accounting/reconciliation-groups/00000000-0000-0000-0000-000000000000"))
+        .send()
+        .await
+        .unwrap();
+    assert_ne!(resp.status().as_u16(), 404, "GET /accounting/reconciliation-groups/:id must be mounted");
 }

@@ -23,6 +23,7 @@ pub mod infrastructure;
 pub mod application;
 pub mod presentation;
 pub mod seeders;
+pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -41,6 +42,8 @@ pub use application::service::JournalLineService;
 pub use application::service::LedgerService;
 pub use application::service::ReconciliationService;
 pub use application::service::ReconciliationItemService;
+pub use application::service::FullReconcileService;
+pub use application::service::PartialReconcileService;
 
 // Re-exports - Workflows
 pub use application::workflows::*;
@@ -62,16 +65,22 @@ use sqlx::PgPool;
 /// let router = accounting.all_crud_routes();
 /// ```
 pub struct AccountingModule {
-    pub account_service: Arc<AccountService>,
-    pub accounting_post_service: Arc<AccountingPostService>,
-    pub cost_center_service: Arc<CostCenterService>,
-    pub financial_statement_service: Arc<FinancialStatementService>,
-    pub fiscal_period_service: Arc<FiscalPeriodService>,
-    pub journal_service: Arc<JournalService>,
-    pub journal_line_service: Arc<JournalLineService>,
-    pub ledger_service: Arc<LedgerService>,
-    pub reconciliation_service: Arc<ReconciliationService>,
-    pub reconciliation_item_service: Arc<ReconciliationItemService>,
+    pub(crate) account_service: Arc<AccountService>,
+    pub(crate) accounting_post_service: Arc<AccountingPostService>,
+    pub(crate) cost_center_service: Arc<CostCenterService>,
+    pub(crate) financial_statement_service: Arc<FinancialStatementService>,
+    pub(crate) fiscal_period_service: Arc<FiscalPeriodService>,
+    pub(crate) journal_service: Arc<JournalService>,
+    pub(crate) journal_line_service: Arc<JournalLineService>,
+    pub(crate) ledger_service: Arc<LedgerService>,
+    pub(crate) reconciliation_service: Arc<ReconciliationService>,
+    pub(crate) reconciliation_item_service: Arc<ReconciliationItemService>,
+    pub(crate) full_reconcile_service: Arc<FullReconcileService>,
+    pub(crate) partial_reconcile_service: Arc<PartialReconcileService>,
+    // <<< CUSTOM FIELDS
+    pub(crate) db_pool: PgPool,
+    pub(crate) reconcile_write_service: Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>,
+    // END CUSTOM
 }
 
 impl AccountingModule {
@@ -97,6 +106,8 @@ impl AccountingModule {
             create_ledger_routes,
             create_reconciliation_routes,
             create_reconciliation_item_routes,
+            create_full_reconcile_routes,
+            create_partial_reconcile_routes,
         };
 
         Router::new()
@@ -110,6 +121,8 @@ impl AccountingModule {
             .merge(create_ledger_routes(self.ledger_service.clone()))
             .merge(create_reconciliation_routes(self.reconciliation_service.clone()))
             .merge(create_reconciliation_item_routes(self.reconciliation_item_service.clone()))
+            .merge(create_full_reconcile_routes(self.full_reconcile_service.clone()))
+            .merge(create_partial_reconcile_routes(self.partial_reconcile_service.clone()))
     }
 
     /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
@@ -117,10 +130,83 @@ impl AccountingModule {
     /// mount exposes unguarded writes. Compose a guarded router (read + validated
     /// writes) for production, or call `all_crud_routes()` to opt into the full
     /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD on every entity; compose a guarded router for production, or call all_crud_routes() for the intentional full/unguarded surface")]
+    #[deprecated(note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface")]
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
+
+    /// Read-only routes for every entity (GET endpoints only) — the safe base.
+    ///
+    /// Generic mutation can't reach here, so this surface cannot bypass a
+    /// validated write service's invariants. Use this as the production base and
+    /// merge validated write routes (or a write service's HTTP layer) onto it.
+    pub fn readonly_routes(&self) -> Router {
+        use presentation::http::{
+            create_account_read_routes,
+            create_accounting_post_read_routes,
+            create_cost_center_read_routes,
+            create_financial_statement_read_routes,
+            create_fiscal_period_read_routes,
+            create_journal_read_routes,
+            create_journal_line_read_routes,
+            create_ledger_read_routes,
+            create_reconciliation_read_routes,
+            create_reconciliation_item_read_routes,
+            create_full_reconcile_read_routes,
+            create_partial_reconcile_read_routes,
+        };
+
+        Router::new()
+            .merge(create_account_read_routes(self.account_service.clone()))
+            .merge(create_accounting_post_read_routes(self.accounting_post_service.clone()))
+            .merge(create_cost_center_read_routes(self.cost_center_service.clone()))
+            .merge(create_financial_statement_read_routes(self.financial_statement_service.clone()))
+            .merge(create_fiscal_period_read_routes(self.fiscal_period_service.clone()))
+            .merge(create_journal_read_routes(self.journal_service.clone()))
+            .merge(create_journal_line_read_routes(self.journal_line_service.clone()))
+            .merge(create_ledger_read_routes(self.ledger_service.clone()))
+            .merge(create_reconciliation_read_routes(self.reconciliation_service.clone()))
+            .merge(create_reconciliation_item_read_routes(self.reconciliation_item_service.clone()))
+            .merge(create_full_reconcile_read_routes(self.full_reconcile_service.clone()))
+            .merge(create_partial_reconcile_read_routes(self.partial_reconcile_service.clone()))
+    }
+
+    // <<< CUSTOM METHODS
+    /// The reconciliation write service — the ONLY sanctioned writer of the
+    /// reconciliation graph (guards + CLAMP + side-effecting unlink). The graph tables
+    /// carry no CRUD surface anywhere; `guarded_routes` mounts its verb routes.
+    pub fn reconcile_write_service(
+        &self,
+    ) -> std::sync::Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>
+    {
+        self.reconcile_write_service.clone()
+    }
+
+    /// Build a reconcile write service with the FX (exchange-difference) account
+    /// configured. Without one, any rate divergence that demands an exchange move fails
+    /// closed (`exchange_account_unconfigured`) — normal single-currency posts never
+    /// generate one, so the default service is complete for them.
+    pub fn reconcile_write_service_with_exchange_account(
+        &self,
+        exchange_account_id: uuid::Uuid,
+    ) -> std::sync::Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>
+    {
+        std::sync::Arc::new(
+            crate::application::service::reconcile_write_service::ReconcileWriteService::new(
+                std::sync::Arc::new(
+                    crate::infrastructure::persistence::reconcile_graph_repository::SqlxReconcileGraphRepository::new(),
+                ),
+                std::sync::Arc::new(
+                    crate::infrastructure::persistence::posting_repository::SqlxPostingRepository::new(
+                        self.db_pool.clone(),
+                    ),
+                ),
+                self.db_pool.clone(),
+                Some(exchange_account_id),
+            ),
+        )
+    }
+    // END CUSTOM
 }
 
 /// Builder for AccountingModule
@@ -190,6 +276,34 @@ impl AccountingModuleBuilder {
         let reconciliation_item_repository = Arc::new(ReconciliationItemRepository::new(db_pool.clone()));
         let reconciliation_item_service = Arc::new(ReconciliationItemService::with_repository(reconciliation_item_repository.clone()));
 
+        // FullReconcile service
+        let full_reconcile_repository = Arc::new(FullReconcileRepository::new(db_pool.clone()));
+        let full_reconcile_service = Arc::new(FullReconcileService::with_repository(full_reconcile_repository.clone()));
+
+        // PartialReconcile service
+        let partial_reconcile_repository = Arc::new(PartialReconcileRepository::new(db_pool.clone()));
+        let partial_reconcile_service = Arc::new(PartialReconcileService::with_repository(partial_reconcile_repository.clone()));
+        // <<< CUSTOM
+        // Reconciliation write service: graph port + posting port (reversals of
+        // generated moves) over the shared pool; no FX account by default (fail-closed).
+        let reconcile_graph_repository = std::sync::Arc::new(
+            crate::infrastructure::persistence::reconcile_graph_repository::SqlxReconcileGraphRepository::new(),
+        );
+        let reconcile_posting_repository = std::sync::Arc::new(
+            crate::infrastructure::persistence::posting_repository::SqlxPostingRepository::new(
+                db_pool.clone(),
+            ),
+        );
+        let reconcile_write_service = std::sync::Arc::new(
+            crate::application::service::reconcile_write_service::ReconcileWriteService::new(
+                reconcile_graph_repository,
+                reconcile_posting_repository,
+                db_pool.clone(),
+                None,
+            ),
+        );
+        // END CUSTOM
+
         // <<< CUSTOM
         // END CUSTOM
 
@@ -204,7 +318,11 @@ impl AccountingModuleBuilder {
             ledger_service,
             reconciliation_service,
             reconciliation_item_service,
+            full_reconcile_service,
+            partial_reconcile_service,
             // <<< CUSTOM
+            db_pool,
+            reconcile_write_service,
             // END CUSTOM
         })
     }
