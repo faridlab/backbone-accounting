@@ -22,6 +22,8 @@ use backbone_accounting::seeders::SeedJournalLineSeeder;
 use backbone_accounting::seeders::SeedLedgerSeeder;
 use backbone_accounting::seeders::SeedReconciliationSeeder;
 use backbone_accounting::seeders::SeedReconciliationItemSeeder;
+use backbone_accounting::seeders::SeedFullReconcileSeeder;
+use backbone_accounting::seeders::SeedPartialReconcileSeeder;
 use backbone_accounting::seeders::Seeder;
 
 #[tokio::main]
@@ -34,7 +36,7 @@ async fn main() -> Result<()> {
         .map(|s| s.as_str());
 
     let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
+        .map_err(|e| anyhow::anyhow!("DATABASE_URL must be set: {e}"))?;
 
     println!("Connecting to database...");
 
@@ -60,6 +62,8 @@ async fn main() -> Result<()> {
     seeders.push(Box::new(SeedLedgerSeeder::new()));
     seeders.push(Box::new(SeedReconciliationSeeder::new()));
     seeders.push(Box::new(SeedReconciliationItemSeeder::new()));
+    seeders.push(Box::new(SeedFullReconcileSeeder::new()));
+    seeders.push(Box::new(SeedPartialReconcileSeeder::new()));
 
     // Sort by order
     seeders.sort_by_key(|s| s.order());

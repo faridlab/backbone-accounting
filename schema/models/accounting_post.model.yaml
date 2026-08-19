@@ -246,6 +246,8 @@ enums:
         description: "Cap table + dividends (share issue/buyback, dividend declare/pay)"
       - name: manual
         description: "Manual posting"
+      - name: reconciliation
+        description: "Reconciliation-generated move (exchange difference; later CABA)"
 
   # ---------------------------------------------------------------------------
   # Posting Type

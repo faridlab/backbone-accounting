@@ -106,7 +106,7 @@ pub struct Journal {
 impl Journal {
     /// Create a builder for Journal
     pub fn builder() -> JournalBuilder {
-        JournalBuilder::default()
+        <JournalBuilder as Default>::default()
     }
 
     /// Create a new Journal with required fields
@@ -947,7 +947,7 @@ impl JournalBuilder {
             company_id,
             journal_number,
             reference_number: self.reference_number,
-            journal_type: self.journal_type.unwrap_or(JournalType::default()),
+            journal_type: self.journal_type.unwrap_or_default(),
             branch_id: self.branch_id,
             transaction_date,
             posting_date: self.posting_date,
@@ -960,7 +960,7 @@ impl JournalBuilder {
             total_debit: self.total_debit.unwrap_or(Decimal::from(0)),
             total_credit: self.total_credit.unwrap_or(Decimal::from(0)),
             line_count: self.line_count.unwrap_or(0),
-            source: self.source.unwrap_or(JournalSource::default()),
+            source: self.source.unwrap_or_default(),
             source_type: self.source_type,
             source_id: self.source_id,
             source_reference: self.source_reference,
@@ -972,7 +972,7 @@ impl JournalBuilder {
             is_reversing: self.is_reversing.unwrap_or(false),
             auto_reverse: self.auto_reverse.unwrap_or(false),
             auto_reverse_date: self.auto_reverse_date,
-            status: self.status.unwrap_or(JournalStatus::default()),
+            status: self.status.unwrap_or_default(),
             requires_approval: self.requires_approval.unwrap_or(false),
             approval_threshold: self.approval_threshold,
             submitted_at: self.submitted_at,

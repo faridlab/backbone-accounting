@@ -777,3 +777,4 @@ impl backbone_core::ApplyUpdateDto<UpdateLedgerDto> for Ledger {
 // Add custom DTOs specific to Ledger here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

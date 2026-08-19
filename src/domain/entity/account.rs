@@ -102,7 +102,7 @@ pub struct Account {
 impl Account {
     /// Create a builder for Account
     pub fn builder() -> AccountBuilder {
-        AccountBuilder::default()
+        <AccountBuilder as Default>::default()
     }
 
     /// Create a new Account with required fields
@@ -850,7 +850,7 @@ impl AccountBuilder {
             require_project: self.require_project.unwrap_or(false),
             sort_order: self.sort_order.unwrap_or(0),
             show_in_reports: self.show_in_reports.unwrap_or(true),
-            status: self.status.unwrap_or(AccountStatus::default()),
+            status: self.status.unwrap_or_default(),
             is_system: self.is_system.unwrap_or(false),
             notes: self.notes,
             source_id: self.source_id,

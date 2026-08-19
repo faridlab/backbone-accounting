@@ -103,7 +103,7 @@ pub struct Ledger {
 impl Ledger {
     /// Create a builder for Ledger
     pub fn builder() -> LedgerBuilder {
-        LedgerBuilder::default()
+        <LedgerBuilder as Default>::default()
     }
 
     /// Create a new Ledger with required fields

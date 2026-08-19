@@ -12,6 +12,8 @@ pub mod journal_line_domain_policy;
 pub mod ledger_domain_policy;
 pub mod reconciliation_domain_policy;
 pub mod reconciliation_item_domain_policy;
+pub mod full_reconcile_domain_policy;
+pub mod partial_reconcile_domain_policy;
 
 pub use account_domain_policy::AccountDomainPolicy;
 pub use accounting_post_domain_policy::AccountingPostDomainPolicy;
@@ -23,7 +25,12 @@ pub use journal_line_domain_policy::JournalLineDomainPolicy;
 pub use ledger_domain_policy::LedgerDomainPolicy;
 pub use reconciliation_domain_policy::ReconciliationDomainPolicy;
 pub use reconciliation_item_domain_policy::ReconciliationItemDomainPolicy;
-
 // <<< CUSTOM
 pub mod posting_rules;
+pub mod reconcile_rules;
+// END CUSTOM
+pub use full_reconcile_domain_policy::FullReconcileDomainPolicy;
+pub use partial_reconcile_domain_policy::PartialReconcileDomainPolicy;
+
+// <<< CUSTOM
 // END CUSTOM

@@ -98,3 +98,17 @@ entities:
     pagination:
       default_limit: 20
       max_limit: 100
+  full_reconcile:
+    collection: full_reconciles
+    enabled: false
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  partial_reconcile:
+    collection: partial_reconciles
+    enabled: false
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100

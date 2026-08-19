@@ -558,6 +558,11 @@ models:
         type: datetime?
         description: "Reconciliation timestamp"
 
+      full_reconcile_id:
+        type: uuid?
+        attributes: ["@foreign_key(FullReconcile.id)"]
+        description: "Full-reconcile group this line's residual reached zero in (the reconciliation-graph anchor)"
+
       # =======================================================================
       # Ledger Posting
       # =======================================================================
@@ -608,6 +613,12 @@ models:
         attributes: ["@one", "@foreign_key(reconciliation_id)"]
         description: "Reconciliation"
 
+      full_reconcile:
+        type: FullReconcile?
+        attributes: ["@one", "@foreign_key(full_reconcile_id)"]
+        description: "Full-reconcile group this line completed into"
+        inverse: reconciled_lines
+
       ledger:
         type: Ledger?
         attributes: ["@one", "@foreign_key(ledger_id)"]
@@ -634,6 +645,10 @@ models:
         fields: [account_id, is_posted]
       - type: index
         fields: [company_id, is_reconciled]
+      # Reconciliation-graph group lookup (fully-reconciled lines)
+      - type: index
+        fields: [company_id, full_reconcile_id]
+        where: "full_reconcile_id IS NOT NULL"
       - type: index
         fields: [source_type, source_id]
       - type: index

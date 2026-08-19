@@ -73,5 +73,6 @@ imports:
   - ledger.model.yaml
   - fiscal.model.yaml
   - reconciliation.model.yaml
+  - reconciliation_graph.model.yaml
   - accounting_post.model.yaml
   - financial_statement.model.yaml

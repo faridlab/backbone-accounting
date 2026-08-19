@@ -14,6 +14,8 @@ mod journal_line_repository;
 mod ledger_repository;
 mod reconciliation_repository;
 mod reconciliation_item_repository;
+mod full_reconcile_repository;
+mod partial_reconcile_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
@@ -23,6 +25,7 @@ pub mod period_close_repository;
 pub mod bank_reconciliation_repository;
 pub mod reporting_repository;
 pub mod hierarchy_repository;
+pub mod reconcile_graph_repository;
 // END CUSTOM
 
 // Re-exports
@@ -36,6 +39,8 @@ pub use journal_line_repository::JournalLineRepository;
 pub use ledger_repository::LedgerRepository;
 pub use reconciliation_repository::ReconciliationRepository;
 pub use reconciliation_item_repository::ReconciliationItemRepository;
+pub use full_reconcile_repository::FullReconcileRepository;
+pub use partial_reconcile_repository::PartialReconcileRepository;
 
 // Re-export backbone-orm types
 pub use backbone_orm::repository::{
@@ -52,4 +57,5 @@ pub use period_close_repository::SqlxPeriodCloseRepository;
 pub use bank_reconciliation_repository::SqlxBankReconciliationRepository;
 pub use reporting_repository::SqlxReportingRepository;
 pub use hierarchy_repository::SqlxHierarchyRepository;
+pub use reconcile_graph_repository::SqlxReconcileGraphRepository;
 // END CUSTOM

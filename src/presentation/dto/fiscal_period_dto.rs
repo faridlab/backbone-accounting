@@ -700,3 +700,4 @@ impl backbone_core::ApplyUpdateDto<UpdateFiscalPeriodDto> for FiscalPeriod {
 // Add custom DTOs specific to FiscalPeriod here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

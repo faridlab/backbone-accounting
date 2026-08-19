@@ -84,6 +84,7 @@ pub struct JournalLine {
     pub is_reconciled: bool,
     pub reconciliation_id: Option<Uuid>,
     pub reconciled_at: Option<DateTime<Utc>>,
+    pub full_reconcile_id: Option<Uuid>,
     pub is_posted: bool,
     pub ledger_id: Option<Uuid>,
     pub posted_at: Option<DateTime<Utc>>,
@@ -94,7 +95,7 @@ pub struct JournalLine {
 impl JournalLine {
     /// Create a builder for JournalLine
     pub fn builder() -> JournalLineBuilder {
-        JournalLineBuilder::default()
+        <JournalLineBuilder as Default>::default()
     }
 
     /// Create a new JournalLine with required fields
@@ -135,6 +136,7 @@ impl JournalLine {
             is_reconciled,
             reconciliation_id: None,
             reconciled_at: None,
+            full_reconcile_id: None,
             is_posted,
             ledger_id: None,
             posted_at: None,
@@ -272,6 +274,12 @@ impl JournalLine {
         self
     }
 
+    /// Set the full_reconcile_id field (chainable)
+    pub fn with_full_reconcile_id(mut self, value: Uuid) -> Self {
+        self.full_reconcile_id = Some(value);
+        self
+    }
+
     /// Set the ledger_id field (chainable)
     pub fn with_ledger_id(mut self, value: Uuid) -> Self {
         self.ledger_id = Some(value);
@@ -394,6 +402,9 @@ impl JournalLine {
                 "reconciled_at" => {
                     if let Ok(v) = serde_json::from_value(value) { self.reconciled_at = v; }
                 }
+                "full_reconcile_id" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.full_reconcile_id = v; }
+                }
                 "is_posted" => {
                     if let Ok(v) = serde_json::from_value(value) { self.is_posted = v; }
                 }
@@ -474,6 +485,7 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("related_line_id".to_string(), "uuid".to_string());
         m.insert("reconciliation_id".to_string(), "uuid".to_string());
+        m.insert("full_reconcile_id".to_string(), "uuid".to_string());
         m.insert("ledger_id".to_string(), "uuid".to_string());
         m.insert("party_type".to_string(), "party_type".to_string());
         m
@@ -485,7 +497,7 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
         Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[("journal", "journals", "journalId"), ("account", "accounts", "accountId"), ("relatedLine", "journal_lines", "relatedLineId"), ("reconciliation", "reconciliations", "reconciliationId"), ("ledger", "ledgers", "ledgerId"), ("costCenter", "cost_centers", "costCenterId")]
+        &[("journal", "journals", "journalId"), ("account", "accounts", "accountId"), ("relatedLine", "journal_lines", "relatedLineId"), ("reconciliation", "reconciliations", "reconciliationId"), ("fullReconcile", "full_reconciles", "fullReconcileId"), ("ledger", "ledgers", "ledgerId"), ("costCenter", "cost_centers", "costCenterId")]
     }
 }
 
@@ -529,6 +541,7 @@ pub struct JournalLineBuilder {
     is_reconciled: Option<bool>,
     reconciliation_id: Option<Uuid>,
     reconciled_at: Option<DateTime<Utc>>,
+    full_reconcile_id: Option<Uuid>,
     is_posted: Option<bool>,
     ledger_id: Option<Uuid>,
     posted_at: Option<DateTime<Utc>>,
@@ -741,6 +754,12 @@ impl JournalLineBuilder {
         self
     }
 
+    /// Set the full_reconcile_id field (optional)
+    pub fn full_reconcile_id(mut self, value: Uuid) -> Self {
+        self.full_reconcile_id = Some(value);
+        self
+    }
+
     /// Set the is_posted field (default: `false`)
     pub fn is_posted(mut self, value: bool) -> Self {
         self.is_posted = Some(value);
@@ -818,6 +837,7 @@ impl JournalLineBuilder {
             is_reconciled: self.is_reconciled.unwrap_or(false),
             reconciliation_id: self.reconciliation_id,
             reconciled_at: self.reconciled_at,
+            full_reconcile_id: self.full_reconcile_id,
             is_posted: self.is_posted.unwrap_or(false),
             ledger_id: self.ledger_id,
             posted_at: self.posted_at,

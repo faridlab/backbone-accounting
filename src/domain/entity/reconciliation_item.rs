@@ -91,7 +91,7 @@ pub struct ReconciliationItem {
 impl ReconciliationItem {
     /// Create a builder for ReconciliationItem
     pub fn builder() -> ReconciliationItemBuilder {
-        ReconciliationItemBuilder::default()
+        <ReconciliationItemBuilder as Default>::default()
     }
 
     /// Create a new ReconciliationItem with required fields
@@ -761,7 +761,7 @@ impl ReconciliationItemBuilder {
             statement_description: self.statement_description,
             statement_debit: self.statement_debit.unwrap_or(Decimal::from(0)),
             statement_credit: self.statement_credit.unwrap_or(Decimal::from(0)),
-            status: self.status.unwrap_or(ReconciliationItemStatus::default()),
+            status: self.status.unwrap_or_default(),
             matched_with_id: self.matched_with_id,
             match_date: self.match_date,
             match_method: self.match_method,

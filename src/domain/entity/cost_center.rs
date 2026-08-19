@@ -67,7 +67,7 @@ pub struct CostCenter {
 impl CostCenter {
     /// Create a builder for CostCenter
     pub fn builder() -> CostCenterBuilder {
-        CostCenterBuilder::default()
+        <CostCenterBuilder as Default>::default()
     }
 
     /// Create a new CostCenter with required fields

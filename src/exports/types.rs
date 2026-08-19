@@ -629,6 +629,7 @@ pub struct JournalLineDto {
     pub is_reconciled: bool,
     pub reconciliation_id: Option<Uuid>,
     pub reconciled_at: Option<DateTime<Utc>>,
+    pub full_reconcile_id: Option<Uuid>,
     pub is_posted: bool,
     pub ledger_id: Option<Uuid>,
     pub posted_at: Option<DateTime<Utc>>,
@@ -935,6 +936,134 @@ pub struct ReconciliationItemSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconciliationItemRef {
     pub id: ReconciliationItemId,
+}
+
+// ============================================================================
+// FULLRECONCILE TYPES
+// ============================================================================
+
+/// Type-safe ID for FullReconcile
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FullReconcileId(pub Uuid);
+
+impl FullReconcileId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for FullReconcileId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<FullReconcileId> for Uuid {
+    fn from(id: FullReconcileId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for FullReconcile
+///
+/// This is the public representation of FullReconcile for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileDto {
+    pub id: FullReconcileId,
+    pub company_id: Uuid,
+    pub exchange_total: Decimal,
+    pub reconciled_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Summary view of FullReconcile for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileSummary {
+    pub id: FullReconcileId,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to FullReconcile for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileRef {
+    pub id: FullReconcileId,
+}
+
+// ============================================================================
+// PARTIALRECONCILE TYPES
+// ============================================================================
+
+/// Type-safe ID for PartialReconcile
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PartialReconcileId(pub Uuid);
+
+impl PartialReconcileId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for PartialReconcileId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<PartialReconcileId> for Uuid {
+    fn from(id: PartialReconcileId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for PartialReconcile
+///
+/// This is the public representation of PartialReconcile for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileDto {
+    pub id: PartialReconcileId,
+    pub company_id: Uuid,
+    pub debit_move_id: Uuid,
+    pub credit_move_id: Uuid,
+    pub full_reconcile_id: Option<Uuid>,
+    pub exchange_move_id: Option<Uuid>,
+    pub amount: Decimal,
+    pub debit_amount_currency: Option<Decimal>,
+    pub credit_amount_currency: Option<Decimal>,
+    pub currency: String,
+    pub max_date: NaiveDate,
+    pub origin: ReconcileOrigin,
+    pub source_type: Option<String>,
+    pub source_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Summary view of PartialReconcile for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileSummary {
+    pub id: PartialReconcileId,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to PartialReconcile for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileRef {
+    pub id: PartialReconcileId,
 }
 
 // ============================================================================

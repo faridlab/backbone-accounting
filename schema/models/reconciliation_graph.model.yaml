@@ -1,0 +1,238 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: PartialReconcile, FullReconcile
+# Description: The reconciliation graph — partial debit↔credit edges over journal
+#              lines plus full-reconcile groups (Odoo account.partial.reconcile /
+#              account.full.reconcile shape).
+#
+# Residual (amount minus Σ partial amounts per side) is COMPUTED, never stored —
+# there is deliberately no amount_residual or matching_number column. Fully
+# reconciled groups read the stored full_reconcile_id; partial-only chains resolve
+# through the matching-group read (union-find keyed on min partial id).
+#
+# Unlinking a partial is SIDE-EFFECTING (the Odoo unlink contract): the write
+# service reverses the moves the partial generated (exchange_move_id and any
+# journal stamped source_type='reconciliation', source_id=<partial id> — the hook
+# cash-basis tax deferrals ride later), repairs or dissolves the group, and only
+# then removes the edge. Never a bare DELETE.
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # FullReconcile - a set of lines + partials whose residuals all reached zero
+  # ---------------------------------------------------------------------------
+  - name: FullReconcile
+    collection: full_reconciles
+    description: "Group of journal lines fully reconciled together"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique full-reconcile identifier"
+
+      # =======================================================================
+      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
+      # =======================================================================
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this group # logical FK to organization.Company.id"
+
+      # =======================================================================
+      # Aggregates
+      # =======================================================================
+      exchange_total:
+        type: decimal
+        attributes: ["@default(0)", "@precision(18,2)"]
+        description: "Signed sum of exchange differences the group generated"
+
+      reconciled_at:
+        type: datetime
+        attributes: ["@required", "@default(now)"]
+        description: "When the last edge completed the group"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json?
+        description: "Audit bag (created_by, origin trace, …)"
+
+    relations:
+      partials:
+        type: PartialReconcile[]
+        attributes: ["@many", "@foreign_key(full_reconcile_id)"]
+        description: "Edges grouped into this full reconcile"
+        inverse: full_reconcile
+
+      reconciled_lines:
+        type: JournalLine[]
+        attributes: ["@many", "@foreign_key(full_reconcile_id)"]
+        description: "Lines whose residual reached zero in this group"
+        inverse: full_reconcile
+
+    indexes:
+      - type: index
+        fields: [company_id, reconciled_at]
+
+  # ---------------------------------------------------------------------------
+  # PartialReconcile - one debit↔credit matching edge with a partial amount
+  # ---------------------------------------------------------------------------
+  - name: PartialReconcile
+    collection: partial_reconciles
+    description: "Partial reconciliation edge between a debit and a credit journal line"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique partial-reconcile identifier"
+
+      # =======================================================================
+      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
+      # =======================================================================
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this edge # logical FK to organization.Company.id"
+
+      # =======================================================================
+      # The matched pair (both lines sit on the SAME reconcilable account)
+      # =======================================================================
+      debit_move_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(JournalLine.id)"]
+        description: "Debit side of the edge"
+
+      credit_move_id:
+        type: uuid
+        attributes: ["@required", "@foreign_key(JournalLine.id)"]
+        description: "Credit side of the edge"
+
+      full_reconcile_id:
+        type: uuid?
+        attributes: ["@foreign_key(FullReconcile.id)"]
+        description: "Group this edge completed into (set when the pair's residuals both reached zero)"
+
+      exchange_move_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Exchange-difference journal this edge generated # logical FK to accounting.Journal.id — reversed on unlink"
+
+      # =======================================================================
+      # Amounts (company currency; doc-currency sides kept for forward-compat)
+      # =======================================================================
+      amount:
+        type: decimal
+        attributes: ["@required", "@positive", "@precision(18,2)"]
+        description: "Reconciled amount, always positive, company currency"
+
+      debit_amount_currency:
+        type: decimal?
+        attributes: ["@precision(18,2)", "@non_negative"]
+        description: "Reconciled amount in the debit line's document currency"
+
+      credit_amount_currency:
+        type: decimal?
+        attributes: ["@precision(18,2)", "@non_negative"]
+        description: "Reconciled amount in the credit line's document currency"
+
+      currency:
+        type: string
+        attributes: ["@max(3)", "@default('IDR')"]
+        description: "Company currency of the amount"
+
+      # =======================================================================
+      # Aging / traceability
+      # =======================================================================
+      max_date:
+        type: date
+        attributes: ["@required"]
+        description: "Later of the two lines' transaction dates — drives aged receivable/payable reporting"
+
+      origin:
+        type: ReconcileOrigin
+        attributes: ["@default(manual)"]
+        description: "What created the edge"
+
+      source_type:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Seam trace (e.g. payment, settlement) — redundant with origin for producers"
+
+      source_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Seam trace document id"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json?
+        description: "Audit bag (created_by, actor, unlink trace, …)"
+
+    relations:
+      debit_move:
+        type: JournalLine
+        attributes: ["@one", "@foreign_key(debit_move_id)"]
+        description: "Debit side line"
+
+      credit_move:
+        type: JournalLine
+        attributes: ["@one", "@foreign_key(credit_move_id)"]
+        description: "Credit side line"
+
+      full_reconcile:
+        type: FullReconcile?
+        attributes: ["@one", "@foreign_key(full_reconcile_id)"]
+        description: "Group this edge completed into"
+        inverse: partials
+
+    indexes:
+      # Residual computation scans these two per side
+      - type: index
+        fields: [company_id, debit_move_id]
+      - type: index
+        fields: [company_id, credit_move_id]
+      - type: index
+        fields: [full_reconcile_id]
+        where: "full_reconcile_id IS NOT NULL"
+      - type: index
+        fields: [company_id, source_type, source_id]
+      - type: index
+        fields: [company_id, max_date]
+
+# =============================================================================
+# Enums
+# =============================================================================
+
+enums:
+  # ---------------------------------------------------------------------------
+  # Reconcile Origin
+  # ---------------------------------------------------------------------------
+  - name: ReconcileOrigin
+    description: "What created a reconciliation edge"
+    variants:
+      - name: settlement
+        description: "A settlement applied an invoice receivable/payable against a payment"
+      - name: clearing
+        description: "A bank clearance matched a payment's clearing line against the clearance leg"
+      - name: manual
+        description: "An accountant's manual match"
+        default: true

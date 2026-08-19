@@ -281,6 +281,60 @@ pub struct ReconciliationItemDeletedEvent {
 }
 
 // ============================================================================
+// FULLRECONCILE EVENTS
+// ============================================================================
+
+/// Event published when a FullReconcile is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileCreatedEvent {
+    pub id: FullReconcileId,
+    pub data: FullReconcileDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a FullReconcile is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileUpdatedEvent {
+    pub id: FullReconcileId,
+    pub data: FullReconcileDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a FullReconcile is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FullReconcileDeletedEvent {
+    pub id: FullReconcileId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// PARTIALRECONCILE EVENTS
+// ============================================================================
+
+/// Event published when a PartialReconcile is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileCreatedEvent {
+    pub id: PartialReconcileId,
+    pub data: PartialReconcileDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a PartialReconcile is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileUpdatedEvent {
+    pub id: PartialReconcileId,
+    pub data: PartialReconcileDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a PartialReconcile is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartialReconcileDeletedEvent {
+    pub id: PartialReconcileId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
 // MODULE EVENT ENUM
 // ============================================================================
 
@@ -318,6 +372,12 @@ pub enum AccountingEvent {
     ReconciliationItemCreated(ReconciliationItemCreatedEvent),
     ReconciliationItemUpdated(ReconciliationItemUpdatedEvent),
     ReconciliationItemDeleted(ReconciliationItemDeletedEvent),
+    FullReconcileCreated(FullReconcileCreatedEvent),
+    FullReconcileUpdated(FullReconcileUpdatedEvent),
+    FullReconcileDeleted(FullReconcileDeletedEvent),
+    PartialReconcileCreated(PartialReconcileCreatedEvent),
+    PartialReconcileUpdated(PartialReconcileUpdatedEvent),
+    PartialReconcileDeleted(PartialReconcileDeletedEvent),
 }
 
 /// Metadata for module events

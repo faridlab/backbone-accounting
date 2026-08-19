@@ -367,3 +367,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
 // Add custom DTOs specific to CostCenter here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

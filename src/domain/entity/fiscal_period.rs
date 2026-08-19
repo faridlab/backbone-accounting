@@ -98,7 +98,7 @@ pub struct FiscalPeriod {
 impl FiscalPeriod {
     /// Create a builder for FiscalPeriod
     pub fn builder() -> FiscalPeriodBuilder {
-        FiscalPeriodBuilder::default()
+        <FiscalPeriodBuilder as Default>::default()
     }
 
     /// Create a new FiscalPeriod with required fields
@@ -781,7 +781,7 @@ impl FiscalPeriodBuilder {
             company_id,
             period_code,
             name,
-            period_type: self.period_type.unwrap_or(PeriodType::default()),
+            period_type: self.period_type.unwrap_or_default(),
             start_date,
             end_date,
             fiscal_year,
@@ -789,7 +789,7 @@ impl FiscalPeriodBuilder {
             fiscal_month: self.fiscal_month,
             parent_id: self.parent_id,
             level: self.level.unwrap_or(0),
-            status: self.status.unwrap_or(PeriodStatus::default()),
+            status: self.status.unwrap_or_default(),
             is_current: self.is_current.unwrap_or(false),
             opening_balance_set: self.opening_balance_set.unwrap_or(false),
             opening_balance_date: self.opening_balance_date,

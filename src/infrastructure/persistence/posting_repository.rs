@@ -29,6 +29,12 @@ use crate::domain::repositories::posting_repository::{
     PostingCommit, PostingRepository, PostingWrite, ReversalSource,
 };
 
+/// Typed marker for an idempotency-race loss inside [`SqlxPostingRepository::commit_posting_on`].
+/// The caller's transaction is already aborted when this surfaces.
+#[derive(Debug, thiserror::Error)]
+#[error("concurrent posting conflict")]
+struct ConcurrentPostingConflict;
+
 /// Per-account snapshot used internally during the atomic write (mirrors `PostableAccount`).
 struct AccountInfo {
     number: String,
@@ -227,12 +233,59 @@ impl PostingRepository for SqlxPostingRepository {
     }
 
     async fn commit_posting(&self, write: PostingWrite) -> anyhow::Result<PostingCommit> {
-        let now = write.now;
         let mut tx = self.pool.begin().await?;
         // Bind the tenant for the whole transaction: under the strict fence (a non-superuser
         // app role) these INSERTs need `app.company_id` set for the RLS WITH CHECK to accept
         // them, and the SELECTs inside need it to see rows at all.
         company_scope::bind_company_on(&mut tx, write.company_id).await?;
+
+        match self.commit_posting_on(&mut tx, write.clone()).await {
+            Ok(commit) => {
+                tx.commit().await?;
+                Ok(commit)
+            }
+            // Race loss on the idempotency arbiter: roll everything back (no partial write)
+            // and return the winner, if any.
+            Err(e) if e.downcast_ref::<ConcurrentPostingConflict>().is_some() => {
+                drop(tx);
+                if let Some((existing_post, existing_journal)) = self
+                    .find_existing_post(
+                        write.company_id,
+                        &write.source_type,
+                        write.source_id,
+                        &write.posting_type,
+                        write.idempotency_key.as_deref(),
+                    )
+                    .await?
+                {
+                    let total_debit: Decimal = write.lines.iter().map(|l| l.debit).sum();
+                    let total_credit: Decimal = write.lines.iter().map(|l| l.credit).sum();
+                    return Ok(PostingCommit {
+                        post_id: existing_post,
+                        journal_id: existing_journal,
+                        total_debit,
+                        total_credit,
+                        reused: true,
+                    });
+                }
+                anyhow::bail!("concurrent posting conflict with no existing winner");
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Conn-taking core of `commit_posting` — the SAME atomic write (journal + lines +
+    /// ledger + balances + accounting_post + reversal links, per-account `FOR UPDATE`),
+    /// riding a caller-held transaction. The caller must already have bound `app.company_id`.
+    /// On an idempotency-race loss the caller's transaction is aborted; the error carries
+    /// [`ConcurrentPostingConflict`] for the caller to surface or resolve.
+    async fn commit_posting_on(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        write: PostingWrite,
+    ) -> anyhow::Result<PostingCommit> {
+        let now = write.now;
+        let mut tx = conn;
 
         let total_debit: Decimal = write.lines.iter().map(|l| l.debit).sum();
         let total_credit: Decimal = write.lines.iter().map(|l| l.credit).sum();
@@ -379,33 +432,15 @@ impl PostingRepository for SqlxPostingRepository {
         .execute(&mut *tx)
         .await;
 
-        // Concurrency guard: the partial unique index is the real arbiter. On a race loss, roll
-        // everything back (no partial write) and return the winner.
+        // Concurrency guard: the partial unique index is the real arbiter. On a race loss the
+        // caller's transaction is aborted; surface the typed marker (the pool wrapper
+        // resolves it into a `reused` result instead).
         if let Err(ref e) = post_result {
             if e.as_database_error()
                 .map(|d| d.is_unique_violation())
                 .unwrap_or(false)
             {
-                drop(tx);
-                if let Some((existing_post, existing_journal)) = self
-                    .find_existing_post(
-                        write.company_id,
-                        &write.source_type,
-                        write.source_id,
-                        &write.posting_type,
-                        write.idempotency_key.as_deref(),
-                    )
-                    .await?
-                {
-                    return Ok(PostingCommit {
-                        post_id: existing_post,
-                        journal_id: existing_journal,
-                        total_debit,
-                        total_credit,
-                        reused: true,
-                    });
-                }
-                anyhow::bail!("concurrent posting conflict with no existing winner");
+                return Err(anyhow::Error::new(ConcurrentPostingConflict));
             }
         }
         post_result?;
@@ -431,8 +466,6 @@ impl PostingRepository for SqlxPostingRepository {
                 .await?;
             }
         }
-
-        tx.commit().await?;
 
         Ok(PostingCommit {
             post_id,

@@ -121,7 +121,7 @@ pub struct FinancialStatement {
 impl FinancialStatement {
     /// Create a builder for FinancialStatement
     pub fn builder() -> FinancialStatementBuilder {
-        FinancialStatementBuilder::default()
+        <FinancialStatementBuilder as Default>::default()
     }
 
     /// Create a new FinancialStatement with required fields
@@ -1245,7 +1245,7 @@ impl FinancialStatementBuilder {
             is_comparative: self.is_comparative.unwrap_or(false),
             comparative_period_id: self.comparative_period_id,
             comparative_as_of_date: self.comparative_as_of_date,
-            status: self.status.unwrap_or(StatementStatus::default()),
+            status: self.status.unwrap_or_default(),
             total_current_assets: self.total_current_assets,
             total_non_current_assets: self.total_non_current_assets,
             total_assets: self.total_assets,

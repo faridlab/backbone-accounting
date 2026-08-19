@@ -16,6 +16,8 @@ pub mod journal_line_api_test;
 pub mod ledger_api_test;
 pub mod reconciliation_api_test;
 pub mod reconciliation_item_api_test;
+pub mod full_reconcile_api_test;
+pub mod partial_reconcile_api_test;
 
 // Re-exports for convenience
 pub use crud_test_base::*;
@@ -29,3 +31,5 @@ pub use journal_line_api_test::*;
 pub use ledger_api_test::*;
 pub use reconciliation_api_test::*;
 pub use reconciliation_item_api_test::*;
+pub use full_reconcile_api_test::*;
+pub use partial_reconcile_api_test::*;

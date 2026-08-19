@@ -176,6 +176,17 @@ pub trait PostingRepository: Send + Sync {
     /// partial-unique-index concurrency arbiter internally (returns `reused=true` on a race loss).
     async fn commit_posting(&self, write: PostingWrite) -> anyhow::Result<PostingCommit>;
 
+    /// Conn-taking core of `commit_posting` — the same atomic write riding a caller-held
+    /// transaction (the reconciliation write path posts exchange-difference and unlink-reversal
+    /// journals inside the caller's unit of work). The caller must have bound `app.company_id`
+    /// on the connection. On an idempotency-race loss the caller's transaction is aborted and
+    /// the error message is "concurrent posting conflict" — the caller surfaces it.
+    async fn commit_posting_on(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        write: PostingWrite,
+    ) -> anyhow::Result<PostingCommit>;
+
     /// Load a manual journal + its lines for posting (must exist + match tenant).
     async fn find_manual_journal_for_post(
         &self,

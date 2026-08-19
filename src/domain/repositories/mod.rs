@@ -16,6 +16,8 @@ pub mod journal_line_repository;
 pub mod ledger_repository;
 pub mod reconciliation_repository;
 pub mod reconciliation_item_repository;
+pub mod full_reconcile_repository;
+pub mod partial_reconcile_repository;
 
 // Re-exports
 pub use account_repository::{
@@ -86,6 +88,7 @@ pub mod period_close_repository;
 pub mod bank_reconciliation_repository;
 pub mod reporting_repository;
 pub mod hierarchy_repository;
+pub mod reconcile_graph_repository;
 pub use posting_repository::{
     FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
     PostingCommit, PostingRepository, PostingWrite, ReversalSource,
@@ -98,4 +101,17 @@ pub use bank_reconciliation_repository::{
 };
 pub use reporting_repository::{AccountSumRow, ReportingRepository};
 pub use hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};
+pub use reconcile_graph_repository::{JournalReversalMeta, ReconcileGraphRepository};
 // END CUSTOM
+pub use full_reconcile_repository::{
+    FullReconcileRepository,
+    FullReconcilePaginationParams,
+    FullReconcilePaginatedResult,
+    FullReconcileFilter,
+};
+pub use partial_reconcile_repository::{
+    PartialReconcileRepository,
+    PartialReconcilePaginationParams,
+    PartialReconcilePaginatedResult,
+    PartialReconcileFilter,
+};

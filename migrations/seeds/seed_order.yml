@@ -17,3 +17,7 @@
 - account_seed
 - cost_center_seed
 - fiscal_period_seed
+
+# Newly added seeds (preserve manual order above):
+- partial_reconcile_seed
+- full_reconcile_seed

@@ -16,4 +16,5 @@ pub use entity::*;
 
 // <<< CUSTOM
 pub mod gl_posting;
+pub mod reconcile_graph;
 // END CUSTOM

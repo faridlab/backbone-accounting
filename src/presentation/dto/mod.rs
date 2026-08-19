@@ -15,6 +15,8 @@ pub mod journal_line_dto;
 pub mod ledger_dto;
 pub mod reconciliation_dto;
 pub mod reconciliation_item_dto;
+pub mod full_reconcile_dto;
+pub mod partial_reconcile_dto;
 
 // Re-exports
 pub use account_dto::{
@@ -96,6 +98,22 @@ pub use reconciliation_item_dto::{
     ReconciliationItemResponseDto,
     ReconciliationItemListResponseDto,
     ReconciliationItemSummaryDto,
+};
+pub use full_reconcile_dto::{
+    CreateFullReconcileDto,
+    UpdateFullReconcileDto,
+    PatchFullReconcileDto,
+    FullReconcileResponseDto,
+    FullReconcileListResponseDto,
+    FullReconcileSummaryDto,
+};
+pub use partial_reconcile_dto::{
+    CreatePartialReconcileDto,
+    UpdatePartialReconcileDto,
+    PatchPartialReconcileDto,
+    PartialReconcileResponseDto,
+    PartialReconcileListResponseDto,
+    PartialReconcileSummaryDto,
 };
 
 // Common pagination types

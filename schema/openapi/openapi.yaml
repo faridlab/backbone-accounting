@@ -31,6 +31,10 @@ tags:
     description: Reconciliation management endpoints
   - name: ReconciliationItems
     description: ReconciliationItem management endpoints
+  - name: FullReconciles
+    description: FullReconcile management endpoints
+  - name: PartialReconciles
+    description: PartialReconcile management endpoints
 
 paths:
   /api/v1/accounts:
@@ -3693,6 +3697,738 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /api/v1/full_reconciles:
+    get:
+      tags:
+        - FullReconciles
+      summary: List FullReconciles
+      description: Get a paginated list of FullReconciles with optional filtering and sorting
+      operationId: listFullReconciles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcileList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - FullReconciles
+      summary: Create FullReconcile
+      description: Create a new FullReconcile
+      operationId: createFullReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFullReconcileRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/full_reconciles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - FullReconciles
+      summary: Get FullReconcile by ID
+      operationId: getFullReconcile
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - FullReconciles
+      summary: Update FullReconcile (full)
+      operationId: updateFullReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFullReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - FullReconciles
+      summary: Update FullReconcile (partial)
+      operationId: patchFullReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchFullReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - FullReconciles
+      summary: Delete FullReconcile (soft)
+      operationId: deleteFullReconcile
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/full_reconciles/bulk:
+    post:
+      tags:
+        - FullReconciles
+      summary: Bulk create FullReconciles
+      operationId: bulkCreateFullReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateFullReconcileRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FullReconcile'
+    put:
+      tags:
+        - FullReconciles
+      summary: Bulk update FullReconciles (full, atomic)
+      operationId: bulkUpdateFullReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateFullReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - FullReconciles
+      summary: Bulk partial-update FullReconciles (atomic)
+      operationId: bulkPatchFullReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/full_reconciles/upsert:
+    post:
+      tags:
+        - FullReconciles
+      summary: Upsert FullReconcile
+      operationId: upsertFullReconcile
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFullReconcileRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+
+  /api/v1/full_reconciles/trash:
+    get:
+      tags:
+        - FullReconciles
+      summary: List deleted FullReconciles
+      operationId: listDeletedFullReconciles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcileList'
+
+  /api/v1/full_reconciles/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - FullReconciles
+      summary: Restore deleted FullReconcile
+      operationId: restoreFullReconcile
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/full_reconciles/empty:
+    delete:
+      tags:
+        - FullReconciles
+      summary: Empty trash for FullReconciles
+      operationId: emptyTrashFullReconciles
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/full_reconciles/delete/bulk:
+    post:
+      tags:
+        - FullReconciles
+      summary: Bulk soft-delete FullReconciles by ids (atomic)
+      operationId: bulkDeleteFullReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/full_reconciles/restore/bulk:
+    post:
+      tags:
+        - FullReconciles
+      summary: Bulk restore FullReconciles by ids (atomic)
+      operationId: bulkRestoreFullReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/full_reconciles/restore/all:
+    post:
+      tags:
+        - FullReconciles
+      summary: Restore all soft-deleted FullReconciles
+      operationId: restoreAllFullReconciles
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/full_reconciles/trash/bulk:
+    delete:
+      tags:
+        - FullReconciles
+      summary: Bulk permanently-delete FullReconciles from trash by ids (atomic)
+      operationId: bulkPermanentDeleteFullReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/partial_reconciles:
+    get:
+      tags:
+        - PartialReconciles
+      summary: List PartialReconciles
+      description: Get a paginated list of PartialReconciles with optional filtering and sorting
+      operationId: listPartialReconciles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcileList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - PartialReconciles
+      summary: Create PartialReconcile
+      description: Create a new PartialReconcile
+      operationId: createPartialReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePartialReconcileRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/partial_reconciles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - PartialReconciles
+      summary: Get PartialReconcile by ID
+      operationId: getPartialReconcile
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - PartialReconciles
+      summary: Update PartialReconcile (full)
+      operationId: updatePartialReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartialReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - PartialReconciles
+      summary: Update PartialReconcile (partial)
+      operationId: patchPartialReconcile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchPartialReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - PartialReconciles
+      summary: Delete PartialReconcile (soft)
+      operationId: deletePartialReconcile
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/partial_reconciles/bulk:
+    post:
+      tags:
+        - PartialReconciles
+      summary: Bulk create PartialReconciles
+      operationId: bulkCreatePartialReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreatePartialReconcileRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartialReconcile'
+    put:
+      tags:
+        - PartialReconciles
+      summary: Bulk update PartialReconciles (full, atomic)
+      operationId: bulkUpdatePartialReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdatePartialReconcileRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - PartialReconciles
+      summary: Bulk partial-update PartialReconciles (atomic)
+      operationId: bulkPatchPartialReconciles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/partial_reconciles/upsert:
+    post:
+      tags:
+        - PartialReconciles
+      summary: Upsert PartialReconcile
+      operationId: upsertPartialReconcile
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePartialReconcileRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+
+  /api/v1/partial_reconciles/trash:
+    get:
+      tags:
+        - PartialReconciles
+      summary: List deleted PartialReconciles
+      operationId: listDeletedPartialReconciles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcileList'
+
+  /api/v1/partial_reconciles/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - PartialReconciles
+      summary: Restore deleted PartialReconcile
+      operationId: restorePartialReconcile
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/partial_reconciles/empty:
+    delete:
+      tags:
+        - PartialReconciles
+      summary: Empty trash for PartialReconciles
+      operationId: emptyTrashPartialReconciles
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/partial_reconciles/delete/bulk:
+    post:
+      tags:
+        - PartialReconciles
+      summary: Bulk soft-delete PartialReconciles by ids (atomic)
+      operationId: bulkDeletePartialReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/partial_reconciles/restore/bulk:
+    post:
+      tags:
+        - PartialReconciles
+      summary: Bulk restore PartialReconciles by ids (atomic)
+      operationId: bulkRestorePartialReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialReconcileBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/partial_reconciles/restore/all:
+    post:
+      tags:
+        - PartialReconciles
+      summary: Restore all soft-deleted PartialReconciles
+      operationId: restoreAllPartialReconciles
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/partial_reconciles/trash/bulk:
+    delete:
+      tags:
+        - PartialReconciles
+      summary: Bulk permanently-delete PartialReconciles from trash by ids (atomic)
+      operationId: bulkPermanentDeletePartialReconciles
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
 components:
   schemas:
     Account:
@@ -7212,6 +7948,10 @@ components:
           nullable: true
           type: string
           format: date-time
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
         is_posted:
           type: boolean
         ledger_id:
@@ -7368,6 +8108,10 @@ components:
           nullable: true
           type: string
           format: date-time
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
         is_posted:
           type: boolean
         ledger_id:
@@ -7511,6 +8255,10 @@ components:
           nullable: true
           type: string
           format: date-time
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
         is_posted:
           type: boolean
         ledger_id:
@@ -7635,6 +8383,10 @@ components:
           nullable: true
           type: string
           format: date-time
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
         is_posted:
           type: boolean
         ledger_id:
@@ -9566,6 +10318,364 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReconciliationItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    FullReconcile:
+      type: object
+      required:
+        - id
+        - company_id
+        - exchange_total
+        - reconciled_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        exchange_total:
+          type: string
+        reconciled_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          nullable: true
+          type: object
+
+    FullReconcileBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FullReconcile'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateFullReconcileRequest:
+      type: object
+      required:
+        - company_id
+        - exchange_total
+        - reconciled_at
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        exchange_total:
+          type: string
+        reconciled_at:
+          type: string
+          format: date-time
+        metadata:
+          nullable: true
+          type: object
+
+    UpdateFullReconcileRequest:
+      type: object
+      required:
+        - company_id
+        - exchange_total
+        - reconciled_at
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        exchange_total:
+          type: string
+        reconciled_at:
+          type: string
+          format: date-time
+        metadata:
+          nullable: true
+          type: object
+
+    PatchFullReconcileRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        exchange_total:
+          type: string
+        reconciled_at:
+          type: string
+          format: date-time
+        metadata:
+          nullable: true
+          type: object
+
+    FullReconcileList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FullReconcile'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PartialReconcile:
+      type: object
+      required:
+        - id
+        - company_id
+        - debit_move_id
+        - credit_move_id
+        - amount
+        - currency
+        - max_date
+        - origin
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        company_id:
+          type: string
+          format: uuid
+        debit_move_id:
+          type: string
+          format: uuid
+        credit_move_id:
+          type: string
+          format: uuid
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
+        exchange_move_id:
+          nullable: true
+          type: string
+          format: uuid
+        amount:
+          type: string
+        debit_amount_currency:
+          nullable: true
+          type: string
+        credit_amount_currency:
+          nullable: true
+          type: string
+        currency:
+          type: string
+          maxLength: 3
+        max_date:
+          type: string
+          format: date
+        origin:
+          type: string
+        source_type:
+          nullable: true
+          type: string
+          maxLength: 50
+        source_id:
+          nullable: true
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          nullable: true
+          type: object
+
+    PartialReconcileBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartialReconcile'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreatePartialReconcileRequest:
+      type: object
+      required:
+        - company_id
+        - debit_move_id
+        - credit_move_id
+        - amount
+        - currency
+        - max_date
+        - origin
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        debit_move_id:
+          type: string
+          format: uuid
+        credit_move_id:
+          type: string
+          format: uuid
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
+        exchange_move_id:
+          nullable: true
+          type: string
+          format: uuid
+        amount:
+          type: string
+        debit_amount_currency:
+          nullable: true
+          type: string
+        credit_amount_currency:
+          nullable: true
+          type: string
+        currency:
+          type: string
+          maxLength: 3
+        max_date:
+          type: string
+          format: date
+        origin:
+          type: string
+        source_type:
+          nullable: true
+          type: string
+          maxLength: 50
+        source_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          nullable: true
+          type: object
+
+    UpdatePartialReconcileRequest:
+      type: object
+      required:
+        - company_id
+        - debit_move_id
+        - credit_move_id
+        - amount
+        - currency
+        - max_date
+        - origin
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        debit_move_id:
+          type: string
+          format: uuid
+        credit_move_id:
+          type: string
+          format: uuid
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
+        exchange_move_id:
+          nullable: true
+          type: string
+          format: uuid
+        amount:
+          type: string
+        debit_amount_currency:
+          nullable: true
+          type: string
+        credit_amount_currency:
+          nullable: true
+          type: string
+        currency:
+          type: string
+          maxLength: 3
+        max_date:
+          type: string
+          format: date
+        origin:
+          type: string
+        source_type:
+          nullable: true
+          type: string
+          maxLength: 50
+        source_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          nullable: true
+          type: object
+
+    PatchPartialReconcileRequest:
+      type: object
+      properties:
+        company_id:
+          type: string
+          format: uuid
+        debit_move_id:
+          type: string
+          format: uuid
+        credit_move_id:
+          type: string
+          format: uuid
+        full_reconcile_id:
+          nullable: true
+          type: string
+          format: uuid
+        exchange_move_id:
+          nullable: true
+          type: string
+          format: uuid
+        amount:
+          type: string
+        debit_amount_currency:
+          nullable: true
+          type: string
+        credit_amount_currency:
+          nullable: true
+          type: string
+        currency:
+          type: string
+          maxLength: 3
+        max_date:
+          type: string
+          format: date
+        origin:
+          type: string
+        source_type:
+          nullable: true
+          type: string
+          maxLength: 50
+        source_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          nullable: true
+          type: object
+
+    PartialReconcileList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartialReconcile'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
 

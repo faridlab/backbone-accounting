@@ -108,7 +108,7 @@ pub struct Reconciliation {
 impl Reconciliation {
     /// Create a builder for Reconciliation
     pub fn builder() -> ReconciliationBuilder {
-        ReconciliationBuilder::default()
+        <ReconciliationBuilder as Default>::default()
     }
 
     /// Create a new Reconciliation with required fields
@@ -904,7 +904,7 @@ impl ReconciliationBuilder {
             account_id,
             account_number,
             account_name,
-            reconciliation_type: self.reconciliation_type.unwrap_or(ReconciliationType::default()),
+            reconciliation_type: self.reconciliation_type.unwrap_or_default(),
             period_start,
             period_end,
             statement_date,
@@ -933,7 +933,7 @@ impl ReconciliationBuilder {
             adjusted_statement_balance: self.adjusted_statement_balance,
             difference: self.difference.unwrap_or(Decimal::from(0)),
             is_balanced: self.is_balanced.unwrap_or(false),
-            status: self.status.unwrap_or(ReconciliationStatus::default()),
+            status: self.status.unwrap_or_default(),
             started_at: self.started_at,
             started_by: self.started_by,
             completed_at: self.completed_at,

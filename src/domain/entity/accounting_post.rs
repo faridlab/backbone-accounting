@@ -84,7 +84,7 @@ pub struct AccountingPost {
 impl AccountingPost {
     /// Create a builder for AccountingPost
     pub fn builder() -> AccountingPostBuilder {
-        AccountingPostBuilder::default()
+        <AccountingPostBuilder as Default>::default()
     }
 
     /// Create a new AccountingPost with required fields
@@ -590,8 +590,8 @@ impl AccountingPostBuilder {
             source_id,
             source_reference: self.source_reference,
             journal_id: self.journal_id,
-            posting_type: self.posting_type.unwrap_or(PostingType::default()),
-            posting_status: self.posting_status.unwrap_or(PostingStatus::default()),
+            posting_type: self.posting_type.unwrap_or_default(),
+            posting_status: self.posting_status.unwrap_or_default(),
             currency: self.currency.unwrap_or("IDR".to_string()),
             total_debit: self.total_debit.unwrap_or(Decimal::from(0)),
             total_credit: self.total_credit.unwrap_or(Decimal::from(0)),

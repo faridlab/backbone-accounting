@@ -8,7 +8,7 @@
 //! ## Usage from other modules
 //!
 //! ```text
-//! use accounting::exports::{AccountDto, AccountingQueryService};
+//! use accounting::exports::{AccountDto};
 //! ```
 
 mod types;
@@ -57,9 +57,12 @@ pub use events::*;
 /// - `ReconciliationItemDto` - Data transfer object for ReconciliationItem
 /// - `ReconciliationItemSummary` - Summary view of ReconciliationItem
 /// - `ReconciliationItemId` - Type-safe ID wrapper
-///
-/// ## Public Services
-/// - `AccountingQueryService` - Read-only queries
+/// - `FullReconcileDto` - Data transfer object for FullReconcile
+/// - `FullReconcileSummary` - Summary view of FullReconcile
+/// - `FullReconcileId` - Type-safe ID wrapper
+/// - `PartialReconcileDto` - Data transfer object for PartialReconcile
+/// - `PartialReconcileSummary` - Summary view of PartialReconcile
+/// - `PartialReconcileId` - Type-safe ID wrapper
 ///
 /// ## Public Events
 /// - `AccountCreatedEvent` - Published when Account is created
@@ -92,4 +95,10 @@ pub use events::*;
 /// - `ReconciliationItemCreatedEvent` - Published when ReconciliationItem is created
 /// - `ReconciliationItemUpdatedEvent` - Published when ReconciliationItem is updated
 /// - `ReconciliationItemDeletedEvent` - Published when ReconciliationItem is deleted
+/// - `FullReconcileCreatedEvent` - Published when FullReconcile is created
+/// - `FullReconcileUpdatedEvent` - Published when FullReconcile is updated
+/// - `FullReconcileDeletedEvent` - Published when FullReconcile is deleted
+/// - `PartialReconcileCreatedEvent` - Published when PartialReconcile is created
+/// - `PartialReconcileUpdatedEvent` - Published when PartialReconcile is updated
+/// - `PartialReconcileDeletedEvent` - Published when PartialReconcile is deleted
 pub struct ExportSummary;

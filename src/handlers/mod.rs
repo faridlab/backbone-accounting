@@ -19,6 +19,8 @@ use crate::application::service::JournalLineService;
 use crate::application::service::LedgerService;
 use crate::application::service::ReconciliationService;
 use crate::application::service::ReconciliationItemService;
+use crate::application::service::FullReconcileService;
+use crate::application::service::PartialReconcileService;
 
 /// Application state for dependency injection.
 ///
@@ -58,6 +60,10 @@ pub struct AppState {
     pub reconciliation_service: Arc<ReconciliationService>,
     /// ReconciliationItem service
     pub reconciliation_item_service: Arc<ReconciliationItemService>,
+    /// FullReconcile service
+    pub full_reconcile_service: Arc<FullReconcileService>,
+    /// PartialReconcile service
+    pub partial_reconcile_service: Arc<PartialReconcileService>,
 }
 
 impl AppState {
@@ -72,7 +78,9 @@ impl AppState {
         journal_line_service: Arc<JournalLineService>,
         ledger_service: Arc<LedgerService>,
         reconciliation_service: Arc<ReconciliationService>,
-        reconciliation_item_service: Arc<ReconciliationItemService>
+        reconciliation_item_service: Arc<ReconciliationItemService>,
+        full_reconcile_service: Arc<FullReconcileService>,
+        partial_reconcile_service: Arc<PartialReconcileService>
     ) -> Self {
         Self {
             account_service,
@@ -85,6 +93,8 @@ impl AppState {
             ledger_service,
             reconciliation_service,
             reconciliation_item_service,
+            full_reconcile_service,
+            partial_reconcile_service,
         }
     }
 
@@ -101,6 +111,8 @@ impl AppState {
             ledger_service: module.ledger_service.clone(),
             reconciliation_service: module.reconciliation_service.clone(),
             reconciliation_item_service: module.reconciliation_item_service.clone(),
+            full_reconcile_service: module.full_reconcile_service.clone(),
+            partial_reconcile_service: module.partial_reconcile_service.clone(),
         }
     }
 }
@@ -120,6 +132,8 @@ pub struct AppStateBuilder {
     ledger_service: Option<Arc<LedgerService>>,
     reconciliation_service: Option<Arc<ReconciliationService>>,
     reconciliation_item_service: Option<Arc<ReconciliationItemService>>,
+    full_reconcile_service: Option<Arc<FullReconcileService>>,
+    partial_reconcile_service: Option<Arc<PartialReconcileService>>,
 }
 
 impl AppStateBuilder {
@@ -188,6 +202,18 @@ impl AppStateBuilder {
         self
     }
 
+    /// Set the FullReconcile service.
+    pub fn with_full_reconcile_service(mut self, service: Arc<FullReconcileService>) -> Self {
+        self.full_reconcile_service = Some(service);
+        self
+    }
+
+    /// Set the PartialReconcile service.
+    pub fn with_partial_reconcile_service(mut self, service: Arc<PartialReconcileService>) -> Self {
+        self.partial_reconcile_service = Some(service);
+        self
+    }
+
     /// Build the AppState.
     ///
     /// # Panics
@@ -205,6 +231,8 @@ impl AppStateBuilder {
             ledger_service: self.ledger_service.expect("ledger_service is required"),
             reconciliation_service: self.reconciliation_service.expect("reconciliation_service is required"),
             reconciliation_item_service: self.reconciliation_item_service.expect("reconciliation_item_service is required"),
+            full_reconcile_service: self.full_reconcile_service.expect("full_reconcile_service is required"),
+            partial_reconcile_service: self.partial_reconcile_service.expect("partial_reconcile_service is required"),
         }
     }
 }

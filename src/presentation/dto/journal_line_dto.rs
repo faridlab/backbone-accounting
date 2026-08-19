@@ -116,6 +116,8 @@ pub struct CreateJournalLineDto {
     pub reconciliation_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
+    pub full_reconcile_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_posted")]
     pub is_posted: bool,
@@ -223,6 +225,8 @@ pub struct UpdateJournalLineDto {
     pub reconciliation_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
+    pub full_reconcile_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_posted")]
     pub is_posted: bool,
@@ -331,6 +335,8 @@ pub struct PatchJournalLineDto {
     pub reconciliation_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
+    pub full_reconcile_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_posted")]
     pub is_posted: Option<bool>,
@@ -347,7 +353,7 @@ pub struct PatchJournalLineDto {
 impl PatchJournalLineDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.journal_id.is_some() || self.company_id.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.line_number.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.debit_amount.is_some() || self.credit_amount.is_some() || self.currency.is_some() || self.exchange_rate.is_some() || self.base_debit_amount.is_some() || self.base_credit_amount.is_some() || self.description.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.dimensions.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_tax_line.is_some() || self.tax_rate.is_some() || self.tax_base_amount.is_some() || self.related_line_id.is_some() || self.has_quantity.is_some() || self.quantity.is_some() || self.unit.is_some() || self.unit_price.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.reconciled_at.is_some() || self.is_posted.is_some() || self.ledger_id.is_some() || self.posted_at.is_some() || self.tags.is_some() || self.data.is_some()
+        self.journal_id.is_some() || self.company_id.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.line_number.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.debit_amount.is_some() || self.credit_amount.is_some() || self.currency.is_some() || self.exchange_rate.is_some() || self.base_debit_amount.is_some() || self.base_credit_amount.is_some() || self.description.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.dimensions.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_tax_line.is_some() || self.tax_rate.is_some() || self.tax_base_amount.is_some() || self.related_line_id.is_some() || self.has_quantity.is_some() || self.quantity.is_some() || self.unit.is_some() || self.unit_price.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.reconciled_at.is_some() || self.full_reconcile_id.is_some() || self.is_posted.is_some() || self.ledger_id.is_some() || self.posted_at.is_some() || self.tags.is_some() || self.data.is_some()
     }
 }
 
@@ -409,6 +415,7 @@ pub struct JournalLineResponseDto {
     pub is_reconciled: bool,
     pub reconciliation_id: Option<Uuid>,
     pub reconciled_at: Option<DateTime<Utc>>,
+    pub full_reconcile_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub is_posted: bool,
     pub ledger_id: Option<Uuid>,
@@ -519,6 +526,7 @@ impl From<JournalLine> for JournalLineResponseDto {
             is_reconciled: entity.is_reconciled,
             reconciliation_id: entity.reconciliation_id,
             reconciled_at: entity.reconciled_at,
+            full_reconcile_id: entity.full_reconcile_id,
             is_posted: entity.is_posted,
             ledger_id: entity.ledger_id,
             posted_at: entity.posted_at,
@@ -579,6 +587,7 @@ impl From<CreateJournalLineDto> for JournalLine {
             is_reconciled: dto.is_reconciled,
             reconciliation_id: dto.reconciliation_id,
             reconciled_at: dto.reconciled_at,
+            full_reconcile_id: dto.full_reconcile_id,
             is_posted: dto.is_posted,
             ledger_id: dto.ledger_id,
             posted_at: dto.posted_at,
@@ -626,6 +635,7 @@ impl From<&JournalLine> for JournalLineResponseDto {
             is_reconciled: entity.is_reconciled.clone(),
             reconciliation_id: entity.reconciliation_id.clone(),
             reconciled_at: entity.reconciled_at.clone(),
+            full_reconcile_id: entity.full_reconcile_id.clone(),
             is_posted: entity.is_posted.clone(),
             ledger_id: entity.ledger_id.clone(),
             posted_at: entity.posted_at.clone(),
@@ -677,6 +687,7 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalLineDto> for JournalLine {
         self.is_reconciled = dto.is_reconciled;
         self.reconciliation_id = dto.reconciliation_id;
         self.reconciled_at = dto.reconciled_at;
+        self.full_reconcile_id = dto.full_reconcile_id;
         self.is_posted = dto.is_posted;
         self.ledger_id = dto.ledger_id;
         self.posted_at = dto.posted_at;
@@ -694,3 +705,4 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalLineDto> for JournalLine {
 // Add custom DTOs specific to JournalLine here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

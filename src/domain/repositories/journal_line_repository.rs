@@ -66,6 +66,7 @@ pub struct JournalLineFilter {
     pub unit: Option<String>,
     pub is_reconciled: Option<bool>,
     pub reconciliation_id: Option<Uuid>,
+    pub full_reconcile_id: Option<Uuid>,
     pub is_posted: Option<bool>,
     pub ledger_id: Option<Uuid>,
 }
@@ -73,7 +74,7 @@ pub struct JournalLineFilter {
 impl JournalLineFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.journal_id.is_some() || self.company_id.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.currency.is_some() || self.description.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_tax_line.is_some() || self.related_line_id.is_some() || self.has_quantity.is_some() || self.unit.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.is_posted.is_some() || self.ledger_id.is_some()
+        self.journal_id.is_some() || self.company_id.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.currency.is_some() || self.description.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_tax_line.is_some() || self.related_line_id.is_some() || self.has_quantity.is_some() || self.unit.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.full_reconcile_id.is_some() || self.is_posted.is_some() || self.ledger_id.is_some()
     }
 }
 

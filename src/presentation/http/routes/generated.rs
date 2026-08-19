@@ -19,6 +19,8 @@ use super::{
     ledger_handler::create_ledger_routes,
     reconciliation_handler::create_reconciliation_routes,
     reconciliation_item_handler::create_reconciliation_item_routes,
+    full_reconcile_handler::create_full_reconcile_routes,
+    partial_reconcile_handler::create_partial_reconcile_routes,
 };
 
 use crate::application::service::{
@@ -32,6 +34,8 @@ use crate::application::service::{
     LedgerService,
     ReconciliationService,
     ReconciliationItemService,
+    FullReconcileService,
+    PartialReconcileService,
 };
 
 /// Services collection for all CRUD endpoints
@@ -46,6 +50,8 @@ pub struct HttpServices {
     pub ledger: Arc<LedgerService>,
     pub reconciliation: Arc<ReconciliationService>,
     pub reconciliation_item: Arc<ReconciliationItemService>,
+    pub full_reconcile: Arc<FullReconcileService>,
+    pub partial_reconcile: Arc<PartialReconcileService>,
 }
 
 /// Configure all HTTP routes for this module using Axum and BackboneCrudHandler.
@@ -85,6 +91,10 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_reconciliation_routes(services.reconciliation))
         // ReconciliationItem routes (12 Backbone endpoints)
         .merge(create_reconciliation_item_routes(services.reconciliation_item))
+        // FullReconcile routes (12 Backbone endpoints)
+        .merge(create_full_reconcile_routes(services.full_reconcile))
+        // PartialReconcile routes (12 Backbone endpoints)
+        .merge(create_partial_reconcile_routes(services.partial_reconcile))
 }
 
 /// Create an individual entity's routes (for modular configuration)
@@ -129,6 +139,14 @@ pub mod individual {
 
     pub fn reconciliation_item_routes(service: Arc<ReconciliationItemService>) -> Router {
         create_reconciliation_item_routes(service)
+    }
+
+    pub fn full_reconcile_routes(service: Arc<FullReconcileService>) -> Router {
+        create_full_reconcile_routes(service)
+    }
+
+    pub fn partial_reconcile_routes(service: Arc<PartialReconcileService>) -> Router {
+        create_partial_reconcile_routes(service)
     }
 
 }
