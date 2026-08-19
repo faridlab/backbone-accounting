@@ -137,6 +137,37 @@ fn error_response(e: &ReconcileError) -> axum::response::Response {
         .into_response()
 }
 
+// ── Tenant consistency ────────────────────────────────────────────────────────
+//
+// The verb services bind RLS with the REQUEST's `company_id` (it rides the same
+// transaction as the write, so it must be explicit). That value would override
+// whatever scope the caller's token established — so when a host has mounted an
+// ambient company scope (backbone-auth's `company_auth` wraps every request in
+// `with_company_scope(token.company_id)`), the request's company must agree with
+// it. Without this check an authenticated tenant could name ANY company in the
+// body and read or reshape its books. With no ambient scope (unit tests, trusted
+// internal hosts) the check is skipped — the module keeps its standalone shape.
+
+const COMPANY_MISMATCH: &str = "company_mismatch";
+
+fn tenant_mismatch(req_company: Uuid) -> bool {
+    match backbone_orm::current_company() {
+        Some(authenticated) => authenticated != req_company,
+        None => false,
+    }
+}
+
+fn forbidden_tenant() -> axum::response::Response {
+    (
+        StatusCode::FORBIDDEN,
+        Json(ReconcileErrorDto {
+            code: COMPANY_MISMATCH.to_string(),
+            message: "the request's company_id does not match the authenticated company".into(),
+        }),
+    )
+        .into_response()
+}
+
 // =============================================================================
 // Handlers
 // =============================================================================
@@ -145,6 +176,9 @@ async fn reconcile_handler(
     State(service): State<Arc<ReconcileWriteService>>,
     Json(dto): Json<ReconcilePairRequestDto>,
 ) -> impl IntoResponse {
+    if tenant_mismatch(dto.company_id) {
+        return forbidden_tenant();
+    }
     let req = PairRequest {
         company_id: dto.company_id,
         debit: locator_from_dto(dto.debit),
@@ -164,6 +198,9 @@ async fn unreconcile_handler(
     Path(partial_id): Path<Uuid>,
     Json(body): Json<UnreconcileBody>,
 ) -> impl IntoResponse {
+    if tenant_mismatch(body.company_id) {
+        return forbidden_tenant();
+    }
     match service.unreconcile(body.company_id, partial_id, None).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => error_response(&e),
@@ -175,6 +212,9 @@ async fn matching_group_handler(
     Path(line_id): Path<Uuid>,
     Query(q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
+    if tenant_mismatch(q.company_id) {
+        return forbidden_tenant();
+    }
     match service.matching_group(q.company_id, line_id).await {
         Ok(g) => (
             StatusCode::OK,

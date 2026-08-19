@@ -948,3 +948,107 @@ async fn concurrent_completions_stamp_one_group() {
     .unwrap();
     assert_eq!(orphans, 0, "the group keeps its partials");
 }
+
+// ── Tenant consistency on the verb routes ─────────────────────────────────────
+//
+// The verb services bind RLS from the REQUEST's company_id; when a host has an
+// ambient company scope (company_auth's `with_company_scope` task-local), the
+// request's company must agree with it — otherwise an authenticated tenant
+// could name any company in the body and read or reshape its books. Without an
+// ambient scope the verbs keep their standalone (trusted-host) shape.
+#[tokio::test]
+async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    let pool = pool().await;
+    let (company, coa) = seed(&pool).await;
+    let other = Uuid::new_v4();
+    let app = backbone_accounting::presentation::http::reconcile_handler::create_reconcile_verb_routes(
+        Arc::new(reconcile_svc(&pool)),
+    );
+
+    let pair_body = serde_json::json!({
+        "company_id": company,
+        "debit": {"source_type": "order", "source_id": Uuid::new_v4(), "account_id": coa["1200"]},
+        "credit": {"source_type": "payment", "source_id": Uuid::new_v4(), "account_id": coa["1200"]},
+        "amount": "1",
+        "origin": "manual",
+    })
+    .to_string();
+
+    // POST /accounting/reconcile naming another company → 403 company_mismatch,
+    // before any DB work (the locators above are random uuids; reaching the
+    // service would answer 404 line_not_found instead).
+    let resp = backbone_orm::with_company_scope(Some(other), async {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/accounting/reconcile")
+                    .header("content-type", "application/json")
+                    .body(Body::from(pair_body.clone()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    })
+    .await;
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+    let text = String::from_utf8_lossy(&bytes).to_string();
+    assert!(text.contains("company_mismatch"), "got: {text}");
+
+    // Matching ambient scope passes the tenant gate (and then fails on the
+    // random locators — proving the gate, not the guard, answered).
+    let resp = backbone_orm::with_company_scope(Some(company), async {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/accounting/reconcile")
+                    .header("content-type", "application/json")
+                    .body(Body::from(pair_body.clone()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    })
+    .await;
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    // GET /accounting/reconciliation-groups naming another company → 403.
+    let resp = backbone_orm::with_company_scope(Some(other), async {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/accounting/reconciliation-groups/{}?company_id={}", Uuid::new_v4(), company))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    })
+    .await;
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    // POST /accounting/unreconcile naming another company → 403.
+    let resp = backbone_orm::with_company_scope(Some(other), async {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/accounting/unreconcile/{}", Uuid::new_v4()))
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::json!({"company_id": company}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    })
+    .await;
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}

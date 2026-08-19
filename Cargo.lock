@@ -219,6 +219,7 @@ dependencies = [
  "backbone-orm",
  "chrono",
  "config",
+ "http-body-util",
  "jsonwebtoken",
  "mockall",
  "pbjson",
