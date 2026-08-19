@@ -12,6 +12,11 @@ version: 2
 schema: accounting
 description: "GL, journals, ledger, reconciliation (extracted from bersihir)"
 
+# ADR-0014 company fence: every entity in this module is company-scoped and fenced
+# strict — accounting data never crosses companies. Reliance/master tables without
+# company_id would be excluded automatically; this module has none.
+company_fence: strict
+
 # Module-level configuration
 config:
   database: postgresql
