@@ -400,13 +400,28 @@ impl ReconcileWriteService {
         if residuals.iter().any(|(_, r)| *r != Decimal::ZERO) {
             return Ok(None);
         }
+        // Idempotence against a completion that already grouped (part of) this component — the
+        // concurrent case: two verbs complete overlapping components, serialize on the line locks
+        // above, and the waiter re-sees all-zero residuals because group creation touches no
+        // partials. Without this check the waiter would mint a second group over already-grouped
+        // lines, orphaning the first. One stamp = re-attach that group (also heals the unlink
+        // path's partially-cleared survivor lines back onto their surviving group); divergent
+        // stamps are unreachable by construction and left untouched.
+        let stamps = self
+            .repo
+            .distinct_group_stamps(conn, company_id, &comp_lines)
+            .await?;
+        let group = match stamps.as_slice() {
+            [] => self
+                .repo
+                .create_full_group(conn, company_id, exchange_total, now)
+                .await?,
+            [existing] => *existing,
+            _ => return Ok(None),
+        };
         let comp_partials = self
             .repo
             .component_partial_ids(conn, company_id, &comp_lines)
-            .await?;
-        let group = self
-            .repo
-            .create_full_group(conn, company_id, exchange_total, now)
             .await?;
         self.repo
             .attach_group(conn, company_id, group, &comp_lines, &comp_partials, now)

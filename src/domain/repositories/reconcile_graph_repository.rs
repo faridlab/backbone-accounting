@@ -115,6 +115,17 @@ pub trait ReconcileGraphRepository: Send + Sync {
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>>;
 
+    /// The DISTINCT non-null `full_reconcile_id` stamps carried by the given lines. Empty = nobody
+    /// stamped; one = the component already (or partially) belongs to that group; more than one =
+    /// divergent stamps (unreachable by construction — a zero-residual line can never gain a new
+    /// edge, so completed components cannot merge).
+    async fn distinct_group_stamps(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        company_id: Uuid,
+        line_ids: &[Uuid],
+    ) -> anyhow::Result<Vec<Uuid>>;
+
     /// Create a full-reconcile group row; returns its id.
     async fn create_full_group(
         &self,

@@ -291,6 +291,24 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         Ok(rows.into_iter().map(|(id,)| id).collect())
     }
 
+    async fn distinct_group_stamps(
+        &self,
+        conn: &mut PgConnection,
+        company_id: Uuid,
+        line_ids: &[Uuid],
+    ) -> anyhow::Result<Vec<Uuid>> {
+        let mut distinct: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT DISTINCT full_reconcile_id FROM accounting.journal_lines \
+             WHERE company_id=$1 AND id = ANY($2) AND full_reconcile_id IS NOT NULL",
+        )
+        .bind(company_id)
+        .bind(line_ids)
+        .fetch_all(&mut *conn)
+        .await?;
+        distinct.sort_unstable();
+        Ok(distinct)
+    }
+
     async fn create_full_group(
         &self,
         conn: &mut PgConnection,
@@ -322,10 +340,12 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         partial_ids: &[Uuid],
         now: DateTime<Utc>,
     ) -> anyhow::Result<()> {
-        // journal_lines carries no updated_at column (no audit metadata on lines).
+        // journal_lines carries no updated_at column (no audit metadata on lines). The stamps use
+        // COALESCE so a group is never overwritten by a later attach — the one guarantee the
+        // duplicate-group guard above depends on.
         sqlx::query(
             "UPDATE accounting.journal_lines \
-             SET full_reconcile_id=$3, is_reconciled=TRUE, reconciled_at=$4 \
+             SET full_reconcile_id=COALESCE(full_reconcile_id, $3), is_reconciled=TRUE, reconciled_at=$4 \
              WHERE company_id=$1 AND id = ANY($2)",
         )
         .bind(company_id)
@@ -335,7 +355,7 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         .execute(&mut *conn)
         .await?;
         sqlx::query(
-            "UPDATE accounting.partial_reconciles SET full_reconcile_id=$3, updated_at=NOW() \
+            "UPDATE accounting.partial_reconciles SET full_reconcile_id=COALESCE(full_reconcile_id, $3), updated_at=NOW() \
              WHERE company_id=$1 AND id = ANY($2)",
         )
         .bind(company_id)

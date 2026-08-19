@@ -882,3 +882,69 @@ async fn concurrent_reconciles_never_over_edge() {
     .unwrap();
     assert_eq!(total, dec("100"));
 }
+
+/// Two racing reconciles that COMPLETE the same component (everything consumed to zero, unlike
+/// the on-account race above) must stamp exactly ONE full-reconcile group. The completions
+/// serialize on the component's line locks; the waiter re-sees all-zero residuals because group
+/// creation touches no partials — without the already-stamped guard in the completion it would
+/// mint a second group over the winner's, orphaning it. One group, uniform stamp, no orphans.
+#[tokio::test]
+async fn concurrent_completions_stamp_one_group() {
+    let pool = pool().await;
+    let (company, coa) = seed(&pool).await;
+    let party = Uuid::new_v4();
+    let posting = posting_svc(&pool);
+    let invoice = post_invoice(&posting, company, coa["1200"], coa["4000"], party, "120").await;
+    let p1 = post_receipt(&posting, company, coa["1100"], coa["1200"], party, "60").await;
+    let p2 = post_receipt(&posting, company, coa["1100"], coa["1200"], party, "60").await;
+    let svc = Arc::new(reconcile_svc(&pool));
+
+    let first = pair(
+        company,
+        loc("order", invoice, coa["1200"]),
+        loc("payment", p1, coa["1200"]),
+        "60",
+    );
+    let second = pair(
+        company,
+        loc("order", invoice, coa["1200"]),
+        loc("payment", p2, coa["1200"]),
+        "60",
+    );
+    let (a, b) = tokio::join!(svc.reconcile_pair(&first), svc.reconcile_pair(&second));
+    let applied: Decimal = [a.unwrap().applied, b.unwrap().applied].iter().sum();
+    assert_eq!(applied, dec("120"), "the two claims exactly consume the invoice");
+
+    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
+    let p1_line = line_id(&pool, company, "payment", p1, coa["1200"]).await;
+    let p2_line = line_id(&pool, company, "payment", p2, coa["1200"]).await;
+    for l in [inv_line, p1_line, p2_line] {
+        assert_eq!(residual(&pool, company, l).await, Decimal::ZERO);
+    }
+    let groups: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.full_reconciles WHERE company_id=$1")
+            .bind(company)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(groups, 1, "overlapping completions share one group, no orphan");
+    let stamps: Vec<Option<Uuid>> = sqlx::query_scalar(
+        "SELECT full_reconcile_id FROM accounting.journal_lines WHERE id = ANY($1) ORDER BY id",
+    )
+    .bind(&[inv_line, p1_line, p2_line][..])
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    let uniform = stamps.iter().map(|s| *s).collect::<Option<Vec<Uuid>>>();
+    let uniform = uniform.expect("every completed line carries a group");
+    assert!(uniform.windows(2).all(|w| w[0] == w[1]), "one stamp across the component");
+    let orphans: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM accounting.full_reconciles fr WHERE company_id=$1 AND NOT EXISTS \
+         (SELECT 1 FROM accounting.partial_reconciles p WHERE p.full_reconcile_id = fr.id)",
+    )
+    .bind(company)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(orphans, 0, "the group keeps its partials");
+}
