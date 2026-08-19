@@ -9,8 +9,15 @@
 //! Requires DATABASE_URL (defaults to local dev Postgres on :5433) backed by a superuser-capable
 //! role so it can mint/teardown the restricted role.
 
+use std::sync::Arc;
+
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
+
+use backbone_accounting::application::service::reconcile_write_service::ReconcileWriteService;
+use backbone_accounting::infrastructure::persistence::{
+    SqlxPostingRepository, SqlxReconcileGraphRepository,
+};
 
 const ROLE: &str = "bbacc_rls_probe";
 const PWD: &str = "probe";
@@ -267,4 +274,133 @@ async fn rls_fences_reconciliation_graph_tables() {
     let _ = tenant_b; // seeded only if a future probe needs B-side lines
     let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}")).execute(&admin).await;
     let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}")).execute(&admin).await;
+}
+
+/// The pool-verb matching-group read must survive the fence on a RESTRICTED pool. The bind is
+/// `set_config(..., is_local=true)` — transaction-scoped — so a read wrapper that binds on a bare
+/// pooled connection (no transaction) loses the setting before its first statement and the fence
+/// silently empties the result. That shape returns 200 with an empty group on any fenced
+/// app-role deployment while looking perfectly green on owner/superuser DSNs. This probe builds
+/// the service over a restricted pool with real graph rows and asserts the read finds them.
+#[tokio::test]
+async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
+    let _ddl = ROLE_DDL_LOCK.lock().await;
+    let role = "bbacc_rls_read_probe";
+    let admin = admin().await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}")).execute(&admin).await;
+    for stmt in [
+        format!("CREATE ROLE {role} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
+        format!("GRANT USAGE ON SCHEMA accounting TO {role}"),
+        format!(
+            "GRANT SELECT ON accounting.journals, accounting.journal_lines, \
+             accounting.partial_reconciles, accounting.full_reconciles, accounting.accounts TO {role}"
+        ),
+    ] {
+        sqlx::query(&stmt).execute(&admin).await.unwrap();
+    }
+    let restricted = PgPool::connect(&format!(
+        "postgresql://{role}:{PWD}@localhost:5433/backbone_accounting"
+    ))
+    .await
+    .expect("connect read-probe role");
+
+    // Seed one tenant's graph as the owner: an account, a journal, a debit and a credit
+    // line, and a partial edge between them.
+    let company = Uuid::new_v4();
+    let account = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.accounts
+             (id, company_id, account_number, account_code, name, account_type,
+              account_subtype, normal_balance, status)
+           VALUES ($1,$2,$3,$3,'read probe','asset'::account_type,
+                   'accounts_receivable'::account_subtype,'debit'::normal_balance,
+                   'active'::account_status)"#,
+    )
+    .bind(account)
+    .bind(company)
+    .bind(format!("RLR-{account}"))
+    .execute(&admin)
+    .await
+    .unwrap();
+    let journal = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.journals
+             (id, company_id, journal_number, journal_type, source, transaction_date,
+              description, currency, status)
+           VALUES ($1,$2,$3,'general'::journal_type,'manual'::journal_source,'2026-06-15',
+                   'read probe','IDR','posted'::journal_status)"#,
+    )
+    .bind(journal)
+    .bind(company)
+    .bind(format!("RLR-{journal}"))
+    .execute(&admin)
+    .await
+    .unwrap();
+    let mut lines = Vec::new();
+    for n in 1..=2 {
+        let id = Uuid::new_v4();
+        sqlx::query(
+            r#"INSERT INTO accounting.journal_lines
+                 (id, journal_id, company_id, line_number, account_id, account_number,
+                  account_name, debit_amount, credit_amount, base_debit_amount,
+                  base_credit_amount, is_posted)
+               VALUES ($1,$2,$3,$4,$5,'RLR','read probe',100,0,100,0,TRUE)"#,
+        )
+        .bind(id)
+        .bind(journal)
+        .bind(company)
+        .bind(n)
+        .bind(account)
+        .execute(&admin)
+        .await
+        .unwrap();
+        lines.push(id);
+    }
+    let partial = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.partial_reconciles
+             (id, company_id, debit_move_id, credit_move_id, amount, currency, max_date,
+              origin, updated_at)
+           VALUES ($1,$2,$3,$4,40,'IDR','2026-06-15','manual'::reconcile_origin,NOW())"#,
+    )
+    .bind(partial)
+    .bind(company)
+    .bind(lines[0])
+    .bind(lines[1])
+    .execute(&admin)
+    .await
+    .unwrap();
+
+    // The service over the RESTRICTED pool — the pool verbs bind the company themselves,
+    // exactly like an HTTP read on a fenced deployment.
+    let svc = ReconcileWriteService::new(
+        Arc::new(SqlxReconcileGraphRepository::new()),
+        Arc::new(SqlxPostingRepository::new(restricted.clone())),
+        restricted.clone(),
+        None,
+    );
+    let group = svc
+        .matching_group(company, lines[0])
+        .await
+        .expect("matching-group read succeeds");
+    assert!(
+        group.label.starts_with("P-"),
+        "partial-only component must carry a P- label, got {:?}",
+        group.label
+    );
+    assert_eq!(
+        group.line_ids.len(),
+        2,
+        "the component must span both lines, got {:?}",
+        group.line_ids
+    );
+    assert_eq!(group.partial_ids, vec![partial], "the edge must be found");
+    assert!(
+        group.residuals.iter().all(|(_, r)| *r > 0.into()),
+        "residuals must be readable through the fence"
+    );
+
+    let _ = sqlx::query(&format!("DROP OWNED BY {role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}")).execute(&admin).await;
 }

@@ -811,19 +811,29 @@ impl ReconcileWriteService {
     }
 
     /// Pool wrapper over [`Self::matching_group_on`].
+    ///
+    /// The bind runs inside a transaction on purpose: `bind_company_on` uses
+    /// `set_config(..., is_local)`, whose setting only lives for the current
+    /// transaction. On a bare pooled connection it evaporates before the next
+    /// statement, the ADR-0014 fence then sees no company, and the read
+    /// silently returns an empty group — invisible on owner/superuser DSNs
+    /// (they bypass RLS), fatal on any fenced app-role deployment.
     pub async fn matching_group(
         &self,
         company_id: Uuid,
         line_id: Uuid,
     ) -> Result<MatchingGroup, ReconcileError> {
-        let mut conn = self.pool.acquire().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut conn, company_id)
+        let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
+        company_scope::bind_company_on(&mut tx, company_id)
             .await
             .map_err(|e| internal(e.into()))?;
-        self.matching_group_on(&mut conn, company_id, line_id).await
+        let group = self.matching_group_on(&mut tx, company_id, line_id).await?;
+        tx.commit().await.map_err(|e| internal(e.into()))?;
+        Ok(group)
     }
 
-    /// Pool wrapper over [`Self::residuals_for_party_on`].
+    /// Pool wrapper over [`Self::residuals_for_party_on`] — same
+    /// transaction-scoped bind discipline as [`Self::matching_group`].
     pub async fn residuals_for_party(
         &self,
         company_id: Uuid,
@@ -831,11 +841,14 @@ impl ReconcileWriteService {
         party_type: &str,
         party_id: Uuid,
     ) -> Result<Vec<PartyResidual>, ReconcileError> {
-        let mut conn = self.pool.acquire().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut conn, company_id)
+        let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
+        company_scope::bind_company_on(&mut tx, company_id)
             .await
             .map_err(|e| internal(e.into()))?;
-        self.residuals_for_party_on(&mut conn, company_id, account_id, party_type, party_id)
-            .await
+        let rows = self
+            .residuals_for_party_on(&mut tx, company_id, account_id, party_type, party_id)
+            .await?;
+        tx.commit().await.map_err(|e| internal(e.into()))?;
+        Ok(rows)
     }
 }
