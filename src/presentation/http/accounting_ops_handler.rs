@@ -54,7 +54,11 @@ async fn close_period(
     Json(body): Json<ClosePeriodBody>,
 ) -> impl IntoResponse {
     match svc
-        .close_period(body.company_id, period_id, body.retained_earnings_account_id)
+        .close_period(
+            body.company_id,
+            period_id,
+            body.retained_earnings_account_id,
+        )
         .await
     {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),

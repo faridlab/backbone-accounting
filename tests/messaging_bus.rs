@@ -73,8 +73,9 @@ async fn publishes_failed_event_to_bus() {
 // ── End-to-end: PostingService → MessagingSink → bus ─────────────────────────
 #[tokio::test]
 async fn posting_service_publishes_to_bus() {
-    let url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string());
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
+    });
     let pool = PgPool::connect(&url).await.unwrap();
 
     // Fresh company + bank/revenue accounts.
@@ -83,7 +84,14 @@ async fn posting_service_publishes_to_bus() {
     let revenue = Uuid::new_v4();
     for (id, code, name, at, st, nb) in [
         (bank, "1100", "Bank", "asset", "bank", "debit"),
-        (revenue, "4000", "Rev", "revenue", "operating_revenue", "credit"),
+        (
+            revenue,
+            "4000",
+            "Rev",
+            "revenue",
+            "operating_revenue",
+            "credit",
+        ),
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
@@ -95,23 +103,63 @@ async fn posting_service_publishes_to_bus() {
     }
 
     let bus = Arc::new(IntegrationEventBus::new());
-    let svc = PostingService::with_sink(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), Arc::new(MessagingSink::new(bus.clone())));
+    let svc = PostingService::with_sink(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        Arc::new(MessagingSink::new(bus.clone())),
+    );
 
-    let mut req = PostingRequest::original(company, "order", Uuid::new_v4(), chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+    let mut req = PostingRequest::original(
+        company,
+        "order",
+        Uuid::new_v4(),
+        chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+    );
     req.lines = vec![
-        PostingLine { account_id: bank, debit: dec("100.00"), credit: Decimal::ZERO, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
-        PostingLine { account_id: revenue, debit: Decimal::ZERO, credit: dec("100.00"), party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+        PostingLine {
+            account_id: bank,
+            debit: dec("100.00"),
+            credit: Decimal::ZERO,
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
+        PostingLine {
+            account_id: revenue,
+            debit: Decimal::ZERO,
+            credit: dec("100.00"),
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
     ];
     svc.post(req, None).await.unwrap();
 
     // Fire-and-forget publish runs on a spawned task; poll the bus history briefly.
     let mut found = false;
     for _ in 0..100 {
-        if bus.history().await.iter().any(|e| e.event_type == "accounting.posting.posted") {
+        if bus
+            .history()
+            .await
+            .iter()
+            .any(|e| e.event_type == "accounting.posting.posted")
+        {
             found = true;
             break;
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    assert!(found, "expected AccountingPostPosted on the bus after a real post");
+    assert!(
+        found,
+        "expected AccountingPostPosted on the bus after a real post"
+    );
 }

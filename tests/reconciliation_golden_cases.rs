@@ -17,8 +17,9 @@ fn dec(s: &str) -> Decimal {
     Decimal::from_str_exact(s).unwrap()
 }
 async fn pool() -> PgPool {
-    let url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string());
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
+    });
     PgPool::connect(&url).await.unwrap()
 }
 
@@ -29,7 +30,14 @@ async fn seed(pool: &PgPool) -> (Uuid, Uuid, Uuid) {
     let revenue = Uuid::new_v4();
     for (id, code, name, at, st, nb) in [
         (bank, "1100", "Bank BCA", "asset", "bank", "debit"),
-        (revenue, "4000", "Pendapatan", "revenue", "operating_revenue", "credit"),
+        (
+            revenue,
+            "4000",
+            "Pendapatan",
+            "revenue",
+            "operating_revenue",
+            "credit",
+        ),
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
@@ -44,10 +52,35 @@ async fn seed(pool: &PgPool) -> (Uuid, Uuid, Uuid) {
 
 /// Post a cash receipt: Dr Bank amount · Cr Revenue amount → one +amount ledger row on bank.
 async fn receipt(svc: &PostingService, company: Uuid, bank: Uuid, revenue: Uuid, amount: &str) {
-    let mut r = PostingRequest::original(company, "payment", Uuid::new_v4(), NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+    let mut r = PostingRequest::original(
+        company,
+        "payment",
+        Uuid::new_v4(),
+        NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+    );
     r.lines = vec![
-        PostingLine { account_id: bank, debit: dec(amount), credit: Decimal::ZERO, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
-        PostingLine { account_id: revenue, debit: Decimal::ZERO, credit: dec(amount), party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+        PostingLine {
+            account_id: bank,
+            debit: dec(amount),
+            credit: Decimal::ZERO,
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
+        PostingLine {
+            account_id: revenue,
+            debit: Decimal::ZERO,
+            credit: dec(amount),
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
     ];
     svc.post(r, None).await.unwrap();
 }
@@ -58,7 +91,11 @@ async fn is_reconciled_count(pool: &PgPool, company: Uuid, account: Uuid) -> i64
 }
 
 fn stmt(amount: &str) -> StatementLine {
-    StatementLine { date: NaiveDate::from_ymd_opt(2026, 6, 20).unwrap(), amount: dec(amount), reference: None }
+    StatementLine {
+        date: NaiveDate::from_ymd_opt(2026, 6, 20).unwrap(),
+        amount: dec(amount),
+        reference: None,
+    }
 }
 
 fn req(company: Uuid, bank: Uuid, lines: Vec<StatementLine>) -> ReconcileRequest {
@@ -77,19 +114,32 @@ fn req(company: Uuid, bank: Uuid, lines: Vec<StatementLine>) -> ReconcileRequest
 async fn rcg1_partial_match() {
     let pool = pool().await;
     let (company, bank, revenue) = seed(&pool).await;
-    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let recon = BankReconciliationService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(pool.clone())));
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let recon = BankReconciliationService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(
+            pool.clone(),
+        ),
+    ));
 
     receipt(&posting, company, bank, revenue, "100.00").await;
     receipt(&posting, company, bank, revenue, "200.00").await;
     receipt(&posting, company, bank, revenue, "300.00").await;
 
     // Statement: 100 & 200 match; 999 does not.
-    let res = recon.reconcile(req(company, bank, vec![stmt("100.00"), stmt("200.00"), stmt("999.00")])).await.unwrap();
+    let res = recon
+        .reconcile(req(
+            company,
+            bank,
+            vec![stmt("100.00"), stmt("200.00"), stmt("999.00")],
+        ))
+        .await
+        .unwrap();
 
     assert_eq!(res.matched_count, 2);
-    assert_eq!(res.unmatched_book, 1);       // the 300 receipt
-    assert_eq!(res.unmatched_statement, 1);  // the 999 line
+    assert_eq!(res.unmatched_book, 1); // the 300 receipt
+    assert_eq!(res.unmatched_statement, 1); // the 999 line
     assert!(!res.is_balanced);
     assert_eq!(res.closing_book_balance, dec("600.00"));
     assert_eq!(res.closing_statement_balance, dec("1299.00"));
@@ -102,14 +152,27 @@ async fn rcg1_partial_match() {
 async fn rcg2_full_match() {
     let pool = pool().await;
     let (company, bank, revenue) = seed(&pool).await;
-    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let recon = BankReconciliationService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(pool.clone())));
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let recon = BankReconciliationService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(
+            pool.clone(),
+        ),
+    ));
 
     receipt(&posting, company, bank, revenue, "100.00").await;
     receipt(&posting, company, bank, revenue, "200.00").await;
     receipt(&posting, company, bank, revenue, "300.00").await;
 
-    let res = recon.reconcile(req(company, bank, vec![stmt("100.00"), stmt("200.00"), stmt("300.00")])).await.unwrap();
+    let res = recon
+        .reconcile(req(
+            company,
+            bank,
+            vec![stmt("100.00"), stmt("200.00"), stmt("300.00")],
+        ))
+        .await
+        .unwrap();
 
     assert_eq!(res.matched_count, 3);
     assert_eq!(res.unmatched_book, 0);

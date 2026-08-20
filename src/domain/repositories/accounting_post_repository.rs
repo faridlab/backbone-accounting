@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the AccountingPost aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{AccountingPost, PostingSourceType, PostingStatus, PostingType};
@@ -64,7 +64,21 @@ pub struct AccountingPostFilter {
 impl AccountingPostFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.branch_id.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.journal_id.is_some() || self.posting_type.is_some() || self.posting_status.is_some() || self.currency.is_some() || self.error_code.is_some() || self.error_message.is_some() || self.reverses_post_id.is_some() || self.reversed_by_post_id.is_some() || self.posted_by.is_some() || self.notes.is_some()
+        self.company_id.is_some()
+            || self.branch_id.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
+            || self.source_reference.is_some()
+            || self.journal_id.is_some()
+            || self.posting_type.is_some()
+            || self.posting_status.is_some()
+            || self.currency.is_some()
+            || self.error_code.is_some()
+            || self.error_message.is_some()
+            || self.reverses_post_id.is_some()
+            || self.reversed_by_post_id.is_some()
+            || self.posted_by.is_some()
+            || self.notes.is_some()
     }
 }
 
@@ -74,7 +88,6 @@ impl AccountingPostFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait AccountingPostRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -99,10 +112,17 @@ pub trait AccountingPostRepository: Send + Sync {
     // =========================================================================
 
     /// List accounting_post with pagination
-    async fn list(&self, params: AccountingPostPaginationParams) -> Result<AccountingPostPaginatedResult>;
+    async fn list(
+        &self,
+        params: AccountingPostPaginationParams,
+    ) -> Result<AccountingPostPaginatedResult>;
 
     /// List accounting_post with pagination and filters
-    async fn list_with_filters(&self, params: AccountingPostPaginationParams, filters: AccountingPostFilter) -> Result<AccountingPostPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: AccountingPostPaginationParams,
+        filters: AccountingPostFilter,
+    ) -> Result<AccountingPostPaginatedResult>;
 
     /// Count all accounting_post entities
     async fn count(&self) -> Result<u64>;
@@ -124,7 +144,10 @@ pub trait AccountingPostRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<AccountingPost>>;
 
     /// List soft-deleted accounting_post entities
-    async fn list_deleted(&self, params: AccountingPostPaginationParams) -> Result<AccountingPostPaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: AccountingPostPaginationParams,
+    ) -> Result<AccountingPostPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

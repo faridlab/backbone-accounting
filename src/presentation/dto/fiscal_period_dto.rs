@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::FiscalPeriod;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::FiscalPeriod;
 use crate::domain::entity::PeriodStatus;
 use crate::domain::entity::PeriodType;
 
@@ -35,7 +35,10 @@ use crate::domain::entity::PeriodType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFiscalPeriodDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -58,10 +61,18 @@ pub struct CreateFiscalPeriodDto {
     #[serde(alias = "fiscal_year")]
     pub fiscal_year: i32,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 4)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_quarter")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_quarter"
+    )]
     pub fiscal_quarter: Option<i32>,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 12)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "parent_id")]
     pub parent_id: Option<Uuid>,
@@ -74,13 +85,29 @@ pub struct CreateFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "opening_balance_set")]
     pub opening_balance_set: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_by"
+    )]
     pub opening_balance_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "closing_started_at"
+    )]
     pub closing_started_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "closing_started_by"
+    )]
     pub closing_started_by: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "closed_at")]
     pub closed_at: Option<DateTime<Utc>>,
@@ -91,12 +118,20 @@ pub struct CreateFiscalPeriodDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "locked_by")]
     pub locked_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "lock_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "lock_reason"
+    )]
     pub lock_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_adjustments")]
     pub allow_adjustments: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjustment_deadline")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "adjustment_deadline"
+    )]
     pub adjustment_deadline: Option<NaiveDate>,
     #[serde(alias = "total_debits")]
     pub total_debits: Decimal,
@@ -123,7 +158,11 @@ pub struct CreateFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "income_statement_generated")]
     pub income_statement_generated: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statements_generated_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "statements_generated_at"
+    )]
     pub statements_generated_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -143,7 +182,10 @@ pub struct CreateFiscalPeriodDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFiscalPeriodDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -166,10 +208,18 @@ pub struct UpdateFiscalPeriodDto {
     #[serde(alias = "fiscal_year")]
     pub fiscal_year: i32,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 4)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_quarter")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_quarter"
+    )]
     pub fiscal_quarter: Option<i32>,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 12)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "parent_id")]
     pub parent_id: Option<Uuid>,
@@ -182,13 +232,29 @@ pub struct UpdateFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "opening_balance_set")]
     pub opening_balance_set: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_by"
+    )]
     pub opening_balance_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "closing_started_at"
+    )]
     pub closing_started_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "closing_started_by"
+    )]
     pub closing_started_by: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "closed_at")]
     pub closed_at: Option<DateTime<Utc>>,
@@ -199,12 +265,20 @@ pub struct UpdateFiscalPeriodDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "locked_by")]
     pub locked_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "lock_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "lock_reason"
+    )]
     pub lock_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_adjustments")]
     pub allow_adjustments: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjustment_deadline")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "adjustment_deadline"
+    )]
     pub adjustment_deadline: Option<NaiveDate>,
     #[serde(alias = "total_debits")]
     pub total_debits: Decimal,
@@ -231,7 +305,11 @@ pub struct UpdateFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "income_statement_generated")]
     pub income_statement_generated: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statements_generated_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "statements_generated_at"
+    )]
     pub statements_generated_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -251,7 +329,10 @@ pub struct UpdateFiscalPeriodDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchFiscalPeriodDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -293,7 +374,10 @@ pub struct PatchFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_set")]
     pub opening_balance_set: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
     pub opening_balance_by: Option<Uuid>,
@@ -337,12 +421,21 @@ pub struct PatchFiscalPeriodDto {
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_equity")]
     pub total_equity: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "balance_sheet_generated")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "balance_sheet_generated"
+    )]
     pub balance_sheet_generated: Option<bool>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "income_statement_generated")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "income_statement_generated"
+    )]
     pub income_statement_generated: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "statements_generated_at")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "statements_generated_at"
+    )]
     pub statements_generated_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -352,7 +445,44 @@ pub struct PatchFiscalPeriodDto {
 impl PatchFiscalPeriodDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.start_date.is_some() || self.end_date.is_some() || self.fiscal_year.is_some() || self.fiscal_quarter.is_some() || self.fiscal_month.is_some() || self.parent_id.is_some() || self.level.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_date.is_some() || self.opening_balance_by.is_some() || self.closing_started_at.is_some() || self.closing_started_by.is_some() || self.closed_at.is_some() || self.closed_by.is_some() || self.locked_at.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.allow_adjustments.is_some() || self.adjustment_deadline.is_some() || self.total_debits.is_some() || self.total_credits.is_some() || self.journal_count.is_some() || self.total_revenue.is_some() || self.total_expenses.is_some() || self.net_income.is_some() || self.total_assets.is_some() || self.total_liabilities.is_some() || self.total_equity.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.statements_generated_at.is_some() || self.notes.is_some()
+        self.company_id.is_some()
+            || self.period_code.is_some()
+            || self.name.is_some()
+            || self.period_type.is_some()
+            || self.start_date.is_some()
+            || self.end_date.is_some()
+            || self.fiscal_year.is_some()
+            || self.fiscal_quarter.is_some()
+            || self.fiscal_month.is_some()
+            || self.parent_id.is_some()
+            || self.level.is_some()
+            || self.status.is_some()
+            || self.is_current.is_some()
+            || self.opening_balance_set.is_some()
+            || self.opening_balance_date.is_some()
+            || self.opening_balance_by.is_some()
+            || self.closing_started_at.is_some()
+            || self.closing_started_by.is_some()
+            || self.closed_at.is_some()
+            || self.closed_by.is_some()
+            || self.locked_at.is_some()
+            || self.locked_by.is_some()
+            || self.lock_reason.is_some()
+            || self.allow_adjustments.is_some()
+            || self.adjustment_deadline.is_some()
+            || self.total_debits.is_some()
+            || self.total_credits.is_some()
+            || self.journal_count.is_some()
+            || self.total_revenue.is_some()
+            || self.total_expenses.is_some()
+            || self.net_income.is_some()
+            || self.total_assets.is_some()
+            || self.total_liabilities.is_some()
+            || self.total_equity.is_some()
+            || self.balance_sheet_generated.is_some()
+            || self.income_statement_generated.is_some()
+            || self.statements_generated_at.is_some()
+            || self.notes.is_some()
     }
 }
 
@@ -368,9 +498,15 @@ impl PatchFiscalPeriodDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct FiscalPeriodResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub period_code: String,
@@ -700,4 +836,3 @@ impl backbone_core::ApplyUpdateDto<UpdateFiscalPeriodDto> for FiscalPeriod {
 // Add custom DTOs specific to FiscalPeriod here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

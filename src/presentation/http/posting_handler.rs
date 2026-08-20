@@ -186,36 +186,41 @@ pub fn create_protected_posting_routes<A: AuthMiddleware + Send + Sync + 'static
     service: Arc<PostingService>,
     auth: Arc<A>,
 ) -> Router {
-    use axum::{middleware, Extension, response::IntoResponse};
+    use axum::{middleware, response::IntoResponse, Extension};
 
     let auth_layer = auth.clone();
     Router::new()
         .route("/accounting/posts", post(post_handler_protected))
         .with_state(service)
-        .layer(middleware::from_fn(move |mut req: axum::extract::Request, next: axum::middleware::Next| {
-            let auth = auth_layer.clone();
-            async move {
-                let token = req
-                    .headers()
-                    .get(axum::http::header::AUTHORIZATION)
-                    .and_then(|h| h.to_str().ok())
-                    .and_then(|raw| raw.strip_prefix("Bearer ").or_else(|| raw.strip_prefix("bearer ")))
-                    .unwrap_or("");
-                match auth.authenticate(token).await {
-                    Ok(ctx) => {
-                        req.extensions_mut().insert(ctx);
-                        next.run(req).await
+        .layer(middleware::from_fn(
+            move |mut req: axum::extract::Request, next: axum::middleware::Next| {
+                let auth = auth_layer.clone();
+                async move {
+                    let token = req
+                        .headers()
+                        .get(axum::http::header::AUTHORIZATION)
+                        .and_then(|h| h.to_str().ok())
+                        .and_then(|raw| {
+                            raw.strip_prefix("Bearer ")
+                                .or_else(|| raw.strip_prefix("bearer "))
+                        })
+                        .unwrap_or("");
+                    match auth.authenticate(token).await {
+                        Ok(ctx) => {
+                            req.extensions_mut().insert(ctx);
+                            next.run(req).await
+                        }
+                        Err(_) => (
+                            axum::http::StatusCode::UNAUTHORIZED,
+                            axum::Json(serde_json::json!({
+                                "success": false,
+                                "error": "unauthorized",
+                                "message": "Authentication required"
+                            })),
+                        )
+                            .into_response(),
                     }
-                    Err(_) => (
-                        axum::http::StatusCode::UNAUTHORIZED,
-                        axum::Json(serde_json::json!({
-                            "success": false,
-                            "error": "unauthorized",
-                            "message": "Authentication required"
-                        })),
-                    )
-                        .into_response(),
                 }
-            }
-        }))
+            },
+        ))
 }

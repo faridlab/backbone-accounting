@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the FullReconcile aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::FullReconcile;
@@ -60,7 +60,6 @@ impl FullReconcileFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait FullReconcileRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -85,10 +84,17 @@ pub trait FullReconcileRepository: Send + Sync {
     // =========================================================================
 
     /// List full_reconcile with pagination
-    async fn list(&self, params: FullReconcilePaginationParams) -> Result<FullReconcilePaginatedResult>;
+    async fn list(
+        &self,
+        params: FullReconcilePaginationParams,
+    ) -> Result<FullReconcilePaginatedResult>;
 
     /// List full_reconcile with pagination and filters
-    async fn list_with_filters(&self, params: FullReconcilePaginationParams, filters: FullReconcileFilter) -> Result<FullReconcilePaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: FullReconcilePaginationParams,
+        filters: FullReconcileFilter,
+    ) -> Result<FullReconcilePaginatedResult>;
 
     /// Count all full_reconcile entities
     async fn count(&self) -> Result<u64>;

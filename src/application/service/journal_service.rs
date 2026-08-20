@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateJournalDto, UpdateJournalDto};
 use crate::domain::entity::Journal;
 use crate::infrastructure::persistence::JournalRepository;
+use crate::presentation::dto::{CreateJournalDto, UpdateJournalDto};
 
 /// Application service for Journal entities.
 ///
@@ -25,12 +25,8 @@ use crate::infrastructure::persistence::JournalRepository;
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type JournalService = GenericCrudService<
-    Journal,
-    CreateJournalDto,
-    UpdateJournalDto,
-    JournalRepository,
->;
+pub type JournalService =
+    GenericCrudService<Journal, CreateJournalDto, UpdateJournalDto, JournalRepository>;
 
 // <<< CUSTOM
 // END CUSTOM

@@ -16,11 +16,11 @@
 use std::sync::Arc;
 
 use axum::{
-    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
+    Json, Router,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -125,8 +125,7 @@ fn ack_from_outcome(o: EdgeOutcome) -> ReconcileEdgeAckDto {
 }
 
 fn error_response(e: &ReconcileError) -> axum::response::Response {
-    let status =
-        StatusCode::from_u16(e.http_status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let status = StatusCode::from_u16(e.http_status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     (
         status,
         Json(ReconcileErrorDto {
@@ -245,7 +244,13 @@ async fn matching_group_handler(
 pub fn create_reconcile_verb_routes(service: Arc<ReconcileWriteService>) -> Router {
     Router::new()
         .route("/accounting/reconcile", post(reconcile_handler))
-        .route("/accounting/unreconcile/:partial_id", post(unreconcile_handler))
-        .route("/accounting/reconciliation-groups/:line_id", get(matching_group_handler))
+        .route(
+            "/accounting/unreconcile/:partial_id",
+            post(unreconcile_handler),
+        )
+        .route(
+            "/accounting/reconciliation-groups/:line_id",
+            get(matching_group_handler),
+        )
         .with_state(service)
 }

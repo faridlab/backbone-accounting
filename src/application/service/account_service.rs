@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateAccountDto, UpdateAccountDto};
 use crate::domain::entity::Account;
 use crate::infrastructure::persistence::AccountRepository;
+use crate::presentation::dto::{CreateAccountDto, UpdateAccountDto};
 
 /// Application service for Account entities.
 ///
@@ -25,12 +25,8 @@ use crate::infrastructure::persistence::AccountRepository;
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type AccountService = GenericCrudService<
-    Account,
-    CreateAccountDto,
-    UpdateAccountDto,
-    AccountRepository,
->;
+pub type AccountService =
+    GenericCrudService<Account, CreateAccountDto, UpdateAccountDto, AccountRepository>;
 
 // <<< CUSTOM
 // END CUSTOM

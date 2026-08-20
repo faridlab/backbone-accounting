@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the FinancialStatement aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{FinancialStatement, StatementStatus, StatementType};
@@ -66,7 +66,23 @@ pub struct FinancialStatementFilter {
 impl FinancialStatementFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.statement_number.is_some() || self.statement_type.is_some() || self.name.is_some() || self.fiscal_period_id.is_some() || self.is_comparative.is_some() || self.comparative_period_id.is_some() || self.status.is_some() || self.balance_check.is_some() || self.trial_balance_check.is_some() || self.management_notes.is_some() || self.generated_by.is_some() || self.reviewed_by.is_some() || self.approved_by.is_some() || self.pdf_url.is_some() || self.excel_url.is_some() || self.currency.is_some()
+        self.company_id.is_some()
+            || self.statement_number.is_some()
+            || self.statement_type.is_some()
+            || self.name.is_some()
+            || self.fiscal_period_id.is_some()
+            || self.is_comparative.is_some()
+            || self.comparative_period_id.is_some()
+            || self.status.is_some()
+            || self.balance_check.is_some()
+            || self.trial_balance_check.is_some()
+            || self.management_notes.is_some()
+            || self.generated_by.is_some()
+            || self.reviewed_by.is_some()
+            || self.approved_by.is_some()
+            || self.pdf_url.is_some()
+            || self.excel_url.is_some()
+            || self.currency.is_some()
     }
 }
 
@@ -76,7 +92,6 @@ impl FinancialStatementFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait FinancialStatementRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -91,7 +106,11 @@ pub trait FinancialStatementRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<FinancialStatement>>;
 
     /// Update financial_statement by ID
-    async fn update(&self, id: &str, entity: &FinancialStatement) -> Result<Option<FinancialStatement>>;
+    async fn update(
+        &self,
+        id: &str,
+        entity: &FinancialStatement,
+    ) -> Result<Option<FinancialStatement>>;
 
     /// Delete financial_statement by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -101,10 +120,17 @@ pub trait FinancialStatementRepository: Send + Sync {
     // =========================================================================
 
     /// List financial_statement with pagination
-    async fn list(&self, params: FinancialStatementPaginationParams) -> Result<FinancialStatementPaginatedResult>;
+    async fn list(
+        &self,
+        params: FinancialStatementPaginationParams,
+    ) -> Result<FinancialStatementPaginatedResult>;
 
     /// List financial_statement with pagination and filters
-    async fn list_with_filters(&self, params: FinancialStatementPaginationParams, filters: FinancialStatementFilter) -> Result<FinancialStatementPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: FinancialStatementPaginationParams,
+        filters: FinancialStatementFilter,
+    ) -> Result<FinancialStatementPaginatedResult>;
 
     /// Count all financial_statement entities
     async fn count(&self) -> Result<u64>;
@@ -126,7 +152,10 @@ pub trait FinancialStatementRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<FinancialStatement>>;
 
     /// List soft-deleted financial_statement entities
-    async fn list_deleted(&self, params: FinancialStatementPaginationParams) -> Result<FinancialStatementPaginatedResult>;
+    async fn list_deleted(
+        &self,
+        params: FinancialStatementPaginationParams,
+    ) -> Result<FinancialStatementPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

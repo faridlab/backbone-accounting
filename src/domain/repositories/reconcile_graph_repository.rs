@@ -18,8 +18,8 @@ use uuid::Uuid;
 
 use crate::domain::gl_posting::PostingLine;
 use crate::domain::reconcile_graph::{
-    AccountReconcileFlags, LineLocator, LocatorResolution, MatchingGroup, NewPartial,
-    PartyResidual, PartialRow, ReconcileLineSnapshot,
+    AccountReconcileFlags, LineLocator, LocatorResolution, MatchingGroup, NewPartial, PartialRow,
+    PartyResidual, ReconcileLineSnapshot,
 };
 
 /// Metadata needed to derive a reversal of a reconciliation-generated journal.

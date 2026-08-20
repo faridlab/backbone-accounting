@@ -33,13 +33,37 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     let company_id = Uuid::new_v4();
     let coa: &[(&str, &str, &str, &str, &str)] = &[
         ("1100", "Bank BCA", "asset", "bank", "debit"),
-        ("1200", "Piutang Usaha", "asset", "accounts_receivable", "debit"),
+        (
+            "1200",
+            "Piutang Usaha",
+            "asset",
+            "accounts_receivable",
+            "debit",
+        ),
         ("1210", "PPN Masukan", "asset", "tax", "debit"),
-        ("2100", "Utang Usaha", "liability", "accounts_payable", "credit"),
+        (
+            "2100",
+            "Utang Usaha",
+            "liability",
+            "accounts_payable",
+            "credit",
+        ),
         ("2200", "PPN Keluaran", "liability", "tax", "credit"),
         ("2300", "Utang PPh 23", "liability", "tax", "credit"),
-        ("4000", "Pendapatan", "revenue", "operating_revenue", "credit"),
-        ("5000", "Beban Operasional", "expense", "operating_expense", "debit"),
+        (
+            "4000",
+            "Pendapatan",
+            "revenue",
+            "operating_revenue",
+            "credit",
+        ),
+        (
+            "5000",
+            "Beban Operasional",
+            "expense",
+            "operating_expense",
+            "debit",
+        ),
     ];
     let mut map = HashMap::new();
     for (code, name, at, st, nb) in coa {
@@ -51,8 +75,17 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
                VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
                        TRUE, FALSE, 'active'::account_status)"#,
         )
-        .bind(id).bind(company_id).bind(code).bind(code).bind(name).bind(at).bind(st).bind(nb)
-        .execute(pool).await.expect("seed account");
+        .bind(id)
+        .bind(company_id)
+        .bind(code)
+        .bind(code)
+        .bind(name)
+        .bind(at)
+        .bind(st)
+        .bind(nb)
+        .execute(pool)
+        .await
+        .expect("seed account");
         map.insert(*code, id);
     }
     (company_id, map)
@@ -85,22 +118,40 @@ fn req(company: Uuid, source_type: &str, lines: Vec<PostingLine>) -> PostingRequ
 /// Post GC-1 (sales invoice + PPN Output 11%).
 async fn post_sales_invoice(svc: &PostingService, company: Uuid, a: &HashMap<&str, Uuid>) {
     let cust = Uuid::new_v4();
-    svc.post(req(company, "order", vec![
-        party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-        line(a["4000"], "0", "1000000.00"),
-        line(a["2200"], "0", "110000.00"),
-    ]), None).await.unwrap();
+    svc.post(
+        req(
+            company,
+            "order",
+            vec![
+                party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                line(a["4000"], "0", "1000000.00"),
+                line(a["2200"], "0", "110000.00"),
+            ],
+        ),
+        None,
+    )
+    .await
+    .unwrap();
 }
 
 /// Post GC-3 (purchase invoice + PPN Input + PPh 23 withholding).
 async fn post_purchase_invoice(svc: &PostingService, company: Uuid, a: &HashMap<&str, Uuid>) {
     let supp = Uuid::new_v4();
-    svc.post(req(company, "expense", vec![
-        line(a["5000"], "500000.00", "0"),
-        line(a["1210"], "55000.00", "0"),
-        party_line(line(a["2100"], "0", "545000.00"), "supplier", supp),
-        line(a["2300"], "0", "10000.00"),
-    ]), None).await.unwrap();
+    svc.post(
+        req(
+            company,
+            "expense",
+            vec![
+                line(a["5000"], "500000.00", "0"),
+                line(a["1210"], "55000.00", "0"),
+                party_line(line(a["2100"], "0", "545000.00"), "supplier", supp),
+                line(a["2300"], "0", "10000.00"),
+            ],
+        ),
+        None,
+    )
+    .await
+    .unwrap();
 }
 
 // RGC-1 — reports after a single sales invoice ────────────────────────────────
@@ -108,8 +159,14 @@ async fn post_purchase_invoice(svc: &PostingService, company: Uuid, a: &HashMap<
 async fn rgc1_after_sales_invoice() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let reports = ReportingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(
+            pool.clone(),
+        ),
+    ));
     post_sales_invoice(&posting, company, &a).await;
 
     let as_of = NaiveDate::from_ymd_opt(2026, 6, 30).unwrap();
@@ -122,7 +179,10 @@ async fn rgc1_after_sales_invoice() {
     assert_eq!(tb.lines.len(), 3);
 
     // Income statement: revenue 1,000,000, net income 1,000,000.
-    let is = reports.income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of).await.unwrap();
+    let is = reports
+        .income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
+        .await
+        .unwrap();
     assert_eq!(is.revenue, dec("1000000.00"));
     assert_eq!(is.expenses, dec("0"));
     assert_eq!(is.net_income, dec("1000000.00"));
@@ -141,8 +201,14 @@ async fn rgc1_after_sales_invoice() {
 async fn rgc2_after_sales_and_purchase() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let reports = ReportingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(
+            pool.clone(),
+        ),
+    ));
     post_sales_invoice(&posting, company, &a).await;
     post_purchase_invoice(&posting, company, &a).await;
 
@@ -152,7 +218,10 @@ async fn rgc2_after_sales_and_purchase() {
     assert!(tb.balanced);
     assert_eq!(tb.total_debit, dec("1665000.00")); // AR 1.11M + Expense 500k + PPN In 55k
 
-    let is = reports.income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of).await.unwrap();
+    let is = reports
+        .income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
+        .await
+        .unwrap();
     assert_eq!(is.revenue, dec("1000000.00"));
     assert_eq!(is.expenses, dec("500000.00"));
     assert_eq!(is.net_income, dec("500000.00"));
@@ -170,21 +239,33 @@ async fn rgc2_after_sales_and_purchase() {
 async fn rgc3_period_filter() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let posting = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let reports = ReportingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(pool.clone())));
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let reports = ReportingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(
+            pool.clone(),
+        ),
+    ));
     post_sales_invoice(&posting, company, &a).await; // posted on 2026-06-15
 
     // A July period contains no activity → revenue 0.
-    let is = reports.income_statement(
-        company,
-        NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
-        NaiveDate::from_ymd_opt(2026, 7, 31).unwrap(),
-    ).await.unwrap();
+    let is = reports
+        .income_statement(
+            company,
+            NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+            NaiveDate::from_ymd_opt(2026, 7, 31).unwrap(),
+        )
+        .await
+        .unwrap();
     assert_eq!(is.revenue, dec("0"));
     assert_eq!(is.net_income, dec("0"));
 
     // A balance sheet as-of before the posting date shows nothing.
-    let bs = reports.balance_sheet(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap()).await.unwrap();
+    let bs = reports
+        .balance_sheet(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap())
+        .await
+        .unwrap();
     assert_eq!(bs.assets, dec("0"));
     assert!(bs.balanced);
 }

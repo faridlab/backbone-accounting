@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -33,23 +33,48 @@ use crate::domain::entity::ReconcileOrigin;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePartialReconcileDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "debit_move_id")]
     pub debit_move_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "credit_move_id")]
     pub credit_move_id: Uuid,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "full_reconcile_id"
+    )]
     pub full_reconcile_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "exchange_move_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "exchange_move_id"
+    )]
     pub exchange_move_id: Option<Uuid>,
     pub amount: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "debit_amount_currency")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "debit_amount_currency"
+    )]
     pub debit_amount_currency: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "credit_amount_currency")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "credit_amount_currency"
+    )]
     pub credit_amount_currency: Option<Decimal>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -59,7 +84,11 @@ pub struct CreatePartialReconcileDto {
     pub max_date: NaiveDate,
     pub origin: ReconcileOrigin,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_type"
+    )]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
@@ -78,23 +107,48 @@ pub struct CreatePartialReconcileDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePartialReconcileDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "debit_move_id")]
     pub debit_move_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "credit_move_id")]
     pub credit_move_id: Uuid,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "full_reconcile_id"
+    )]
     pub full_reconcile_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "exchange_move_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "exchange_move_id"
+    )]
     pub exchange_move_id: Option<Uuid>,
     pub amount: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "debit_amount_currency")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "debit_amount_currency"
+    )]
     pub debit_amount_currency: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "credit_amount_currency")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "credit_amount_currency"
+    )]
     pub credit_amount_currency: Option<Decimal>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -104,7 +158,11 @@ pub struct UpdatePartialReconcileDto {
     pub max_date: NaiveDate,
     pub origin: ReconcileOrigin,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_type"
+    )]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
@@ -123,13 +181,22 @@ pub struct UpdatePartialReconcileDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchPartialReconcileDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "debit_move_id")]
     pub debit_move_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "credit_move_id")]
     pub credit_move_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
@@ -138,9 +205,15 @@ pub struct PatchPartialReconcileDto {
     pub exchange_move_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "debit_amount_currency")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "debit_amount_currency"
+    )]
     pub debit_amount_currency: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "credit_amount_currency")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "credit_amount_currency"
+    )]
     pub credit_amount_currency: Option<Decimal>,
     #[cfg_attr(feature = "validation", validate(length(max = 3)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -161,7 +234,19 @@ pub struct PatchPartialReconcileDto {
 impl PatchPartialReconcileDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.debit_move_id.is_some() || self.credit_move_id.is_some() || self.full_reconcile_id.is_some() || self.exchange_move_id.is_some() || self.amount.is_some() || self.debit_amount_currency.is_some() || self.credit_amount_currency.is_some() || self.currency.is_some() || self.max_date.is_some() || self.origin.is_some() || self.source_type.is_some() || self.source_id.is_some()
+        self.company_id.is_some()
+            || self.debit_move_id.is_some()
+            || self.credit_move_id.is_some()
+            || self.full_reconcile_id.is_some()
+            || self.exchange_move_id.is_some()
+            || self.amount.is_some()
+            || self.debit_amount_currency.is_some()
+            || self.credit_amount_currency.is_some()
+            || self.currency.is_some()
+            || self.max_date.is_some()
+            || self.origin.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
     }
 }
 
@@ -177,13 +262,25 @@ impl PatchPartialReconcileDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct PartialReconcileResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub debit_move_id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub credit_move_id: Uuid,
     pub full_reconcile_id: Option<Uuid>,
     pub exchange_move_id: Option<Uuid>,
@@ -234,7 +331,12 @@ pub struct PartialReconcileListResponseDto {
 
 impl PartialReconcileListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(items: Vec<PartialReconcileResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
+    pub fn new(
+        items: Vec<PartialReconcileResponseDto>,
+        total: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -359,7 +461,10 @@ impl backbone_core::FromCreateDto<CreatePartialReconcileDto> for PartialReconcil
 }
 
 impl backbone_core::ApplyUpdateDto<UpdatePartialReconcileDto> for PartialReconcile {
-    fn apply_update(mut self, dto: UpdatePartialReconcileDto) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(
+        mut self,
+        dto: UpdatePartialReconcileDto,
+    ) -> backbone_core::ServiceResult<Self> {
         self.updated_at = Utc::now();
         self.company_id = dto.company_id;
         self.debit_move_id = dto.debit_move_id;
@@ -386,4 +491,3 @@ impl backbone_core::ApplyUpdateDto<UpdatePartialReconcileDto> for PartialReconci
 // Add custom DTOs specific to PartialReconcile here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

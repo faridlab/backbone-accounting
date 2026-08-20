@@ -33,7 +33,12 @@ pub struct LineLocator {
 
 impl LineLocator {
     pub fn new(source_type: &str, source_id: Uuid, account_id: Uuid) -> Self {
-        Self { source_type: source_type.to_string(), source_id, account_id, reversing: false }
+        Self {
+            source_type: source_type.to_string(),
+            source_id,
+            account_id,
+            reversing: false,
+        }
     }
     pub fn reversing(mut self) -> Self {
         self.reversing = true;
@@ -139,7 +144,10 @@ pub struct MatchingGroup {
 
 impl MatchingGroup {
     pub fn residual_of(&self, line_id: Uuid) -> Option<Decimal> {
-        self.residuals.iter().find(|(id, _)| *id == line_id).map(|(_, r)| *r)
+        self.residuals
+            .iter()
+            .find(|(id, _)| *id == line_id)
+            .map(|(_, r)| *r)
     }
 }
 

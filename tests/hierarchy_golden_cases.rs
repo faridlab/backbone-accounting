@@ -42,8 +42,15 @@ async fn seed_accounts(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
                VALUES ($1,$2,$3,$3,$4,'asset'::account_type,'current_asset'::account_subtype,
                        'debit'::normal_balance, TRUE, FALSE, $5, $6, 'active'::account_status)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(parent).bind(level)
-        .execute(pool).await.unwrap();
+        .bind(id)
+        .bind(company)
+        .bind(code)
+        .bind(name)
+        .bind(parent)
+        .bind(level)
+        .execute(pool)
+        .await
+        .unwrap();
     }
     (company, root, mid, leaf)
 }
@@ -60,8 +67,15 @@ async fn seed_cost_centers(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
             r#"INSERT INTO accounting.cost_centers (id, company_id, code, name, parent_id, level)
                VALUES ($1,$2,$3,$4,$5,$6)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(parent).bind(level)
-        .execute(pool).await.unwrap();
+        .bind(id)
+        .bind(company)
+        .bind(code)
+        .bind(name)
+        .bind(parent)
+        .bind(level)
+        .execute(pool)
+        .await
+        .unwrap();
     }
     (company, root, mid, leaf)
 }
@@ -71,9 +85,33 @@ async fn seed_fiscal_periods(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
     let (root, mid, leaf) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
     let y = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
     for (id, code, name, parent, level, start, end) in [
-        (root, "FY2026", "FY 2026", None, 0, y, y + chrono::Duration::days(365)),
-        (mid, "Q1", "Q1 2026", Some(root), 1, y, y + chrono::Duration::days(90)),
-        (leaf, "M01", "Jan 2026", Some(mid), 2, y, y + chrono::Duration::days(31)),
+        (
+            root,
+            "FY2026",
+            "FY 2026",
+            None,
+            0,
+            y,
+            y + chrono::Duration::days(365),
+        ),
+        (
+            mid,
+            "Q1",
+            "Q1 2026",
+            Some(root),
+            1,
+            y,
+            y + chrono::Duration::days(90),
+        ),
+        (
+            leaf,
+            "M01",
+            "Jan 2026",
+            Some(mid),
+            2,
+            y,
+            y + chrono::Duration::days(31),
+        ),
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.fiscal_periods
@@ -90,15 +128,24 @@ async fn seed_fiscal_periods(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
 async fn account_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_accounts(&pool).await;
-    let chain = svc(&pool).ancestors(HierarchyTable::Account, company, leaf).await.unwrap();
+    let chain = svc(&pool)
+        .ancestors(HierarchyTable::Account, company, leaf)
+        .await
+        .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();
     assert_eq!(ids, vec![root, mid, leaf], "root → self order");
     assert_eq!(chain[2].parent_id, Some(mid));
     // Leaf's own lookup returns just itself.
-    let only_root = svc(&pool).ancestors(HierarchyTable::Account, company, root).await.unwrap();
+    let only_root = svc(&pool)
+        .ancestors(HierarchyTable::Account, company, root)
+        .await
+        .unwrap();
     assert_eq!(only_root.len(), 1);
     // Unknown id → empty.
-    let missing = svc(&pool).ancestors(HierarchyTable::Account, company, Uuid::new_v4()).await.unwrap();
+    let missing = svc(&pool)
+        .ancestors(HierarchyTable::Account, company, Uuid::new_v4())
+        .await
+        .unwrap();
     assert!(missing.is_empty());
 }
 
@@ -106,7 +153,10 @@ async fn account_ancestors_root_first() {
 async fn cost_center_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_cost_centers(&pool).await;
-    let chain = svc(&pool).ancestors(HierarchyTable::CostCenter, company, leaf).await.unwrap();
+    let chain = svc(&pool)
+        .ancestors(HierarchyTable::CostCenter, company, leaf)
+        .await
+        .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();
     assert_eq!(ids, vec![root, mid, leaf]);
 }
@@ -115,7 +165,10 @@ async fn cost_center_ancestors_root_first() {
 async fn fiscal_period_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_fiscal_periods(&pool).await;
-    let chain = svc(&pool).ancestors(HierarchyTable::FiscalPeriod, company, leaf).await.unwrap();
+    let chain = svc(&pool)
+        .ancestors(HierarchyTable::FiscalPeriod, company, leaf)
+        .await
+        .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();
     assert_eq!(ids, vec![root, mid, leaf]);
 }
@@ -130,7 +183,9 @@ async fn hierarchy_route_returns_chain_json() {
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); });
+    tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
     tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
     let resp = reqwest::get(format!(
@@ -141,7 +196,13 @@ async fn hierarchy_route_returns_chain_json() {
     assert!(resp.status().is_success());
     let body: serde_json::Value = resp.json().await.unwrap();
     let hierarchy = body["hierarchy"].as_array().unwrap();
-    let got: Vec<String> = hierarchy.iter().map(|n| n["id"].as_str().unwrap().to_string()).collect();
-    let want: Vec<String> = vec![root, mid, leaf].into_iter().map(|u| u.to_string()).collect();
+    let got: Vec<String> = hierarchy
+        .iter()
+        .map(|n| n["id"].as_str().unwrap().to_string())
+        .collect();
+    let want: Vec<String> = vec![root, mid, leaf]
+        .into_iter()
+        .map(|u| u.to_string())
+        .collect();
     assert_eq!(got, want, "route returns root → self chain");
 }

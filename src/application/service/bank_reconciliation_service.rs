@@ -86,7 +86,10 @@ impl BankReconciliationService {
         Self { repo }
     }
 
-    pub async fn reconcile(&self, req: ReconcileRequest) -> Result<ReconcileResult, ReconcileError> {
+    pub async fn reconcile(
+        &self,
+        req: ReconcileRequest,
+    ) -> Result<ReconcileResult, ReconcileError> {
         let Some((account_number, account_name)) = self
             .repo
             .find_bank_account(req.account_id, req.company_id)
@@ -98,30 +101,52 @@ impl BankReconciliationService {
 
         let rows = self
             .repo
-            .find_unreconciled_book(req.company_id, req.account_id, req.period_start, req.statement_date)
+            .find_unreconciled_book(
+                req.company_id,
+                req.account_id,
+                req.period_start,
+                req.statement_date,
+            )
             .await
             .map_err(internal)?;
         let mut book: Vec<BookEntry> = rows
             .into_iter()
-            .map(|r| BookEntry { ledger_id: r.ledger_id, amount: r.amount, reference: r.reference, matched: false })
+            .map(|r| BookEntry {
+                ledger_id: r.ledger_id,
+                amount: r.amount,
+                reference: r.reference,
+                matched: false,
+            })
             .collect();
 
         // Greedy match: each statement line to the first unmatched book entry of equal amount.
         let mut matched: Vec<MatchedPair> = Vec::new();
         let mut unmatched_stmt: Vec<UnmatchedStatement> = Vec::new();
         for line in &req.statement_lines {
-            match book.iter_mut().find(|b| !b.matched && b.amount == line.amount) {
+            match book
+                .iter_mut()
+                .find(|b| !b.matched && b.amount == line.amount)
+            {
                 Some(b) => {
                     b.matched = true;
-                    matched.push(MatchedPair { ledger_id: b.ledger_id, statement_reference: line.reference.clone() });
+                    matched.push(MatchedPair {
+                        ledger_id: b.ledger_id,
+                        statement_reference: line.reference.clone(),
+                    });
                 }
-                None => unmatched_stmt.push(UnmatchedStatement { reference: line.reference.clone(), amount: line.amount }),
+                None => unmatched_stmt.push(UnmatchedStatement {
+                    reference: line.reference.clone(),
+                    amount: line.amount,
+                }),
             }
         }
         let unmatched_book: Vec<UnmatchedBook> = book
             .iter()
             .filter(|b| !b.matched)
-            .map(|b| UnmatchedBook { ledger_id: b.ledger_id, amount: b.amount })
+            .map(|b| UnmatchedBook {
+                ledger_id: b.ledger_id,
+                amount: b.amount,
+            })
             .collect();
 
         let closing_book_balance = self
@@ -138,8 +163,16 @@ impl BankReconciliationService {
         let unmatched_book_count = unmatched_book.len() as i32;
         let unmatched_statement_count = unmatched_stmt.len() as i32;
 
-        let number = format!("REC-{}-{}", req.statement_date.format("%Y%m%d"), &Uuid::new_v4().to_string()[..8]);
-        let status = if is_balanced { "completed" } else { "in_progress" };
+        let number = format!(
+            "REC-{}-{}",
+            req.statement_date.format("%Y%m%d"),
+            &Uuid::new_v4().to_string()[..8]
+        );
+        let status = if is_balanced {
+            "completed"
+        } else {
+            "in_progress"
+        };
 
         let commit = ReconciliationCommit {
             company_id: req.company_id,
@@ -161,7 +194,11 @@ impl BankReconciliationService {
             unmatched_statement: unmatched_stmt,
             now: Utc::now(),
         };
-        let reconciliation_id = self.repo.commit_reconciliation(commit).await.map_err(internal)?;
+        let reconciliation_id = self
+            .repo
+            .commit_reconciliation(commit)
+            .await
+            .map_err(internal)?;
 
         Ok(ReconcileResult {
             reconciliation_id,

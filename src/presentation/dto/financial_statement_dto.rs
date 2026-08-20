@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::FinancialStatement;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::FinancialStatement;
 use crate::domain::entity::StatementStatus;
 use crate::domain::entity::StatementType;
 
@@ -35,7 +35,10 @@ use crate::domain::entity::StatementType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFinancialStatementDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -47,88 +50,216 @@ pub struct CreateFinancialStatementDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_period_id"
+    )]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "fiscal_year")]
     pub fiscal_year: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "as_of_date")]
     pub as_of_date: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "period_start")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "period_start"
+    )]
     pub period_start: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "period_end")]
     pub period_end: Option<NaiveDate>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_comparative")]
     pub is_comparative: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "comparative_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_period_id"
+    )]
     pub comparative_period_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "comparative_as_of_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_as_of_date"
+    )]
     pub comparative_as_of_date: Option<NaiveDate>,
     pub status: StatementStatus,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_current_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_assets"
+    )]
     pub total_current_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_non_current_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_assets"
+    )]
     pub total_non_current_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_assets"
+    )]
     pub total_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_current_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_liabilities"
+    )]
     pub total_current_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_non_current_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_liabilities"
+    )]
     pub total_non_current_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_liabilities"
+    )]
     pub total_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_equity")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_equity"
+    )]
     pub total_equity: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "balance_check")]
     pub balance_check: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "balance_difference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "balance_difference"
+    )]
     pub balance_difference: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_revenue")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_revenue"
+    )]
     pub total_revenue: Option<Decimal>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_cogs")]
     pub total_cogs: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "gross_profit")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "gross_profit"
+    )]
     pub gross_profit: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "gross_profit_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "gross_profit_margin"
+    )]
     pub gross_profit_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_operating_expenses")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_operating_expenses"
+    )]
     pub total_operating_expenses: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "operating_income")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "operating_income"
+    )]
     pub operating_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "operating_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "operating_margin"
+    )]
     pub operating_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_other_income")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_other_income"
+    )]
     pub total_other_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_other_expenses")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_other_expenses"
+    )]
     pub total_other_expenses: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "income_before_tax")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "income_before_tax"
+    )]
     pub income_before_tax: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_expense")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "tax_expense"
+    )]
     pub tax_expense: Option<Decimal>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_income")]
     pub net_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_profit_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "net_profit_margin"
+    )]
     pub net_profit_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_operations")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_operations"
+    )]
     pub cash_from_operations: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_investing")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_investing"
+    )]
     pub cash_from_investing: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_financing")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_financing"
+    )]
     pub cash_from_financing: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_cash_change")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "net_cash_change"
+    )]
     pub net_cash_change: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "beginning_cash")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "beginning_cash"
+    )]
     pub beginning_cash: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "ending_cash")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "ending_cash"
+    )]
     pub ending_cash: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_debits")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_debits"
+    )]
     pub total_debits: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_credits")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_credits"
+    )]
     pub total_credits: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "trial_balance_check")]
@@ -141,23 +272,55 @@ pub struct CreateFinancialStatementDto {
     pub variance_data: serde_json::Value,
     pub notes: serde_json::Value,
     #[cfg_attr(feature = "validation", validate(length(max = 2000)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "management_notes")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "management_notes"
+    )]
     pub management_notes: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "generated_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "generated_at"
+    )]
     pub generated_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "generated_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "generated_by"
+    )]
     pub generated_by: Option<Uuid>,
     #[serde(alias = "generation_parameters")]
     pub generation_parameters: serde_json::Value,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reviewed_at"
+    )]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reviewed_by"
+    )]
     pub reviewed_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_at"
+    )]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_by"
+    )]
     pub approved_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "published_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "published_at"
+    )]
     pub published_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "pdf_url")]
@@ -182,7 +345,10 @@ pub struct CreateFinancialStatementDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFinancialStatementDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -194,88 +360,216 @@ pub struct UpdateFinancialStatementDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_period_id"
+    )]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "fiscal_year")]
     pub fiscal_year: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "as_of_date")]
     pub as_of_date: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "period_start")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "period_start"
+    )]
     pub period_start: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "period_end")]
     pub period_end: Option<NaiveDate>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_comparative")]
     pub is_comparative: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "comparative_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_period_id"
+    )]
     pub comparative_period_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "comparative_as_of_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_as_of_date"
+    )]
     pub comparative_as_of_date: Option<NaiveDate>,
     pub status: StatementStatus,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_current_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_assets"
+    )]
     pub total_current_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_non_current_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_assets"
+    )]
     pub total_non_current_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_assets")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_assets"
+    )]
     pub total_assets: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_current_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_liabilities"
+    )]
     pub total_current_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_non_current_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_liabilities"
+    )]
     pub total_non_current_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_liabilities")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_liabilities"
+    )]
     pub total_liabilities: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_equity")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_equity"
+    )]
     pub total_equity: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "balance_check")]
     pub balance_check: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "balance_difference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "balance_difference"
+    )]
     pub balance_difference: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_revenue")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_revenue"
+    )]
     pub total_revenue: Option<Decimal>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_cogs")]
     pub total_cogs: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "gross_profit")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "gross_profit"
+    )]
     pub gross_profit: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "gross_profit_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "gross_profit_margin"
+    )]
     pub gross_profit_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_operating_expenses")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_operating_expenses"
+    )]
     pub total_operating_expenses: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "operating_income")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "operating_income"
+    )]
     pub operating_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "operating_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "operating_margin"
+    )]
     pub operating_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_other_income")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_other_income"
+    )]
     pub total_other_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_other_expenses")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_other_expenses"
+    )]
     pub total_other_expenses: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "income_before_tax")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "income_before_tax"
+    )]
     pub income_before_tax: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_expense")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "tax_expense"
+    )]
     pub tax_expense: Option<Decimal>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_income")]
     pub net_income: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_profit_margin")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "net_profit_margin"
+    )]
     pub net_profit_margin: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_operations")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_operations"
+    )]
     pub cash_from_operations: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_investing")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_investing"
+    )]
     pub cash_from_investing: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cash_from_financing")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_financing"
+    )]
     pub cash_from_financing: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "net_cash_change")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "net_cash_change"
+    )]
     pub net_cash_change: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "beginning_cash")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "beginning_cash"
+    )]
     pub beginning_cash: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "ending_cash")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "ending_cash"
+    )]
     pub ending_cash: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_debits")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_debits"
+    )]
     pub total_debits: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "total_credits")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "total_credits"
+    )]
     pub total_credits: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "trial_balance_check")]
@@ -288,23 +582,55 @@ pub struct UpdateFinancialStatementDto {
     pub variance_data: serde_json::Value,
     pub notes: serde_json::Value,
     #[cfg_attr(feature = "validation", validate(length(max = 2000)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "management_notes")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "management_notes"
+    )]
     pub management_notes: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "generated_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "generated_at"
+    )]
     pub generated_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "generated_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "generated_by"
+    )]
     pub generated_by: Option<Uuid>,
     #[serde(alias = "generation_parameters")]
     pub generation_parameters: serde_json::Value,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reviewed_at"
+    )]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reviewed_by"
+    )]
     pub reviewed_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_at"
+    )]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_by"
+    )]
     pub approved_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "published_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "published_at"
+    )]
     pub published_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "pdf_url")]
@@ -329,7 +655,10 @@ pub struct UpdateFinancialStatementDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchFinancialStatementDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -359,21 +688,39 @@ pub struct PatchFinancialStatementDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_comparative")]
     pub is_comparative: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "comparative_period_id")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_period_id"
+    )]
     pub comparative_period_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "comparative_as_of_date")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "comparative_as_of_date"
+    )]
     pub comparative_as_of_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StatementStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_current_assets")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_assets"
+    )]
     pub total_current_assets: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_non_current_assets")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_assets"
+    )]
     pub total_non_current_assets: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_assets")]
     pub total_assets: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_current_liabilities")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_current_liabilities"
+    )]
     pub total_current_liabilities: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_non_current_liabilities")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_non_current_liabilities"
+    )]
     pub total_non_current_liabilities: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_liabilities")]
     pub total_liabilities: Option<Decimal>,
@@ -392,7 +739,10 @@ pub struct PatchFinancialStatementDto {
     pub gross_profit: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "gross_profit_margin")]
     pub gross_profit_margin: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_operating_expenses")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_operating_expenses"
+    )]
     pub total_operating_expenses: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "operating_income")]
     pub operating_income: Option<Decimal>,
@@ -400,7 +750,10 @@ pub struct PatchFinancialStatementDto {
     pub operating_margin: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_other_income")]
     pub total_other_income: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "total_other_expenses")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "total_other_expenses"
+    )]
     pub total_other_expenses: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "income_before_tax")]
     pub income_before_tax: Option<Decimal>,
@@ -410,7 +763,10 @@ pub struct PatchFinancialStatementDto {
     pub net_income: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "net_profit_margin")]
     pub net_profit_margin: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "cash_from_operations")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "cash_from_operations"
+    )]
     pub cash_from_operations: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "cash_from_investing")]
     pub cash_from_investing: Option<Decimal>,
@@ -444,7 +800,10 @@ pub struct PatchFinancialStatementDto {
     pub generated_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "generated_by")]
     pub generated_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "generation_parameters")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "generation_parameters"
+    )]
     pub generation_parameters: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
     pub reviewed_at: Option<DateTime<Utc>>,
@@ -470,7 +829,67 @@ pub struct PatchFinancialStatementDto {
 impl PatchFinancialStatementDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.statement_number.is_some() || self.statement_type.is_some() || self.name.is_some() || self.fiscal_period_id.is_some() || self.fiscal_year.is_some() || self.fiscal_month.is_some() || self.as_of_date.is_some() || self.period_start.is_some() || self.period_end.is_some() || self.is_comparative.is_some() || self.comparative_period_id.is_some() || self.comparative_as_of_date.is_some() || self.status.is_some() || self.total_current_assets.is_some() || self.total_non_current_assets.is_some() || self.total_assets.is_some() || self.total_current_liabilities.is_some() || self.total_non_current_liabilities.is_some() || self.total_liabilities.is_some() || self.total_equity.is_some() || self.balance_check.is_some() || self.balance_difference.is_some() || self.total_revenue.is_some() || self.total_cogs.is_some() || self.gross_profit.is_some() || self.gross_profit_margin.is_some() || self.total_operating_expenses.is_some() || self.operating_income.is_some() || self.operating_margin.is_some() || self.total_other_income.is_some() || self.total_other_expenses.is_some() || self.income_before_tax.is_some() || self.tax_expense.is_some() || self.net_income.is_some() || self.net_profit_margin.is_some() || self.cash_from_operations.is_some() || self.cash_from_investing.is_some() || self.cash_from_financing.is_some() || self.net_cash_change.is_some() || self.beginning_cash.is_some() || self.ending_cash.is_some() || self.total_debits.is_some() || self.total_credits.is_some() || self.trial_balance_check.is_some() || self.line_items.is_some() || self.comparative_data.is_some() || self.variance_data.is_some() || self.notes.is_some() || self.management_notes.is_some() || self.generated_at.is_some() || self.generated_by.is_some() || self.generation_parameters.is_some() || self.reviewed_at.is_some() || self.reviewed_by.is_some() || self.approved_at.is_some() || self.approved_by.is_some() || self.published_at.is_some() || self.pdf_url.is_some() || self.excel_url.is_some() || self.currency.is_some()
+        self.company_id.is_some()
+            || self.statement_number.is_some()
+            || self.statement_type.is_some()
+            || self.name.is_some()
+            || self.fiscal_period_id.is_some()
+            || self.fiscal_year.is_some()
+            || self.fiscal_month.is_some()
+            || self.as_of_date.is_some()
+            || self.period_start.is_some()
+            || self.period_end.is_some()
+            || self.is_comparative.is_some()
+            || self.comparative_period_id.is_some()
+            || self.comparative_as_of_date.is_some()
+            || self.status.is_some()
+            || self.total_current_assets.is_some()
+            || self.total_non_current_assets.is_some()
+            || self.total_assets.is_some()
+            || self.total_current_liabilities.is_some()
+            || self.total_non_current_liabilities.is_some()
+            || self.total_liabilities.is_some()
+            || self.total_equity.is_some()
+            || self.balance_check.is_some()
+            || self.balance_difference.is_some()
+            || self.total_revenue.is_some()
+            || self.total_cogs.is_some()
+            || self.gross_profit.is_some()
+            || self.gross_profit_margin.is_some()
+            || self.total_operating_expenses.is_some()
+            || self.operating_income.is_some()
+            || self.operating_margin.is_some()
+            || self.total_other_income.is_some()
+            || self.total_other_expenses.is_some()
+            || self.income_before_tax.is_some()
+            || self.tax_expense.is_some()
+            || self.net_income.is_some()
+            || self.net_profit_margin.is_some()
+            || self.cash_from_operations.is_some()
+            || self.cash_from_investing.is_some()
+            || self.cash_from_financing.is_some()
+            || self.net_cash_change.is_some()
+            || self.beginning_cash.is_some()
+            || self.ending_cash.is_some()
+            || self.total_debits.is_some()
+            || self.total_credits.is_some()
+            || self.trial_balance_check.is_some()
+            || self.line_items.is_some()
+            || self.comparative_data.is_some()
+            || self.variance_data.is_some()
+            || self.notes.is_some()
+            || self.management_notes.is_some()
+            || self.generated_at.is_some()
+            || self.generated_by.is_some()
+            || self.generation_parameters.is_some()
+            || self.reviewed_at.is_some()
+            || self.reviewed_by.is_some()
+            || self.approved_at.is_some()
+            || self.approved_by.is_some()
+            || self.published_at.is_some()
+            || self.pdf_url.is_some()
+            || self.excel_url.is_some()
+            || self.currency.is_some()
     }
 }
 
@@ -486,9 +905,15 @@ impl PatchFinancialStatementDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialStatementResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub statement_number: String,
@@ -591,7 +1016,12 @@ pub struct FinancialStatementListResponseDto {
 
 impl FinancialStatementListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(items: Vec<FinancialStatementResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
+    pub fn new(
+        items: Vec<FinancialStatementResponseDto>,
+        total: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {
@@ -855,7 +1285,10 @@ impl backbone_core::FromCreateDto<CreateFinancialStatementDto> for FinancialStat
 }
 
 impl backbone_core::ApplyUpdateDto<UpdateFinancialStatementDto> for FinancialStatement {
-    fn apply_update(mut self, dto: UpdateFinancialStatementDto) -> backbone_core::ServiceResult<Self> {
+    fn apply_update(
+        mut self,
+        dto: UpdateFinancialStatementDto,
+    ) -> backbone_core::ServiceResult<Self> {
         self.company_id = dto.company_id;
         self.statement_number = dto.statement_number;
         self.statement_type = dto.statement_type;
@@ -929,4 +1362,3 @@ impl backbone_core::ApplyUpdateDto<UpdateFinancialStatementDto> for FinancialSta
 // Add custom DTOs specific to FinancialStatement here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

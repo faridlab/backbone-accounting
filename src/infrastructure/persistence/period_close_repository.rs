@@ -72,10 +72,12 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
     }
 
     async fn mark_closed(&self, period_id: Uuid) -> anyhow::Result<()> {
-        sqlx::query("UPDATE accounting.fiscal_periods SET status='closed'::period_status WHERE id=$1")
-            .bind(period_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "UPDATE accounting.fiscal_periods SET status='closed'::period_status WHERE id=$1",
+        )
+        .bind(period_id)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

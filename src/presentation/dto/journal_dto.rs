@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::Journal;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::Journal;
 use crate::domain::entity::JournalSource;
 use crate::domain::entity::JournalStatus;
 use crate::domain::entity::JournalType;
@@ -36,7 +36,10 @@ use crate::domain::entity::JournalType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateJournalDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -44,7 +47,11 @@ pub struct CreateJournalDto {
     #[serde(alias = "journal_number")]
     pub journal_number: String,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reference_number")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reference_number"
+    )]
     pub reference_number: Option<String>,
     #[serde(alias = "journal_type")]
     pub journal_type: JournalType,
@@ -53,15 +60,31 @@ pub struct CreateJournalDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "transaction_date")]
     pub transaction_date: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "posting_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "posting_date"
+    )]
     pub posting_date: Option<NaiveDate>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_period_id"
+    )]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(range(min = 2020), range(max = 2100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_year")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_year"
+    )]
     pub fiscal_year: Option<i32>,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 12)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -80,24 +103,48 @@ pub struct CreateJournalDto {
     pub line_count: i32,
     pub source: JournalSource,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_type"
+    )]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_reference"
+    )]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversed")]
     pub is_reversed: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_by_id"
+    )]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_at"
+    )]
     pub reversed_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversal_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversal_reason"
+    )]
     pub reversal_reason: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reverses_id"
+    )]
     pub reverses_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversing")]
@@ -105,28 +152,64 @@ pub struct CreateJournalDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "auto_reverse")]
     pub auto_reverse: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "auto_reverse_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "auto_reverse_date"
+    )]
     pub auto_reverse_date: Option<NaiveDate>,
     pub status: JournalStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "requires_approval")]
     pub requires_approval: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approval_threshold")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approval_threshold"
+    )]
     pub approval_threshold: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "submitted_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "submitted_at"
+    )]
     pub submitted_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "submitted_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "submitted_by"
+    )]
     pub submitted_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_at"
+    )]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_by"
+    )]
     pub approved_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejected_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejected_at"
+    )]
     pub rejected_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejected_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejected_by"
+    )]
     pub rejected_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejection_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejection_reason"
+    )]
     pub rejection_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_at")]
     pub posted_at: Option<DateTime<Utc>>,
@@ -140,7 +223,11 @@ pub struct CreateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "voided_by")]
     pub voided_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "void_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "void_reason"
+    )]
     pub void_reason: Option<String>,
     pub attachments: serde_json::Value,
 }
@@ -158,7 +245,10 @@ pub struct CreateJournalDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateJournalDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -166,7 +256,11 @@ pub struct UpdateJournalDto {
     #[serde(alias = "journal_number")]
     pub journal_number: String,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reference_number")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reference_number"
+    )]
     pub reference_number: Option<String>,
     #[serde(alias = "journal_type")]
     pub journal_type: JournalType,
@@ -175,15 +269,31 @@ pub struct UpdateJournalDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "transaction_date")]
     pub transaction_date: NaiveDate,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "posting_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "posting_date"
+    )]
     pub posting_date: Option<NaiveDate>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_period_id"
+    )]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(range(min = 2020), range(max = 2100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_year")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_year"
+    )]
     pub fiscal_year: Option<i32>,
     #[cfg_attr(feature = "validation", validate(range(min = 1), range(max = 12)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "fiscal_month"
+    )]
     pub fiscal_month: Option<i32>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -202,24 +312,48 @@ pub struct UpdateJournalDto {
     pub line_count: i32,
     pub source: JournalSource,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_type"
+    )]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_reference"
+    )]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversed")]
     pub is_reversed: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_by_id"
+    )]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_at"
+    )]
     pub reversed_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversal_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversal_reason"
+    )]
     pub reversal_reason: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reverses_id"
+    )]
     pub reverses_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversing")]
@@ -227,28 +361,64 @@ pub struct UpdateJournalDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "auto_reverse")]
     pub auto_reverse: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "auto_reverse_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "auto_reverse_date"
+    )]
     pub auto_reverse_date: Option<NaiveDate>,
     pub status: JournalStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "requires_approval")]
     pub requires_approval: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approval_threshold")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approval_threshold"
+    )]
     pub approval_threshold: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "submitted_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "submitted_at"
+    )]
     pub submitted_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "submitted_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "submitted_by"
+    )]
     pub submitted_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_at"
+    )]
     pub approved_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "approved_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "approved_by"
+    )]
     pub approved_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejected_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejected_at"
+    )]
     pub rejected_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejected_by")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejected_by"
+    )]
     pub rejected_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "rejection_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "rejection_reason"
+    )]
     pub rejection_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_at")]
     pub posted_at: Option<DateTime<Utc>>,
@@ -262,7 +432,11 @@ pub struct UpdateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "voided_by")]
     pub voided_by: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "void_reason")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "void_reason"
+    )]
     pub void_reason: Option<String>,
     pub attachments: serde_json::Value,
 }
@@ -280,7 +454,10 @@ pub struct UpdateJournalDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchJournalDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -397,7 +574,51 @@ pub struct PatchJournalDto {
 impl PatchJournalDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.journal_number.is_some() || self.reference_number.is_some() || self.journal_type.is_some() || self.branch_id.is_some() || self.transaction_date.is_some() || self.posting_date.is_some() || self.fiscal_period_id.is_some() || self.fiscal_year.is_some() || self.fiscal_month.is_some() || self.description.is_some() || self.notes.is_some() || self.currency.is_some() || self.total_debit.is_some() || self.total_credit.is_some() || self.line_count.is_some() || self.source.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_reversed.is_some() || self.reversed_by_id.is_some() || self.reversed_at.is_some() || self.reversal_reason.is_some() || self.reverses_id.is_some() || self.is_reversing.is_some() || self.auto_reverse.is_some() || self.auto_reverse_date.is_some() || self.status.is_some() || self.requires_approval.is_some() || self.approval_threshold.is_some() || self.submitted_at.is_some() || self.submitted_by.is_some() || self.approved_at.is_some() || self.approved_by.is_some() || self.rejected_at.is_some() || self.rejected_by.is_some() || self.rejection_reason.is_some() || self.posted_at.is_some() || self.posted_by.is_some() || self.is_voided.is_some() || self.voided_at.is_some() || self.voided_by.is_some() || self.void_reason.is_some() || self.attachments.is_some()
+        self.company_id.is_some()
+            || self.journal_number.is_some()
+            || self.reference_number.is_some()
+            || self.journal_type.is_some()
+            || self.branch_id.is_some()
+            || self.transaction_date.is_some()
+            || self.posting_date.is_some()
+            || self.fiscal_period_id.is_some()
+            || self.fiscal_year.is_some()
+            || self.fiscal_month.is_some()
+            || self.description.is_some()
+            || self.notes.is_some()
+            || self.currency.is_some()
+            || self.total_debit.is_some()
+            || self.total_credit.is_some()
+            || self.line_count.is_some()
+            || self.source.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
+            || self.source_reference.is_some()
+            || self.is_reversed.is_some()
+            || self.reversed_by_id.is_some()
+            || self.reversed_at.is_some()
+            || self.reversal_reason.is_some()
+            || self.reverses_id.is_some()
+            || self.is_reversing.is_some()
+            || self.auto_reverse.is_some()
+            || self.auto_reverse_date.is_some()
+            || self.status.is_some()
+            || self.requires_approval.is_some()
+            || self.approval_threshold.is_some()
+            || self.submitted_at.is_some()
+            || self.submitted_by.is_some()
+            || self.approved_at.is_some()
+            || self.approved_by.is_some()
+            || self.rejected_at.is_some()
+            || self.rejected_by.is_some()
+            || self.rejection_reason.is_some()
+            || self.posted_at.is_some()
+            || self.posted_by.is_some()
+            || self.is_voided.is_some()
+            || self.voided_at.is_some()
+            || self.voided_by.is_some()
+            || self.void_reason.is_some()
+            || self.attachments.is_some()
     }
 }
 
@@ -413,9 +634,15 @@ impl PatchJournalDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct JournalResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub journal_number: String,
@@ -778,4 +1005,3 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalDto> for Journal {
 // Add custom DTOs specific to Journal here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

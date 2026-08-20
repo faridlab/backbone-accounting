@@ -43,15 +43,71 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     let company_id = Uuid::new_v4();
     // (code, name, type, subtype, normal_balance, is_header, is_detail)
     let coa: &[(&str, &str, &str, &str, &str, bool, bool)] = &[
-        ("1000", "Header Aset", "asset", "current_asset", "debit", true, false),
+        (
+            "1000",
+            "Header Aset",
+            "asset",
+            "current_asset",
+            "debit",
+            true,
+            false,
+        ),
         ("1100", "Bank BCA", "asset", "bank", "debit", false, true),
-        ("1200", "Piutang Usaha", "asset", "accounts_receivable", "debit", false, true),
+        (
+            "1200",
+            "Piutang Usaha",
+            "asset",
+            "accounts_receivable",
+            "debit",
+            false,
+            true,
+        ),
         ("1210", "PPN Masukan", "asset", "tax", "debit", false, true),
-        ("2100", "Utang Usaha", "liability", "accounts_payable", "credit", false, true),
-        ("2200", "PPN Keluaran", "liability", "tax", "credit", false, true),
-        ("2300", "Utang PPh 23", "liability", "tax", "credit", false, true),
-        ("4000", "Pendapatan", "revenue", "operating_revenue", "credit", false, true),
-        ("5000", "Beban Operasional", "expense", "operating_expense", "debit", false, true),
+        (
+            "2100",
+            "Utang Usaha",
+            "liability",
+            "accounts_payable",
+            "credit",
+            false,
+            true,
+        ),
+        (
+            "2200",
+            "PPN Keluaran",
+            "liability",
+            "tax",
+            "credit",
+            false,
+            true,
+        ),
+        (
+            "2300",
+            "Utang PPh 23",
+            "liability",
+            "tax",
+            "credit",
+            false,
+            true,
+        ),
+        (
+            "4000",
+            "Pendapatan",
+            "revenue",
+            "operating_revenue",
+            "credit",
+            false,
+            true,
+        ),
+        (
+            "5000",
+            "Beban Operasional",
+            "expense",
+            "operating_expense",
+            "debit",
+            false,
+            true,
+        ),
     ];
     let mut map = HashMap::new();
     for (code, name, at, st, nb, is_header, is_detail) in coa {
@@ -101,8 +157,18 @@ fn party_line(mut l: PostingLine, kind: &str, id: Uuid) -> PostingLine {
     l
 }
 
-fn req(company: Uuid, source_type: &str, source_id: Uuid, lines: Vec<PostingLine>) -> PostingRequest {
-    let mut r = PostingRequest::original(company, source_type, source_id, chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+fn req(
+    company: Uuid,
+    source_type: &str,
+    source_id: Uuid,
+    lines: Vec<PostingLine>,
+) -> PostingRequest {
+    let mut r = PostingRequest::original(
+        company,
+        source_type,
+        source_id,
+        chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+    );
     r.lines = lines;
     r
 }
@@ -173,7 +239,9 @@ async fn assert_globally_balanced(pool: &PgPool, company: Uuid) {
 async fn gc1_sales_invoice() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
 
     let r = req(
@@ -195,7 +263,10 @@ async fn gc1_sales_invoice() {
     assert_eq!(acct_balance(&pool, a["1200"]).await, dec("1110000.00"));
     assert_eq!(acct_balance(&pool, a["4000"]).await, dec("1000000.00"));
     assert_eq!(acct_balance(&pool, a["2200"]).await, dec("110000.00"));
-    assert_eq!(party_balance(&pool, a["1200"], cust).await, dec("1110000.00"));
+    assert_eq!(
+        party_balance(&pool, a["1200"], cust).await,
+        dec("1110000.00")
+    );
     assert_globally_balanced(&pool, company).await;
 }
 
@@ -204,25 +275,41 @@ async fn gc1_sales_invoice() {
 async fn gc2_payment_settles_ar() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
 
     svc.post(
-        req(company, "order", Uuid::new_v4(), vec![
-            party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-            line(a["4000"], "0", "1000000.00"),
-            line(a["2200"], "0", "110000.00"),
-        ]),
+        req(
+            company,
+            "order",
+            Uuid::new_v4(),
+            vec![
+                party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                line(a["4000"], "0", "1000000.00"),
+                line(a["2200"], "0", "110000.00"),
+            ],
+        ),
         None,
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
 
     svc.post(
-        req(company, "payment", Uuid::new_v4(), vec![
-            line(a["1100"], "1110000.00", "0"),
-            party_line(line(a["1200"], "0", "1110000.00"), "customer", cust),
-        ]),
+        req(
+            company,
+            "payment",
+            Uuid::new_v4(),
+            vec![
+                line(a["1100"], "1110000.00", "0"),
+                party_line(line(a["1200"], "0", "1110000.00"), "customer", cust),
+            ],
+        ),
         None,
-    ).await.expect("GC-2 should post");
+    )
+    .await
+    .expect("GC-2 should post");
 
     assert_eq!(party_balance(&pool, a["1200"], cust).await, dec("0.00"));
     assert_eq!(acct_balance(&pool, a["1100"]).await, dec("1110000.00"));
@@ -234,25 +321,37 @@ async fn gc2_payment_settles_ar() {
 async fn gc3_purchase_invoice() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let supp = Uuid::new_v4();
 
     svc.post(
-        req(company, "expense", Uuid::new_v4(), vec![
-            line(a["5000"], "500000.00", "0"),
-            line(a["1210"], "55000.00", "0"),
-            party_line(line(a["2100"], "0", "545000.00"), "supplier", supp),
-            line(a["2300"], "0", "10000.00"),
-        ]),
+        req(
+            company,
+            "expense",
+            Uuid::new_v4(),
+            vec![
+                line(a["5000"], "500000.00", "0"),
+                line(a["1210"], "55000.00", "0"),
+                party_line(line(a["2100"], "0", "545000.00"), "supplier", supp),
+                line(a["2300"], "0", "10000.00"),
+            ],
+        ),
         None,
-    ).await.expect("GC-3 should post");
+    )
+    .await
+    .expect("GC-3 should post");
 
     assert_eq!(ledger_count(&pool, company).await, 4);
     assert_eq!(acct_balance(&pool, a["5000"]).await, dec("500000.00"));
     assert_eq!(acct_balance(&pool, a["1210"]).await, dec("55000.00"));
     assert_eq!(acct_balance(&pool, a["2100"]).await, dec("545000.00"));
     assert_eq!(acct_balance(&pool, a["2300"]).await, dec("10000.00"));
-    assert_eq!(party_balance(&pool, a["2100"], supp).await, dec("545000.00"));
+    assert_eq!(
+        party_balance(&pool, a["2100"], supp).await,
+        dec("545000.00")
+    );
     assert_globally_balanced(&pool, company).await;
 }
 
@@ -261,24 +360,42 @@ async fn gc3_purchase_invoice() {
 async fn gc4_reversal() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
     let source = Uuid::new_v4();
 
-    let p1 = svc.post(
-        req(company, "order", source, vec![
-            party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-            line(a["4000"], "0", "1000000.00"),
-            line(a["2200"], "0", "110000.00"),
-        ]),
-        None,
-    ).await.unwrap();
+    let p1 = svc
+        .post(
+            req(
+                company,
+                "order",
+                source,
+                vec![
+                    party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                    line(a["4000"], "0", "1000000.00"),
+                    line(a["2200"], "0", "110000.00"),
+                ],
+            ),
+            None,
+        )
+        .await
+        .unwrap();
 
     // Reversal: same source, posting_type=reversal, derives swapped lines from the original.
-    let mut rev = PostingRequest::original(company, "order", source, chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+    let mut rev = PostingRequest::original(
+        company,
+        "order",
+        source,
+        chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+    );
     rev.posting_type = "reversal".to_string();
     rev.reverses_post_id = Some(p1.post_id);
-    let p2 = svc.post(rev, None).await.expect("GC-4 reversal should post");
+    let p2 = svc
+        .post(rev, None)
+        .await
+        .expect("GC-4 reversal should post");
     assert_ne!(p2.journal_id, p1.journal_id);
 
     // Net GL effect across {original, reversal} is zero for every account.
@@ -289,11 +406,20 @@ async fn gc4_reversal() {
     assert_globally_balanced(&pool, company).await;
 
     // Reversal links.
-    let is_reversed: bool = sqlx::query_scalar("SELECT is_reversed FROM accounting.journals WHERE id=$1")
-        .bind(p1.journal_id).fetch_one(&pool).await.unwrap();
+    let is_reversed: bool =
+        sqlx::query_scalar("SELECT is_reversed FROM accounting.journals WHERE id=$1")
+            .bind(p1.journal_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert!(is_reversed, "original journal must be flagged reversed");
-    let reversed_by: Option<Uuid> = sqlx::query_scalar("SELECT reversed_by_post_id FROM accounting.accounting_posts WHERE id=$1")
-        .bind(p1.post_id).fetch_one(&pool).await.unwrap();
+    let reversed_by: Option<Uuid> = sqlx::query_scalar(
+        "SELECT reversed_by_post_id FROM accounting.accounting_posts WHERE id=$1",
+    )
+    .bind(p1.post_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     assert_eq!(reversed_by, Some(p2.post_id));
 }
 
@@ -304,24 +430,41 @@ async fn gc4a_cross_tenant_reversal_blocked() {
 
     // Company A: post an invoice
     let (company_a, a) = seed_coa(&pool).await;
-    let svc_a = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc_a = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
     let source = Uuid::new_v4();
 
-    let p1 = svc_a.post(
-        req(company_a, "order", source, vec![
-            party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-            line(a["4000"], "0", "1000000.00"),
-            line(a["2200"], "0", "110000.00"),
-        ]),
-        None,
-    ).await.unwrap();
+    let p1 = svc_a
+        .post(
+            req(
+                company_a,
+                "order",
+                source,
+                vec![
+                    party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                    line(a["4000"], "0", "1000000.00"),
+                    line(a["2200"], "0", "110000.00"),
+                ],
+            ),
+            None,
+        )
+        .await
+        .unwrap();
 
     // Company B: attempt to reverse Company A's post
     let (company_b, _b) = seed_coa(&pool).await;
-    let svc_b = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc_b = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
 
-    let mut rev = PostingRequest::original(company_b, "order", source, chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+    let mut rev = PostingRequest::original(
+        company_b,
+        "order",
+        source,
+        chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+    );
     rev.posting_type = "reversal".to_string();
     rev.reverses_post_id = Some(p1.post_id);
     let res = svc_b.post(rev, None).await;
@@ -333,7 +476,11 @@ async fn gc4a_cross_tenant_reversal_blocked() {
     }
 
     // Verify no ledger rows written for company B
-    assert_eq!(ledger_count(&pool, company_b).await, 0, "no ledger rows should be written");
+    assert_eq!(
+        ledger_count(&pool, company_b).await,
+        0,
+        "no ledger rows should be written"
+    );
 }
 
 // ── GC-8: idempotent retry → original returned, no double write ───────────────
@@ -341,18 +488,30 @@ async fn gc4a_cross_tenant_reversal_blocked() {
 async fn gc8_idempotent_retry() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
     let source = Uuid::new_v4();
 
-    let build = || req(company, "order", source, vec![
-        party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-        line(a["4000"], "0", "1000000.00"),
-        line(a["2200"], "0", "110000.00"),
-    ]);
+    let build = || {
+        req(
+            company,
+            "order",
+            source,
+            vec![
+                party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                line(a["4000"], "0", "1000000.00"),
+                line(a["2200"], "0", "110000.00"),
+            ],
+        )
+    };
 
     let p1 = svc.post(build(), None).await.unwrap();
-    let p2 = svc.post(build(), None).await.expect("retry returns original");
+    let p2 = svc
+        .post(build(), None)
+        .await
+        .expect("retry returns original");
 
     assert!(p2.idempotent_reuse);
     assert_eq!(p1.journal_id, p2.journal_id);
@@ -362,24 +521,53 @@ async fn gc8_idempotent_retry() {
 }
 
 // ── Rejections (GC-5,6,7,9,10,11): typed error + zero rows written ────────────
-async fn assert_rejected_no_write(name: &str, res: Result<impl std::fmt::Debug, backbone_accounting::application::service::posting_service::PostingError>, code: &str, pool: &PgPool, company: Uuid) {
+async fn assert_rejected_no_write(
+    name: &str,
+    res: Result<
+        impl std::fmt::Debug,
+        backbone_accounting::application::service::posting_service::PostingError,
+    >,
+    code: &str,
+    pool: &PgPool,
+    company: Uuid,
+) {
     match res {
         Ok(ok) => panic!("{name}: expected rejection, got Ok({ok:?})"),
         Err(e) => assert_eq!(e.code(), code, "{name}: wrong error code"),
     }
-    assert_eq!(journal_count(pool, company).await, 0, "{name}: journal rows written");
-    assert_eq!(ledger_count(pool, company).await, 0, "{name}: ledger rows written");
+    assert_eq!(
+        journal_count(pool, company).await,
+        0,
+        "{name}: journal rows written"
+    );
+    assert_eq!(
+        ledger_count(pool, company).await,
+        0,
+        "{name}: ledger rows written"
+    );
 }
 
 #[tokio::test]
 async fn gc5_unbalanced() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let res = svc.post(req(company, "manual", Uuid::new_v4(), vec![
-        line(a["5000"], "100.00", "0"),
-        line(a["1100"], "0", "90.00"),
-    ]), None).await;
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let res = svc
+        .post(
+            req(
+                company,
+                "manual",
+                Uuid::new_v4(),
+                vec![
+                    line(a["5000"], "100.00", "0"),
+                    line(a["1100"], "0", "90.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-5", res, "unbalanced", &pool, company).await;
 }
 
@@ -387,12 +575,24 @@ async fn gc5_unbalanced() {
 async fn gc6_missing_party() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let res = svc.post(req(company, "order", Uuid::new_v4(), vec![
-        line(a["1200"], "1110000.00", "0"), // A/R but NO party
-        line(a["4000"], "0", "1000000.00"),
-        line(a["2200"], "0", "110000.00"),
-    ]), None).await;
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let res = svc
+        .post(
+            req(
+                company,
+                "order",
+                Uuid::new_v4(),
+                vec![
+                    line(a["1200"], "1110000.00", "0"), // A/R but NO party
+                    line(a["4000"], "0", "1000000.00"),
+                    line(a["2200"], "0", "110000.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-6", res, "party_required", &pool, company).await;
 }
 
@@ -400,13 +600,25 @@ async fn gc6_missing_party() {
 async fn gc7_party_not_allowed() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
-    let res = svc.post(req(company, "order", Uuid::new_v4(), vec![
-        party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-        party_line(line(a["4000"], "0", "1000000.00"), "customer", cust), // party on revenue → not allowed
-        line(a["2200"], "0", "110000.00"),
-    ]), None).await;
+    let res = svc
+        .post(
+            req(
+                company,
+                "order",
+                Uuid::new_v4(),
+                vec![
+                    party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                    party_line(line(a["4000"], "0", "1000000.00"), "customer", cust), // party on revenue → not allowed
+                    line(a["2200"], "0", "110000.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-7", res, "party_not_allowed", &pool, company).await;
 }
 
@@ -414,10 +626,20 @@ async fn gc7_party_not_allowed() {
 async fn gc9_single_line() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let res = svc.post(req(company, "manual", Uuid::new_v4(), vec![
-        line(a["1100"], "100.00", "0"),
-    ]), None).await;
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let res = svc
+        .post(
+            req(
+                company,
+                "manual",
+                Uuid::new_v4(),
+                vec![line(a["1100"], "100.00", "0")],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-9", res, "too_few_lines", &pool, company).await;
 }
 
@@ -425,7 +647,9 @@ async fn gc9_single_line() {
 async fn gc10_closed_period() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     // A closed fiscal period covering the posting date.
     sqlx::query(
         r#"INSERT INTO accounting.fiscal_periods
@@ -436,11 +660,21 @@ async fn gc10_closed_period() {
     .execute(&pool).await.expect("seed closed period");
 
     let cust = Uuid::new_v4();
-    let res = svc.post(req(company, "order", Uuid::new_v4(), vec![
-        party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-        line(a["4000"], "0", "1000000.00"),
-        line(a["2200"], "0", "110000.00"),
-    ]), None).await;
+    let res = svc
+        .post(
+            req(
+                company,
+                "order",
+                Uuid::new_v4(),
+                vec![
+                    party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                    line(a["4000"], "0", "1000000.00"),
+                    line(a["2200"], "0", "110000.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-10", res, "period_closed", &pool, company).await;
 }
 
@@ -450,25 +684,58 @@ async fn events_emitted() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
     let sink = RecordingSink::default();
-    let svc = PostingService::with_sink(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), Arc::new(sink.clone()));
+    let svc = PostingService::with_sink(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        Arc::new(sink.clone()),
+    );
     let cust = Uuid::new_v4();
 
     // success → exactly one AccountingPostPosted
-    svc.post(req(company, "order", Uuid::new_v4(), vec![
-        party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
-        line(a["4000"], "0", "1000000.00"),
-        line(a["2200"], "0", "110000.00"),
-    ]), None).await.unwrap();
+    svc.post(
+        req(
+            company,
+            "order",
+            Uuid::new_v4(),
+            vec![
+                party_line(line(a["1200"], "1110000.00", "0"), "customer", cust),
+                line(a["4000"], "0", "1000000.00"),
+                line(a["2200"], "0", "110000.00"),
+            ],
+        ),
+        None,
+    )
+    .await
+    .unwrap();
 
     // reject → one AccountingPostFailed
-    let _ = svc.post(req(company, "manual", Uuid::new_v4(), vec![
-        line(a["5000"], "100.00", "0"),
-        line(a["1100"], "0", "90.00"),
-    ]), None).await;
+    let _ = svc
+        .post(
+            req(
+                company,
+                "manual",
+                Uuid::new_v4(),
+                vec![
+                    line(a["5000"], "100.00", "0"),
+                    line(a["1100"], "0", "90.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
 
     let events = sink.events.lock().unwrap();
-    let posted = events.iter().filter(|e| matches!(e, PostingEvent::AccountingPostPosted(_))).count();
-    let failed = events.iter().filter(|e| matches!(e, PostingEvent::AccountingPostFailed(_))).count();
+    let posted = events
+        .iter()
+        .filter(|e| matches!(e, PostingEvent::AccountingPostPosted(_)))
+        .count();
+    let failed = events
+        .iter()
+        .filter(|e| matches!(e, PostingEvent::AccountingPostFailed(_)))
+        .count();
     assert_eq!(posted, 1, "expected one AccountingPostPosted");
     assert_eq!(failed, 1, "expected one AccountingPostFailed");
 }
@@ -477,10 +744,22 @@ async fn events_emitted() {
 async fn gc11_header_account() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
-    let res = svc.post(req(company, "manual", Uuid::new_v4(), vec![
-        line(a["1000"], "100.00", "0"), // header account → non-postable
-        line(a["4000"], "0", "100.00"),
-    ]), None).await;
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let res = svc
+        .post(
+            req(
+                company,
+                "manual",
+                Uuid::new_v4(),
+                vec![
+                    line(a["1000"], "100.00", "0"), // header account → non-postable
+                    line(a["4000"], "0", "100.00"),
+                ],
+            ),
+            None,
+        )
+        .await;
     assert_rejected_no_write("GC-11", res, "non_postable_account", &pool, company).await;
 }

@@ -7,7 +7,7 @@
 //! application or infrastructure layers — and `PostingError` carries no `sqlx`
 //! type, so the domain stays persistence-agnostic.
 
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -48,7 +48,12 @@ pub struct PostingRequest {
 
 impl PostingRequest {
     /// Convenience constructor for an original posting.
-    pub fn original(company_id: Uuid, source_type: &str, source_id: Uuid, posting_date: NaiveDate) -> Self {
+    pub fn original(
+        company_id: Uuid,
+        source_type: &str,
+        source_id: Uuid,
+        posting_date: NaiveDate,
+    ) -> Self {
         Self {
             company_id,
             branch_id: None,

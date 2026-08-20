@@ -37,8 +37,12 @@ async fn admin() -> PgPool {
 /// reached the drop, or whose drop was swallowed) make plain DROP ROLE fail with 2BP01 —
 /// DROP OWNED BY first keeps both bootstrap and teardown idempotent across runs.
 async fn drop_role(admin: &PgPool) {
-    let _ = sqlx::query(&format!("DROP OWNED BY {ROLE}")).execute(admin).await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {ROLE}")).execute(admin).await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {ROLE}"))
+        .execute(admin)
+        .await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {ROLE}"))
+        .execute(admin)
+        .await;
 }
 
 async fn bootstrap_role(admin: &PgPool) {
@@ -56,7 +60,9 @@ async fn bootstrap_role(admin: &PgPool) {
 
 async fn restricted() -> PgPool {
     let url = format!("postgresql://{ROLE}:{PWD}@localhost:5433/backbone_accounting");
-    PgPool::connect(&url).await.expect("connect restricted role")
+    PgPool::connect(&url)
+        .await
+        .expect("connect restricted role")
 }
 
 async fn teardown_role(admin: &PgPool) {
@@ -64,7 +70,11 @@ async fn teardown_role(admin: &PgPool) {
 }
 
 /// Insert a minimal accounts row for `company`. Returns the account id (or errors under RLS).
-async fn try_insert(pool: &PgPool, app_company: Uuid, row_company: Uuid) -> Result<Uuid, sqlx::Error> {
+async fn try_insert(
+    pool: &PgPool,
+    app_company: Uuid,
+    row_company: Uuid,
+) -> Result<Uuid, sqlx::Error> {
     let mut tx = pool.begin().await?;
     sqlx::query("SELECT set_config('app.company_id', $1, true)")
         .bind(app_company.to_string())
@@ -116,11 +126,20 @@ async fn rls_rejects_mismatched_tenant_write() {
 
     // Mismatched: session = A, row = B → must be rejected by the RLS WITH CHECK predicate.
     let err = try_insert(&restricted, tenant_a, tenant_b).await;
-    assert!(err.is_err(), "RLS must reject a write to a non-session tenant");
-    assert_eq!(count_for(&admin, tenant_b).await, 0, "no row should have landed for tenant B");
+    assert!(
+        err.is_err(),
+        "RLS must reject a write to a non-session tenant"
+    );
+    assert_eq!(
+        count_for(&admin, tenant_b).await,
+        0,
+        "no row should have landed for tenant B"
+    );
 
     // Matching: session = A, row = A → succeeds.
-    let id = try_insert(&restricted, tenant_a, tenant_a).await.expect("matching write succeeds");
+    let id = try_insert(&restricted, tenant_a, tenant_a)
+        .await
+        .expect("matching write succeeds");
     let got: Uuid = sqlx::query("SELECT company_id FROM accounting.accounts WHERE id=$1")
         .bind(id)
         .fetch_one(&admin)
@@ -144,8 +163,12 @@ async fn rls_fences_reconciliation_graph_tables() {
     let _ddl = ROLE_DDL_LOCK.lock().await;
     let graph_role = "bbacc_rls_graph_probe";
     let admin = admin().await;
-    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}")).execute(&admin).await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}"))
+        .execute(&admin)
+        .await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}"))
+        .execute(&admin)
+        .await;
     for stmt in [
         format!("CREATE ROLE {graph_role} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
         format!("GRANT USAGE ON SCHEMA accounting TO {graph_role}"),
@@ -252,7 +275,10 @@ async fn rls_fences_reconciliation_graph_tables() {
 
     // Session = B, row = A → the fence must reject the cross-tenant edge.
     let err = try_edge(restricted.clone(), tenant_b, tenant_a, lines_a.clone()).await;
-    assert!(err.is_err(), "RLS must reject a graph edge into another tenant");
+    assert!(
+        err.is_err(),
+        "RLS must reject a graph edge into another tenant"
+    );
 
     // Session = A, row = A → lands.
     try_edge(restricted.clone(), tenant_a, tenant_a, lines_a.clone())
@@ -272,8 +298,12 @@ async fn rls_fences_reconciliation_graph_tables() {
     assert_eq!(n, 1, "exactly the matching edge landed");
 
     let _ = tenant_b; // seeded only if a future probe needs B-side lines
-    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}")).execute(&admin).await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}"))
+        .execute(&admin)
+        .await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}"))
+        .execute(&admin)
+        .await;
 }
 
 /// The pool-verb matching-group read must survive the fence on a RESTRICTED pool. The bind is
@@ -287,8 +317,12 @@ async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
     let _ddl = ROLE_DDL_LOCK.lock().await;
     let role = "bbacc_rls_read_probe";
     let admin = admin().await;
-    let _ = sqlx::query(&format!("DROP OWNED BY {role}")).execute(&admin).await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {role}"))
+        .execute(&admin)
+        .await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}"))
+        .execute(&admin)
+        .await;
     for stmt in [
         format!("CREATE ROLE {role} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
         format!("GRANT USAGE ON SCHEMA accounting TO {role}"),
@@ -401,6 +435,10 @@ async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
         "residuals must be readable through the fence"
     );
 
-    let _ = sqlx::query(&format!("DROP OWNED BY {role}")).execute(&admin).await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}")).execute(&admin).await;
+    let _ = sqlx::query(&format!("DROP OWNED BY {role}"))
+        .execute(&admin)
+        .await;
+    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}"))
+        .execute(&admin)
+        .await;
 }

@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the Journal aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{Journal, JournalSource, JournalStatus, JournalType};
@@ -78,7 +78,35 @@ pub struct JournalFilter {
 impl JournalFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.journal_number.is_some() || self.reference_number.is_some() || self.journal_type.is_some() || self.branch_id.is_some() || self.fiscal_period_id.is_some() || self.description.is_some() || self.notes.is_some() || self.currency.is_some() || self.source.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_reversed.is_some() || self.reversed_by_id.is_some() || self.reversal_reason.is_some() || self.reverses_id.is_some() || self.is_reversing.is_some() || self.auto_reverse.is_some() || self.status.is_some() || self.requires_approval.is_some() || self.submitted_by.is_some() || self.approved_by.is_some() || self.rejected_by.is_some() || self.rejection_reason.is_some() || self.posted_by.is_some() || self.is_voided.is_some() || self.voided_by.is_some() || self.void_reason.is_some()
+        self.company_id.is_some()
+            || self.journal_number.is_some()
+            || self.reference_number.is_some()
+            || self.journal_type.is_some()
+            || self.branch_id.is_some()
+            || self.fiscal_period_id.is_some()
+            || self.description.is_some()
+            || self.notes.is_some()
+            || self.currency.is_some()
+            || self.source.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
+            || self.source_reference.is_some()
+            || self.is_reversed.is_some()
+            || self.reversed_by_id.is_some()
+            || self.reversal_reason.is_some()
+            || self.reverses_id.is_some()
+            || self.is_reversing.is_some()
+            || self.auto_reverse.is_some()
+            || self.status.is_some()
+            || self.requires_approval.is_some()
+            || self.submitted_by.is_some()
+            || self.approved_by.is_some()
+            || self.rejected_by.is_some()
+            || self.rejection_reason.is_some()
+            || self.posted_by.is_some()
+            || self.is_voided.is_some()
+            || self.voided_by.is_some()
+            || self.void_reason.is_some()
     }
 }
 
@@ -88,7 +116,6 @@ impl JournalFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait JournalRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -116,7 +143,11 @@ pub trait JournalRepository: Send + Sync {
     async fn list(&self, params: JournalPaginationParams) -> Result<JournalPaginatedResult>;
 
     /// List journal with pagination and filters
-    async fn list_with_filters(&self, params: JournalPaginationParams, filters: JournalFilter) -> Result<JournalPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: JournalPaginationParams,
+        filters: JournalFilter,
+    ) -> Result<JournalPaginatedResult>;
 
     /// Count all journal entities
     async fn count(&self) -> Result<u64>;
@@ -138,7 +169,8 @@ pub trait JournalRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Journal>>;
 
     /// List soft-deleted journal entities
-    async fn list_deleted(&self, params: JournalPaginationParams) -> Result<JournalPaginatedResult>;
+    async fn list_deleted(&self, params: JournalPaginationParams)
+        -> Result<JournalPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

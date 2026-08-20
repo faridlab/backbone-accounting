@@ -23,6 +23,7 @@ user_owned:
   - "src/domain/services/posting_rules.rs"
 
   # Hand-authored repository ports (domain layer).
+  - "src/domain/repositories/deferred_tax.rs"
   - "src/domain/repositories/posting_repository.rs"
   - "src/domain/repositories/journal_workflow_repository.rs"
   - "src/domain/repositories/period_close_repository.rs"
@@ -67,6 +68,7 @@ user_owned:
   - "tests/posting_golden_cases.rs"
   - "tests/reporting_golden_cases.rs"
   - "tests/reconciliation_graph_golden_cases.rs"
+  - "tests/caba_flip_cases.rs"
   - "tests/reconciliation_golden_cases.rs"
   - "tests/period_close_golden_cases.rs"
   - "tests/messaging_bus.rs"

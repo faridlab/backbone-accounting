@@ -125,8 +125,18 @@ mod tests {
     #[test]
     fn rejects_both_sides_and_zero_lines() {
         let id = Uuid::new_v4();
-        assert_eq!(validate(&[line(id, "100", "100"), line(id, "100", "100")]).unwrap_err().code(), "invalid_line_amount");
-        assert_eq!(validate(&[line(id, "0", "0"), line(id, "0", "0")]).unwrap_err().code(), "invalid_line_amount");
+        assert_eq!(
+            validate(&[line(id, "100", "100"), line(id, "100", "100")])
+                .unwrap_err()
+                .code(),
+            "invalid_line_amount"
+        );
+        assert_eq!(
+            validate(&[line(id, "0", "0"), line(id, "0", "0")])
+                .unwrap_err()
+                .code(),
+            "invalid_line_amount"
+        );
     }
 
     #[test]

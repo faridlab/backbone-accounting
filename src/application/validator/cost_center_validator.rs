@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<CostCenter>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 use crate::domain::entity::CostCenter;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 
 /// Validator type alias for CostCenter entities.
 pub type CostCenterValidator = EntityValidator<CostCenter>;
@@ -17,8 +17,12 @@ pub fn cost_center_validator() -> CostCenterValidator {
     EntityValidator::new()
         .rule(RequiredString::new("code", |e: &CostCenter| &e.code))
         .rule(RequiredString::new("name", |e: &CostCenter| &e.name))
-        .rule(OptionalNotBlank::new("name_en", |e: &CostCenter| e.name_en.as_deref()))
-        .rule(OptionalNotBlank::new("description", |e: &CostCenter| e.description.as_deref()))
+        .rule(OptionalNotBlank::new("name_en", |e: &CostCenter| {
+            e.name_en.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("description", |e: &CostCenter| {
+            e.description.as_deref()
+        }))
         .rule(NonNegative::new("level", |e: &CostCenter| e.level as i64))
     // <<< CUSTOM RULES
     // END CUSTOM RULES

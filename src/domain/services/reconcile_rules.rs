@@ -60,8 +60,10 @@ pub fn validate_pair(
         return Err(ReconcileError::DirectionMismatch);
     }
     // G5 — both posted under posted journals.
-    if !debit.is_posted || debit.journal_status != "posted"
-        || !credit.is_posted || credit.journal_status != "posted"
+    if !debit.is_posted
+        || debit.journal_status != "posted"
+        || !credit.is_posted
+        || credit.journal_status != "posted"
     {
         return Err(ReconcileError::LineNotPosted);
     }
@@ -106,7 +108,13 @@ mod tests {
         Decimal::from_str_exact(s).unwrap()
     }
 
-    fn line(id: Uuid, account: Uuid, debit: &str, credit: &str, party: Option<Uuid>) -> ReconcileLineSnapshot {
+    fn line(
+        id: Uuid,
+        account: Uuid,
+        debit: &str,
+        credit: &str,
+        party: Option<Uuid>,
+    ) -> ReconcileLineSnapshot {
         ReconcileLineSnapshot {
             id,
             journal_id: Uuid::new_v4(),
@@ -132,7 +140,10 @@ mod tests {
     }
 
     fn flags(reconcilable: bool, subtype: &str) -> AccountReconcileFlags {
-        AccountReconcileFlags { is_reconcilable: reconcilable, subtype: subtype.into() }
+        AccountReconcileFlags {
+            is_reconcilable: reconcilable,
+            subtype: subtype.into(),
+        }
     }
 
     fn pair() -> (Uuid, ReconcileLineSnapshot, ReconcileLineSnapshot) {
@@ -149,16 +160,32 @@ mod tests {
     #[test]
     fn clamps_to_the_smaller_residual() {
         let (company, d, c) = pair();
-        let applied = validate_pair(company, &d, &c, &flags(true, "accounts_receivable"),
-                                    dec("60"), dec("100"), dec("40")).unwrap();
+        let applied = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "accounts_receivable"),
+            dec("60"),
+            dec("100"),
+            dec("40"),
+        )
+        .unwrap();
         assert_eq!(applied, dec("40"));
     }
 
     #[test]
     fn zero_clamp_is_a_no_op_success() {
         let (company, d, c) = pair();
-        let applied = validate_pair(company, &d, &c, &flags(true, "accounts_receivable"),
-                                    dec("60"), dec("100"), Decimal::ZERO).unwrap();
+        let applied = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "accounts_receivable"),
+            dec("60"),
+            dec("100"),
+            Decimal::ZERO,
+        )
+        .unwrap();
         assert_eq!(applied, Decimal::ZERO);
     }
 
@@ -166,16 +193,32 @@ mod tests {
     fn rejects_split_accounts() {
         let (company, mut d, c) = pair();
         d.account_id = Uuid::new_v4();
-        let err = validate_pair(company, &d, &c, &flags(true, "cash"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "same_account_required");
     }
 
     #[test]
     fn rejects_non_reconcilable_account() {
         let (company, d, c) = pair();
-        let err = validate_pair(company, &d, &c, &flags(false, "cash"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(false, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "account_not_reconcilable");
     }
 
@@ -184,8 +227,16 @@ mod tests {
         let (company, d, mut c) = pair();
         c.debit_amount = dec("100");
         c.credit_amount = dec("0");
-        let err = validate_pair(company, &d, &c, &flags(true, "cash"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "direction_mismatch");
     }
 
@@ -193,20 +244,44 @@ mod tests {
     fn rejects_party_mismatch_on_party_accounts_only() {
         let (company, d, mut c) = pair();
         c.party_id = Some(Uuid::new_v4());
-        let err = validate_pair(company, &d, &c, &flags(true, "accounts_receivable"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "accounts_receivable"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "party_mismatch");
         // A non-party account doesn't care about parties.
-        assert!(validate_pair(company, &d, &c, &flags(true, "cash"),
-                              dec("10"), dec("10"), dec("10")).is_ok());
+        assert!(validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10")
+        )
+        .is_ok());
     }
 
     #[test]
     fn rejects_unposted_or_draft_lines() {
         let (company, mut d, c) = pair();
         d.journal_status = "draft".into();
-        let err = validate_pair(company, &d, &c, &flags(true, "cash"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "line_not_posted");
     }
 
@@ -215,8 +290,16 @@ mod tests {
         let (company, mut d, mut c) = pair();
         d.currency = "USD".into();
         c.currency = "IDR".into();
-        let err = validate_pair(company, &d, &c, &flags(true, "cash"),
-                                dec("10"), dec("10"), dec("10")).unwrap_err();
+        let err = validate_pair(
+            company,
+            &d,
+            &c,
+            &flags(true, "cash"),
+            dec("10"),
+            dec("10"),
+            dec("10"),
+        )
+        .unwrap_err();
         assert_eq!(err.code(), "currency_mismatch");
     }
 }

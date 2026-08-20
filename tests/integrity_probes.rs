@@ -20,8 +20,9 @@ fn dec(s: &str) -> Decimal {
     Decimal::from_str_exact(s).unwrap()
 }
 async fn pool() -> PgPool {
-    let url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string());
+    let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
+    });
     PgPool::connect(&url).await.unwrap()
 }
 async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
@@ -50,16 +51,53 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
 async fn concurrent_double_post_does_not_double_count() {
     let pool = pool().await;
     let (company, a) = seed_coa(&pool).await;
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let cust = Uuid::new_v4();
     let source = Uuid::new_v4(); // SAME source for both concurrent posts
 
     let build = || {
-        let mut r = PostingRequest::original(company, "order", source, chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap());
+        let mut r = PostingRequest::original(
+            company,
+            "order",
+            source,
+            chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+        );
         r.lines = vec![
-            PostingLine { account_id: a["1200"], debit: dec("1110000.00"), credit: Decimal::ZERO, party_type: Some("customer".into()), party_id: Some(cust), cost_center_id: None, project_id: None, department_id: None, description: None },
-            PostingLine { account_id: a["4000"], debit: Decimal::ZERO, credit: dec("1000000.00"), party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
-            PostingLine { account_id: a["2200"], debit: Decimal::ZERO, credit: dec("110000.00"), party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+            PostingLine {
+                account_id: a["1200"],
+                debit: dec("1110000.00"),
+                credit: Decimal::ZERO,
+                party_type: Some("customer".into()),
+                party_id: Some(cust),
+                cost_center_id: None,
+                project_id: None,
+                department_id: None,
+                description: None,
+            },
+            PostingLine {
+                account_id: a["4000"],
+                debit: Decimal::ZERO,
+                credit: dec("1000000.00"),
+                party_type: None,
+                party_id: None,
+                cost_center_id: None,
+                project_id: None,
+                department_id: None,
+                description: None,
+            },
+            PostingLine {
+                account_id: a["2200"],
+                debit: Decimal::ZERO,
+                credit: dec("110000.00"),
+                party_type: None,
+                party_id: None,
+                cost_center_id: None,
+                project_id: None,
+                department_id: None,
+                description: None,
+            },
         ];
         r
     };
@@ -74,13 +112,27 @@ async fn concurrent_double_post_does_not_double_count() {
     // Exactly one posted entry and one journal's worth of ledger rows — no double-count.
     let posted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounting_posts WHERE company_id=$1 AND posting_status='posted'")
         .bind(company).fetch_one(&pool).await.unwrap();
-    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-        .bind(company).fetch_one(&pool).await.unwrap();
-    let ar_balance: Decimal = sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
-        .bind(a["1200"]).fetch_one(&pool).await.unwrap();
+    let ledgers: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
+            .bind(company)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let ar_balance: Decimal =
+        sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
+            .bind(a["1200"])
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
-    assert_eq!(posted, 1, "concurrent posts must yield exactly ONE posted entry");
-    assert_eq!(ledgers, 3, "ledger must have 3 rows, not 6 (no double-count)");
+    assert_eq!(
+        posted, 1,
+        "concurrent posts must yield exactly ONE posted entry"
+    );
+    assert_eq!(
+        ledgers, 3,
+        "ledger must have 3 rows, not 6 (no double-count)"
+    );
     assert_eq!(ar_balance, dec("1110000.00"), "A/R charged once, not twice");
 }
 
@@ -96,7 +148,14 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
     let rev = Uuid::new_v4();
     for (id, code, name, at, st, nb) in [
         (cash, "1100", "Cash", "asset", "cash", "debit"),
-        (rev, "4000", "Revenue", "revenue", "operating_revenue", "credit"),
+        (
+            rev,
+            "4000",
+            "Revenue",
+            "revenue",
+            "operating_revenue",
+            "credit",
+        ),
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
@@ -106,7 +165,9 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
         .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
         .execute(&pool).await.unwrap();
     }
-    let svc = PostingService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())));
+    let svc = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
     let amount = dec("100000.00");
     let n = 8;
 
@@ -124,8 +185,28 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
             )
             .with_idempotency_key(format!("probe2-{i}"));
             r.lines = vec![
-                PostingLine { account_id: cash, debit: amount, credit: Decimal::ZERO, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
-                PostingLine { account_id: rev, debit: Decimal::ZERO, credit: amount, party_type: None, party_id: None, cost_center_id: None, project_id: None, department_id: None, description: None },
+                PostingLine {
+                    account_id: cash,
+                    debit: amount,
+                    credit: Decimal::ZERO,
+                    party_type: None,
+                    party_id: None,
+                    cost_center_id: None,
+                    project_id: None,
+                    department_id: None,
+                    description: None,
+                },
+                PostingLine {
+                    account_id: rev,
+                    debit: Decimal::ZERO,
+                    credit: amount,
+                    party_type: None,
+                    party_id: None,
+                    cost_center_id: None,
+                    project_id: None,
+                    department_id: None,
+                    description: None,
+                },
             ];
             svc.post(r, None).await.unwrap()
         }));
@@ -145,8 +226,15 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
                  GROUP BY sequence_number HAVING COUNT(*) > 1
                ) t"#,
         )
-        .bind(company).bind(acct).fetch_one(&pool).await.unwrap();
-        assert_eq!(dups, 0, "account {acct} has duplicate sequence_number — balance chain corrupted");
+        .bind(company)
+        .bind(acct)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            dups, 0,
+            "account {acct} has duplicate sequence_number — balance chain corrupted"
+        );
     }
 
     // (b) balance_after, ordered by sequence_number, is strictly monotonic and continuous
@@ -156,12 +244,23 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
             r#"SELECT balance_before, balance_change, balance_after FROM accounting.ledgers
                WHERE company_id=$1 AND account_id=$2 ORDER BY sequence_number"#,
         )
-        .bind(company).bind(acct).fetch_all(&pool).await.unwrap();
+        .bind(company)
+        .bind(acct)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
         assert_eq!(rows.len() as i32, n, "expected {n} ledger rows per account");
         let mut prev_after = Decimal::ZERO;
         for (k, (before, change, after)) in rows.iter().enumerate() {
-            assert_eq!(before, &prev_after, "row {k}: balance_before != prior balance_after (chain broken)");
-            assert_eq!(*after, *before + *change, "row {k}: balance_after != before + change");
+            assert_eq!(
+                before, &prev_after,
+                "row {k}: balance_before != prior balance_after (chain broken)"
+            );
+            assert_eq!(
+                *after,
+                *before + *change,
+                "row {k}: balance_after != before + change"
+            );
             prev_after = *after;
         }
         assert_eq!(prev_after, expected, "final balance_after != expected sum");
@@ -169,16 +268,26 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
 
     // (c) Cached account balance agrees with the final ledger balance_after.
     for acct in [cash, rev] {
-        let bal: Decimal = sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
-            .bind(acct).fetch_one(&pool).await.unwrap();
-        assert_eq!(bal, expected, "account {acct} current_balance drifted from ledger sum");
+        let bal: Decimal =
+            sqlx::query_scalar("SELECT current_balance FROM accounting.accounts WHERE id=$1")
+                .bind(acct)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            bal, expected,
+            "account {acct} current_balance drifted from ledger sum"
+        );
     }
 }
 
 // ── Probe 3: guarded composition does NOT expose write verbs on posted GL entities ──#[tokio::test]
 async fn guarded_routes_lock_posted_gl_writes() {
     let pool = pool().await;
-    let module = AccountingModule::builder().with_database(pool).build().unwrap();
+    let module = AccountingModule::builder()
+        .with_database(pool)
+        .build()
+        .unwrap();
     let router = create_guarded_accounting_routes(&module);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -198,10 +307,17 @@ async fn guarded_routes_lock_posted_gl_writes() {
 
     // Write verbs are NOT mounted → 405 Method Not Allowed (the path exists, POST doesn't).
     for path in ["/journals", "/ledgers", "/accounting_posts"] {
-        let resp = client.post(format!("{base}{path}")).json(&serde_json::json!({})).send().await.unwrap();
+        let resp = client
+            .post(format!("{base}{path}"))
+            .json(&serde_json::json!({}))
+            .send()
+            .await
+            .unwrap();
         assert_eq!(
-            resp.status().as_u16(), 405,
-            "POST {path} must be locked (405), got {}", resp.status()
+            resp.status().as_u16(),
+            405,
+            "POST {path} must be locked (405), got {}",
+            resp.status()
         );
     }
 
@@ -209,29 +325,44 @@ async fn guarded_routes_lock_posted_gl_writes() {
     // reconcile verbs, so even the collection GET must not exist.
     for path in ["/partial_reconciles", "/full_reconciles"] {
         for method in [reqwest::Method::GET, reqwest::Method::POST] {
-            let resp = client.request(method.clone(), format!("{base}{path}"))
+            let resp = client
+                .request(method.clone(), format!("{base}{path}"))
                 .json(&serde_json::json!({}))
                 .send()
                 .await
                 .unwrap();
             assert_eq!(
-                resp.status().as_u16(), 404,
-                "{method} {path} must not be mounted, got {}", resp.status()
+                resp.status().as_u16(),
+                404,
+                "{method} {path} must not be mounted, got {}",
+                resp.status()
             );
         }
     }
 
     // …while the reconcile verbs themselves ARE mounted (any non-404 proves presence;
     // the empty body lands in extractor rejection, not routing).
-    let resp = client.post(format!("{base}/accounting/reconcile"))
+    let resp = client
+        .post(format!("{base}/accounting/reconcile"))
         .json(&serde_json::json!({}))
         .send()
         .await
         .unwrap();
-    assert_ne!(resp.status().as_u16(), 404, "POST /accounting/reconcile must be mounted");
-    let resp = client.get(format!("{base}/accounting/reconciliation-groups/00000000-0000-0000-0000-000000000000"))
+    assert_ne!(
+        resp.status().as_u16(),
+        404,
+        "POST /accounting/reconcile must be mounted"
+    );
+    let resp = client
+        .get(format!(
+            "{base}/accounting/reconciliation-groups/00000000-0000-0000-0000-000000000000"
+        ))
         .send()
         .await
         .unwrap();
-    assert_ne!(resp.status().as_u16(), 404, "GET /accounting/reconciliation-groups/:id must be mounted");
+    assert_ne!(
+        resp.status().as_u16(),
+        404,
+        "GET /accounting/reconciliation-groups/:id must be mounted"
+    );
 }

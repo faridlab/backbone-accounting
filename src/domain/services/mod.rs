@@ -7,13 +7,13 @@ pub mod accounting_post_domain_policy;
 pub mod cost_center_domain_policy;
 pub mod financial_statement_domain_policy;
 pub mod fiscal_period_domain_policy;
+pub mod full_reconcile_domain_policy;
 pub mod journal_domain_policy;
 pub mod journal_line_domain_policy;
 pub mod ledger_domain_policy;
+pub mod partial_reconcile_domain_policy;
 pub mod reconciliation_domain_policy;
 pub mod reconciliation_item_domain_policy;
-pub mod full_reconcile_domain_policy;
-pub mod partial_reconcile_domain_policy;
 
 pub use account_domain_policy::AccountDomainPolicy;
 pub use accounting_post_domain_policy::AccountingPostDomainPolicy;

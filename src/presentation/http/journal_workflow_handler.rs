@@ -11,11 +11,16 @@
 
 use std::sync::Arc;
 
-use axum::{extract::Path, extract::Query, extract::State, response::IntoResponse, routing::post, Json, Router};
+use axum::{
+    extract::Path, extract::Query, extract::State, response::IntoResponse, routing::post, Json,
+    Router,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::application::service::journal_workflow_service::{JournalWorkflowError, JournalWorkflowService};
+use crate::application::service::journal_workflow_service::{
+    JournalWorkflowError, JournalWorkflowService,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct CompanyQuery {
@@ -73,9 +78,13 @@ async fn submit(
 ) -> impl IntoResponse {
     match svc.submit(id, q.company_id).await {
         Ok(()) => Json(WorkflowResponse {
-            success: true, journal_id: id, status: "pending_approval",
-            post_id: None, idempotent_reuse: None,
-        }).into_response(),
+            success: true,
+            journal_id: id,
+            status: "pending_approval",
+            post_id: None,
+            idempotent_reuse: None,
+        })
+        .into_response(),
         Err(e) => err_response(e).into_response(),
     }
 }
@@ -106,39 +115,62 @@ async fn void(
 
 /// Shared execution for approve (open + protected variants).
 async fn run_approve(
-    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, approved_by: Option<Uuid>,
+    svc: Arc<JournalWorkflowService>,
+    id: Uuid,
+    company_id: Uuid,
+    approved_by: Option<Uuid>,
 ) -> axum::response::Response {
     match svc.approve(id, company_id, approved_by).await {
         Ok(r) => Json(WorkflowResponse {
-            success: true, journal_id: r.journal_id, status: "posted",
-            post_id: Some(r.post_id), idempotent_reuse: Some(r.idempotent_reuse),
-        }).into_response(),
+            success: true,
+            journal_id: r.journal_id,
+            status: "posted",
+            post_id: Some(r.post_id),
+            idempotent_reuse: Some(r.idempotent_reuse),
+        })
+        .into_response(),
         Err(e) => err_response(e).into_response(),
     }
 }
 
 /// Shared execution for reject.
 async fn run_reject(
-    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, reason: String, rejected_by: Option<Uuid>,
+    svc: Arc<JournalWorkflowService>,
+    id: Uuid,
+    company_id: Uuid,
+    reason: String,
+    rejected_by: Option<Uuid>,
 ) -> axum::response::Response {
     match svc.reject(id, company_id, reason, rejected_by).await {
         Ok(()) => Json(WorkflowResponse {
-            success: true, journal_id: id, status: "rejected",
-            post_id: None, idempotent_reuse: None,
-        }).into_response(),
+            success: true,
+            journal_id: id,
+            status: "rejected",
+            post_id: None,
+            idempotent_reuse: None,
+        })
+        .into_response(),
         Err(e) => err_response(e).into_response(),
     }
 }
 
 /// Shared execution for void.
 async fn run_void(
-    svc: Arc<JournalWorkflowService>, id: Uuid, company_id: Uuid, voided_by: Option<Uuid>, reason: String,
+    svc: Arc<JournalWorkflowService>,
+    id: Uuid,
+    company_id: Uuid,
+    voided_by: Option<Uuid>,
+    reason: String,
 ) -> axum::response::Response {
     match svc.void(id, company_id, voided_by, reason).await {
         Ok(r) => Json(WorkflowResponse {
-            success: true, journal_id: id, status: "voided",
-            post_id: Some(r.post_id), idempotent_reuse: Some(r.idempotent_reuse),
-        }).into_response(),
+            success: true,
+            journal_id: id,
+            status: "voided",
+            post_id: Some(r.post_id),
+            idempotent_reuse: Some(r.idempotent_reuse),
+        })
+        .into_response(),
         Err(e) => err_response(e).into_response(),
     }
 }

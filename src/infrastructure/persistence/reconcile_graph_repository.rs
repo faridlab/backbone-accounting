@@ -18,8 +18,8 @@ use uuid::Uuid;
 
 use crate::domain::gl_posting::PostingLine;
 use crate::domain::reconcile_graph::{
-    AccountReconcileFlags, LineLocator, LocatorResolution, MatchingGroup, NewPartial,
-    PartyResidual, PartialRow, ReconcileLineSnapshot,
+    AccountReconcileFlags, LineLocator, LocatorResolution, MatchingGroup, NewPartial, PartialRow,
+    PartyResidual, ReconcileLineSnapshot,
 };
 use crate::domain::repositories::reconcile_graph_repository::{
     JournalReversalMeta, ReconcileGraphRepository,
@@ -184,7 +184,10 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         .bind(line_ids)
         .fetch_all(&mut *conn)
         .await?;
-        Ok(rows.iter().map(|r| (r.get("id"), r.get::<Decimal, _>("residual"))).collect())
+        Ok(rows
+            .iter()
+            .map(|r| (r.get("id"), r.get::<Decimal, _>("residual")))
+            .collect())
     }
 
     async fn lock_lines(
@@ -204,7 +207,11 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         Ok(())
     }
 
-    async fn insert_partial(&self, conn: &mut PgConnection, p: &NewPartial) -> anyhow::Result<Uuid> {
+    async fn insert_partial(
+        &self,
+        conn: &mut PgConnection,
+        p: &NewPartial,
+    ) -> anyhow::Result<Uuid> {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounting.partial_reconciles
@@ -390,13 +397,11 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         company_id: Uuid,
         partial_id: Uuid,
     ) -> anyhow::Result<Option<PartialRow>> {
-        let row = sqlx::query(&format!(
-            "{PARTIAL_SELECT} WHERE company_id=$1 AND id=$2"
-        ))
-        .bind(company_id)
-        .bind(partial_id)
-        .fetch_optional(&mut *conn)
-        .await?;
+        let row = sqlx::query(&format!("{PARTIAL_SELECT} WHERE company_id=$1 AND id=$2"))
+            .bind(company_id)
+            .bind(partial_id)
+            .fetch_optional(&mut *conn)
+            .await?;
         Ok(row.as_ref().map(map_partial))
     }
 
@@ -530,11 +535,13 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         company_id: Uuid,
         partial_ids: &[Uuid],
     ) -> anyhow::Result<()> {
-        sqlx::query("DELETE FROM accounting.partial_reconciles WHERE company_id=$1 AND id = ANY($2)")
-            .bind(company_id)
-            .bind(partial_ids)
-            .execute(&mut *conn)
-            .await?;
+        sqlx::query(
+            "DELETE FROM accounting.partial_reconciles WHERE company_id=$1 AND id = ANY($2)",
+        )
+        .bind(company_id)
+        .bind(partial_ids)
+        .execute(&mut *conn)
+        .await?;
         Ok(())
     }
 
@@ -643,7 +650,11 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
             })
             .collect();
         // Oldest first — the aging shape.
-        out.sort_by(|a, b| a.transaction_date.cmp(&b.transaction_date).then(a.line_id.cmp(&b.line_id)));
+        out.sort_by(|a, b| {
+            a.transaction_date
+                .cmp(&b.transaction_date)
+                .then(a.line_id.cmp(&b.line_id))
+        });
         Ok(out)
     }
 
@@ -653,8 +664,12 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         company_id: Uuid,
         line_id: Uuid,
     ) -> anyhow::Result<MatchingGroup> {
-        let line_ids = self.component_line_ids(conn, company_id, &[line_id]).await?;
-        let partial_ids = self.component_partial_ids(conn, company_id, &line_ids).await?;
+        let line_ids = self
+            .component_line_ids(conn, company_id, &[line_id])
+            .await?;
+        let partial_ids = self
+            .component_partial_ids(conn, company_id, &line_ids)
+            .await?;
         let residuals = self.residuals_of(conn, company_id, &line_ids).await?;
 
         // Label: a stored full-reconcile wins; otherwise derive from the minimum partial id.
@@ -674,7 +689,13 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
         } else {
             "-".to_string()
         };
-        Ok(MatchingGroup { label, full_reconcile_id: full_id, line_ids, partial_ids, residuals })
+        Ok(MatchingGroup {
+            label,
+            full_reconcile_id: full_id,
+            line_ids,
+            partial_ids,
+            residuals,
+        })
     }
 
     async fn period_closed(

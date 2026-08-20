@@ -32,7 +32,14 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, Uuid, Uuid) {
     let rev = Uuid::new_v4();
     for (id, code, name, at, st, nb) in [
         (bank, "1100", "Bank", "asset", "bank", "debit"),
-        (rev, "4000", "Revenue", "revenue", "operating_revenue", "credit"),
+        (
+            rev,
+            "4000",
+            "Revenue",
+            "revenue",
+            "operating_revenue",
+            "credit",
+        ),
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts
@@ -113,11 +120,12 @@ async fn insert_draft_journal(
 }
 
 async fn journal_status(pool: &PgPool, j: Uuid) -> String {
-    let row = sqlx::query("SELECT status::text AS s, is_voided FROM accounting.journals WHERE id=$1")
-        .bind(j)
-        .fetch_one(pool)
-        .await
-        .unwrap();
+    let row =
+        sqlx::query("SELECT status::text AS s, is_voided FROM accounting.journals WHERE id=$1")
+            .bind(j)
+            .fetch_one(pool)
+            .await
+            .unwrap();
     row.get::<String, _>("s")
 }
 
@@ -135,7 +143,18 @@ async fn approve_posts_draft_journal() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
+    let svc = JournalWorkflowService::new(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(
+                pool.clone(),
+            ),
+        ),
+    );
 
     svc.submit(j, company).await.unwrap();
     let result = svc.approve(j, company, None).await.unwrap();
@@ -146,11 +165,12 @@ async fn approve_posts_draft_journal() {
 
     // Journal flipped to posted; ledger written; balances updated.
     assert_eq!(journal_status(&pool, j).await, "posted");
-    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE journal_id=$1")
-        .bind(j)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let ledgers: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE journal_id=$1")
+            .bind(j)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(ledgers, 2, "approve must write 2 ledger rows");
     assert_eq!(current_balance(&pool, bank).await, dec("100000"));
     assert_eq!(current_balance(&pool, rev).await, dec("100000"));
@@ -173,7 +193,18 @@ async fn reject_keeps_ledger_empty() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
+    let svc = JournalWorkflowService::new(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(
+                pool.clone(),
+            ),
+        ),
+    );
 
     svc.submit(j, company).await.unwrap();
     svc.reject(j, company, "does not look right".into(), None)
@@ -181,11 +212,12 @@ async fn reject_keeps_ledger_empty() {
         .unwrap();
 
     assert_eq!(journal_status(&pool, j).await, "rejected");
-    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-        .bind(company)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let ledgers: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
+            .bind(company)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(ledgers, 0, "reject must write zero ledger rows");
     assert_eq!(current_balance(&pool, bank).await, dec("0"));
 }
@@ -196,7 +228,18 @@ async fn void_reverses_to_zero() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
+    let svc = JournalWorkflowService::new(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(
+                pool.clone(),
+            ),
+        ),
+    );
 
     svc.submit(j, company).await.unwrap();
     svc.approve(j, company, None).await.unwrap();
@@ -211,22 +254,31 @@ async fn void_reverses_to_zero() {
     assert_eq!(current_balance(&pool, rev).await, dec("0"));
 
     // Original ledger retained (2 rows) + 2 reversal rows = 4.
-    let ledgers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-        .bind(company)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-    assert_eq!(ledgers, 4, "void must add 2 reversal ledger rows, not edit the originals");
+    let ledgers: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
+            .bind(company)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        ledgers, 4,
+        "void must add 2 reversal ledger rows, not edit the originals"
+    );
 
     // Journal stamped voided.
-    let row = sqlx::query("SELECT status::text AS s, is_voided, void_reason FROM accounting.journals WHERE id=$1")
-        .bind(j)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let row = sqlx::query(
+        "SELECT status::text AS s, is_voided, void_reason FROM accounting.journals WHERE id=$1",
+    )
+    .bind(j)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     assert_eq!(row.get::<String, _>("s"), "voided");
     assert_eq!(row.get::<bool, _>("is_voided"), true);
-    assert_eq!(row.get::<Option<String>, _>("void_reason").unwrap(), "posted in error");
+    assert_eq!(
+        row.get::<Option<String>, _>("void_reason").unwrap(),
+        "posted in error"
+    );
 }
 
 // ── submit is a state machine: rejects a non-draft journal ──
@@ -235,10 +287,21 @@ async fn submit_rejects_non_draft() {
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
-    let svc = JournalWorkflowService::new(std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone())), std::sync::Arc::new(backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(pool.clone())));
+    let svc = JournalWorkflowService::new(
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                pool.clone(),
+            ),
+        ),
+        std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(
+                pool.clone(),
+            ),
+        ),
+    );
 
     svc.submit(j, company).await.unwrap(); // draft → pending_approval
-    // A second submit must fail (now pending_approval, not draft).
+                                           // A second submit must fail (now pending_approval, not draft).
     let err = svc.submit(j, company).await.unwrap_err();
     assert_eq!(err.code(), "invalid_journal_state");
 }

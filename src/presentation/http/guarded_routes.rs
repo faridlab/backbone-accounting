@@ -15,9 +15,9 @@ use crate::AccountingModule;
 
 use super::{
     create_account_routes, create_accounting_post_read_routes, create_cost_center_routes,
-    create_financial_statement_routes, create_fiscal_period_routes, create_journal_line_read_routes,
-    create_journal_read_routes, create_ledger_read_routes, create_reconciliation_item_routes,
-    create_reconciliation_routes,
+    create_financial_statement_routes, create_fiscal_period_routes,
+    create_journal_line_read_routes, create_journal_read_routes, create_ledger_read_routes,
+    create_reconciliation_item_routes, create_reconciliation_routes,
 };
 
 /// Mount the accounting module with the posted-GL write paths locked to `PostingService`.
@@ -28,17 +28,29 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
         .merge(create_account_routes(m.account_service.clone()))
         .merge(create_cost_center_routes(m.cost_center_service.clone()))
         .merge(create_fiscal_period_routes(m.fiscal_period_service.clone()))
-        .merge(create_financial_statement_routes(m.financial_statement_service.clone()))
-        .merge(create_reconciliation_routes(m.reconciliation_service.clone()))
-        .merge(create_reconciliation_item_routes(m.reconciliation_item_service.clone()))
+        .merge(create_financial_statement_routes(
+            m.financial_statement_service.clone(),
+        ))
+        .merge(create_reconciliation_routes(
+            m.reconciliation_service.clone(),
+        ))
+        .merge(create_reconciliation_item_routes(
+            m.reconciliation_item_service.clone(),
+        ))
         // Posted GL — READ ONLY. Writes flow only through the GL-posting contract.
         .merge(create_journal_read_routes(m.journal_service.clone()))
-        .merge(create_journal_line_read_routes(m.journal_line_service.clone()))
+        .merge(create_journal_line_read_routes(
+            m.journal_line_service.clone(),
+        ))
         .merge(create_ledger_read_routes(m.ledger_service.clone()))
-        .merge(create_accounting_post_read_routes(m.accounting_post_service.clone()))
+        .merge(create_accounting_post_read_routes(
+            m.accounting_post_service.clone(),
+        ))
         // Reconciliation verbs — the ONLY write surface onto the reconciliation graph.
         // The graph tables themselves mount nothing here (and are `enabled: false`).
-        .merge(crate::presentation::http::reconcile_handler::create_reconcile_verb_routes(
-            m.reconcile_write_service(),
-        ))
+        .merge(
+            crate::presentation::http::reconcile_handler::create_reconcile_verb_routes(
+                m.reconcile_write_service(),
+            ),
+        )
 }

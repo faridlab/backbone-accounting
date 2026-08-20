@@ -59,7 +59,10 @@ pub struct PeriodCloseService {
 }
 
 impl PeriodCloseService {
-    pub fn new(posting_repo: Arc<dyn crate::domain::repositories::posting_repository::PostingRepository>, repo: Arc<dyn PeriodCloseRepository>) -> Self {
+    pub fn new(
+        posting_repo: Arc<dyn crate::domain::repositories::posting_repository::PostingRepository>,
+        repo: Arc<dyn PeriodCloseRepository>,
+    ) -> Self {
         Self {
             posting: PostingService::new(posting_repo),
             repo,
@@ -74,7 +77,12 @@ impl PeriodCloseService {
         period_id: Uuid,
         retained_earnings_account_id: Uuid,
     ) -> Result<PeriodCloseResult, PeriodCloseError> {
-        let Some(period) = self.repo.find_period(period_id, company_id).await.map_err(internal)? else {
+        let Some(period) = self
+            .repo
+            .find_period(period_id, company_id)
+            .await
+            .map_err(internal)?
+        else {
             return Err(PeriodCloseError::PeriodNotFound(period_id));
         };
         if period.status == "closed" || period.status == "locked" {
@@ -124,9 +132,17 @@ impl PeriodCloseService {
 
         // Balancing line to Retained Earnings (equity, credit-normal): profit → credit, loss → debit.
         if net_income > Decimal::ZERO {
-            lines.push(close_line(retained_earnings_account_id, Decimal::ZERO, net_income));
+            lines.push(close_line(
+                retained_earnings_account_id,
+                Decimal::ZERO,
+                net_income,
+            ));
         } else if net_income < Decimal::ZERO {
-            lines.push(close_line(retained_earnings_account_id, -net_income, Decimal::ZERO));
+            lines.push(close_line(
+                retained_earnings_account_id,
+                -net_income,
+                Decimal::ZERO,
+            ));
         }
 
         // Post the closing entry (period still open) through the GL-posting contract.

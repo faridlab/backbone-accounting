@@ -11,16 +11,20 @@ use std::sync::Arc;
 use chrono::Utc;
 use uuid::Uuid;
 
+use crate::application::service::posting_service::PostingService;
 use crate::domain::gl_posting::{PostingError, PostingRequest};
 use crate::domain::repositories::journal_workflow_repository::JournalWorkflowRepository;
 use crate::domain::repositories::posting_repository::PostingRepository;
-use crate::application::service::posting_service::PostingService;
 
 /// Typed workflow failure. `code()` is the stable error string.
 #[derive(Debug)]
 pub enum JournalWorkflowError {
     NotFound(Uuid),
-    InvalidState { id: Uuid, current: String, expected: &'static str },
+    InvalidState {
+        id: Uuid,
+        current: String,
+        expected: &'static str,
+    },
     NotPosted(Uuid),
     Posting(PostingError),
     Internal(String),
@@ -50,8 +54,15 @@ impl std::fmt::Display for JournalWorkflowError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NotFound(id) => write!(f, "journal_not_found: {id}"),
-            Self::InvalidState { id, current, expected } => {
-                write!(f, "invalid_journal_state: {id} is '{current}', expected '{expected}'")
+            Self::InvalidState {
+                id,
+                current,
+                expected,
+            } => {
+                write!(
+                    f,
+                    "invalid_journal_state: {id} is '{current}', expected '{expected}'"
+                )
             }
             Self::NotPosted(id) => write!(f, "journal_not_posted: {id}"),
             Self::Posting(e) => write!(f, "posting_error: {e}"),
@@ -78,7 +89,10 @@ pub struct JournalWorkflowService {
 }
 
 impl JournalWorkflowService {
-    pub fn new(posting_repo: Arc<dyn PostingRepository>, workflow: Arc<dyn JournalWorkflowRepository>) -> Self {
+    pub fn new(
+        posting_repo: Arc<dyn PostingRepository>,
+        workflow: Arc<dyn JournalWorkflowRepository>,
+    ) -> Self {
         Self {
             posting: PostingService::new(posting_repo),
             workflow,
@@ -86,8 +100,16 @@ impl JournalWorkflowService {
     }
 
     /// `draft → pending_approval`. Rejects if the journal is not `draft`.
-    pub async fn submit(&self, journal_id: Uuid, company_id: Uuid) -> Result<(), JournalWorkflowError> {
-        let ok = self.workflow.submit(journal_id, company_id).await.map_err(internal)?;
+    pub async fn submit(
+        &self,
+        journal_id: Uuid,
+        company_id: Uuid,
+    ) -> Result<(), JournalWorkflowError> {
+        let ok = self
+            .workflow
+            .submit(journal_id, company_id)
+            .await
+            .map_err(internal)?;
         if !ok {
             return Err(self.state_error(journal_id, company_id, "draft").await);
         }
@@ -109,9 +131,14 @@ impl JournalWorkflowService {
             .await
             .map_err(internal)?;
         if !ok {
-            return Err(self.state_error(journal_id, company_id, "pending_approval").await);
+            return Err(self
+                .state_error(journal_id, company_id, "pending_approval")
+                .await);
         }
-        Ok(self.posting.post_journal(journal_id, company_id, approved_by).await?)
+        Ok(self
+            .posting
+            .post_journal(journal_id, company_id, approved_by)
+            .await?)
     }
 
     /// `draft|pending_approval → rejected` with a reason. Writes no ledger rows.
@@ -129,7 +156,9 @@ impl JournalWorkflowService {
             .await
             .map_err(internal)?;
         if !ok {
-            return Err(self.state_error(journal_id, company_id, "draft or pending_approval").await);
+            return Err(self
+                .state_error(journal_id, company_id, "draft or pending_approval")
+                .await);
         }
         Ok(())
     }
@@ -142,7 +171,12 @@ impl JournalWorkflowService {
         voided_by: Option<Uuid>,
         reason: String,
     ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
-        let Some(status) = self.workflow.find_status(journal_id, company_id).await.map_err(internal)? else {
+        let Some(status) = self
+            .workflow
+            .find_status(journal_id, company_id)
+            .await
+            .map_err(internal)?
+        else {
             return Err(JournalWorkflowError::NotFound(journal_id));
         };
         if status.status != "posted" {
@@ -153,7 +187,12 @@ impl JournalWorkflowService {
             });
         }
 
-        let Some(orig_post_id) = self.workflow.original_post(journal_id, company_id).await.map_err(internal)? else {
+        let Some(orig_post_id) = self
+            .workflow
+            .original_post(journal_id, company_id)
+            .await
+            .map_err(internal)?
+        else {
             return Err(JournalWorkflowError::NotPosted(journal_id));
         };
 

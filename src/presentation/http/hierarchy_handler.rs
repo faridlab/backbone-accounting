@@ -10,7 +10,10 @@
 
 use std::sync::Arc;
 
-use axum::{extract::Path, extract::Query, extract::State, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    extract::Path, extract::Query, extract::State, response::IntoResponse, routing::get, Json,
+    Router,
+};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -36,7 +39,9 @@ async fn ancestors(
     Query(q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
     match svc.ancestors(table, q.company_id, id).await {
-        Ok(chain) => Json(serde_json::json!({ "success": true, "hierarchy": chain })).into_response(),
+        Ok(chain) => {
+            Json(serde_json::json!({ "success": true, "hierarchy": chain })).into_response()
+        }
         Err(e) => err(e).into_response(),
     }
 }

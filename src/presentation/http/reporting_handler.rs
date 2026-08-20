@@ -78,6 +78,9 @@ pub fn create_reporting_routes(service: Arc<ReportingService>) -> Router {
     Router::new()
         .route("/accounting/reports/trial-balance", get(trial_balance))
         .route("/accounting/reports/balance-sheet", get(balance_sheet))
-        .route("/accounting/reports/income-statement", get(income_statement))
+        .route(
+            "/accounting/reports/income-statement",
+            get(income_statement),
+        )
         .with_state(service)
 }

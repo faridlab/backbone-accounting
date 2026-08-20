@@ -6,7 +6,9 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::domain::repositories::hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};
+use crate::domain::repositories::hierarchy_repository::{
+    HierarchyNode, HierarchyRepository, HierarchyTable,
+};
 
 pub struct SqlxHierarchyRepository {
     pool: PgPool,

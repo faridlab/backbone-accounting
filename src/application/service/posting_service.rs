@@ -61,7 +61,10 @@ pub struct PostingService {
 
 impl PostingService {
     pub fn new(repo: Arc<dyn PostingRepository>) -> Self {
-        Self { repo, sink: Arc::new(LoggingSink) }
+        Self {
+            repo,
+            sink: Arc::new(LoggingSink),
+        }
     }
 
     /// Construct with a custom event sink (real bus adapter or a test recorder).
@@ -163,7 +166,9 @@ impl PostingService {
             .await
             .map_err(internal)?
         else {
-            return Err(PostingError::Conflict(format!("journal {journal_id} not found")));
+            return Err(PostingError::Conflict(format!(
+                "journal {journal_id} not found"
+            )));
         };
 
         if ctx.status == "posted" {
@@ -227,22 +232,30 @@ impl PostingService {
             lines: ctx
                 .lines
                 .into_iter()
-                .map(|(id, line)| LedgerEntryInput { journal_line_id: id, line })
+                .map(|(id, line)| LedgerEntryInput {
+                    journal_line_id: id,
+                    line,
+                })
                 .collect(),
         };
 
-        let commit = self.repo.commit_manual_journal(commit_input).await.map_err(internal)?;
+        let commit = self
+            .repo
+            .commit_manual_journal(commit_input)
+            .await
+            .map_err(internal)?;
 
-        self.sink.publish(PostingEvent::AccountingPostPosted(AccountingPostPosted {
-            post_id: commit.post_id,
-            journal_id: commit.journal_id,
-            company_id,
-            source_type: ctx.source_type,
-            source_id: ctx.source_id,
-            total_debit: commit.total_debit,
-            total_credit: commit.total_credit,
-            occurred_at: now,
-        }));
+        self.sink
+            .publish(PostingEvent::AccountingPostPosted(AccountingPostPosted {
+                post_id: commit.post_id,
+                journal_id: commit.journal_id,
+                company_id,
+                source_type: ctx.source_type,
+                source_id: ctx.source_id,
+                total_debit: commit.total_debit,
+                total_credit: commit.total_credit,
+                occurred_at: now,
+            }));
 
         Ok(PostingResult {
             post_id: commit.post_id,
@@ -262,10 +275,18 @@ impl PostingService {
         req: &PostingRequest,
         ids: &[uuid::Uuid],
     ) -> Result<(), PostingError> {
-        let rows = self.repo.find_postable_accounts(req.company_id, ids).await.map_err(internal)?;
+        let rows = self
+            .repo
+            .find_postable_accounts(req.company_id, ids)
+            .await
+            .map_err(internal)?;
         let accounts: std::collections::HashMap<uuid::Uuid, _> =
             rows.into_iter().map(|a| (a.id, a)).collect();
-        let period_closed = self.repo.is_period_closed(req.company_id, req.posting_date).await.map_err(internal)?;
+        let period_closed = self
+            .repo
+            .is_period_closed(req.company_id, req.posting_date)
+            .await
+            .map_err(internal)?;
         posting_rules::validate(&req.lines, &accounts, period_closed)
     }
 
@@ -276,16 +297,17 @@ impl PostingService {
         if commit.reused {
             return;
         }
-        self.sink.publish(PostingEvent::AccountingPostPosted(AccountingPostPosted {
-            post_id: commit.post_id,
-            journal_id: commit.journal_id,
-            company_id: req.company_id,
-            source_type: req.source_type.clone(),
-            source_id: req.source_id,
-            total_debit: commit.total_debit,
-            total_credit: commit.total_credit,
-            occurred_at: Utc::now(),
-        }));
+        self.sink
+            .publish(PostingEvent::AccountingPostPosted(AccountingPostPosted {
+                post_id: commit.post_id,
+                journal_id: commit.journal_id,
+                company_id: req.company_id,
+                source_type: req.source_type.clone(),
+                source_id: req.source_id,
+                total_debit: commit.total_debit,
+                total_credit: commit.total_credit,
+                occurred_at: Utc::now(),
+            }));
     }
 
     /// Load the original journal's swapped reversal lines into `req.lines`; return the original
@@ -302,12 +324,18 @@ impl PostingService {
             .find_reversal_source(orig_post_id, req.company_id)
             .await
             .map_err(internal)?
-            .ok_or_else(|| PostingError::Conflict("original posting not found or not posted".into()))?;
+            .ok_or_else(|| {
+                PostingError::Conflict("original posting not found or not posted".into())
+            })?;
         req.lines = source.lines;
         Ok(source.journal_id)
     }
 
-    async fn record_failed(&self, req: &PostingRequest, err: &PostingError) -> Result<(), PostingError> {
+    async fn record_failed(
+        &self,
+        req: &PostingRequest,
+        err: &PostingError,
+    ) -> Result<(), PostingError> {
         let total_debit: Decimal = req.lines.iter().map(|l| l.debit).sum();
         let total_credit: Decimal = req.lines.iter().map(|l| l.credit).sum();
         let now = Utc::now();
@@ -328,14 +356,15 @@ impl PostingService {
             })
             .await
             .map_err(internal)?;
-        self.sink.publish(PostingEvent::AccountingPostFailed(AccountingPostFailed {
-            company_id: req.company_id,
-            source_type: req.source_type.clone(),
-            source_id: req.source_id,
-            error_code: err.code().to_string(),
-            error_message: err.to_string(),
-            occurred_at: now,
-        }));
+        self.sink
+            .publish(PostingEvent::AccountingPostFailed(AccountingPostFailed {
+                company_id: req.company_id,
+                source_type: req.source_type.clone(),
+                source_id: req.source_id,
+                error_code: err.code().to_string(),
+                error_message: err.to_string(),
+                occurred_at: now,
+            }));
         Ok(())
     }
 }

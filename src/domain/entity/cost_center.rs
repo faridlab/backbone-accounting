@@ -1,8 +1,8 @@
+use super::AuditMetadata;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use super::AuditMetadata;
 
 /// Strongly-typed ID for CostCenter
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,9 +10,15 @@ use super::AuditMetadata;
 pub struct CostCenterId(pub Uuid);
 
 impl CostCenterId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for CostCenterId {
@@ -29,20 +35,28 @@ impl std::str::FromStr for CostCenterId {
 }
 
 impl From<Uuid> for CostCenterId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<CostCenterId> for Uuid {
-    fn from(id: CostCenterId) -> Self { id.0 }
+    fn from(id: CostCenterId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for CostCenterId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for CostCenterId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -71,7 +85,15 @@ impl CostCenter {
     }
 
     /// Create a new CostCenter with required fields
-    pub fn new(company_id: Uuid, code: String, name: String, level: i32, is_group: bool, is_active: bool, sort_order: i32) -> Self {
+    pub fn new(
+        company_id: Uuid,
+        code: String,
+        name: String,
+        level: i32,
+        is_group: bool,
+        is_active: bool,
+        sort_order: i32,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -139,7 +161,6 @@ impl CostCenter {
         self.metadata.deleted_by.as_ref()
     }
 
-
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -177,37 +198,59 @@ impl CostCenter {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.company_id = v;
+                    }
                 }
                 "code" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.code = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.code = v;
+                    }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.name = v;
+                    }
                 }
                 "name_en" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.name_en = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.name_en = v;
+                    }
                 }
                 "description" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.description = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.description = v;
+                    }
                 }
                 "parent_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.parent_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.parent_id = v;
+                    }
                 }
                 "level" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.level = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.level = v;
+                    }
                 }
                 "is_group" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_group = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.is_group = v;
+                    }
                 }
                 "branch_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.branch_id = v;
+                    }
                 }
                 "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.is_active = v;
+                    }
                 }
                 "sort_order" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.sort_order = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.sort_order = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -369,7 +412,9 @@ impl CostCenterBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<CostCenter, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
+        let company_id = self
+            .company_id
+            .ok_or_else(|| "company_id is required".to_string())?;
         let code = self.code.ok_or_else(|| "code is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
 

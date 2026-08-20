@@ -46,9 +46,30 @@ async fn seed(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     let coa: &[(&str, &str, &str, &str, &str, bool)] = &[
         ("1100", "Bank", "asset", "bank", "debit", true),
         ("1200", "AR", "asset", "accounts_receivable", "debit", true),
-        ("2100", "AP", "liability", "accounts_payable", "credit", true),
-        ("4000", "Revenue", "revenue", "operating_revenue", "credit", false),
-        ("4900", "FX Gain/Loss", "other_income", "operating_revenue", "credit", false),
+        (
+            "2100",
+            "AP",
+            "liability",
+            "accounts_payable",
+            "credit",
+            true,
+        ),
+        (
+            "4000",
+            "Revenue",
+            "revenue",
+            "operating_revenue",
+            "credit",
+            false,
+        ),
+        (
+            "4900",
+            "FX Gain/Loss",
+            "other_income",
+            "operating_revenue",
+            "credit",
+            false,
+        ),
     ];
     let mut map = HashMap::new();
     for (code, name, at, st, nb, reconcilable) in coa {
@@ -285,10 +306,19 @@ async fn guard_refusals_carry_distinct_codes() {
     let invoice = post_invoice(&posting, company, coa["1200"], coa["4000"], party, "100").await;
     let payment = post_receipt(&posting, company, coa["1100"], coa["1200"], party, "60").await;
     let other_party = Uuid::new_v4();
-    let payment2 = post_receipt(&posting, company, coa["1100"], coa["1200"], other_party, "60").await;
+    let payment2 = post_receipt(
+        &posting,
+        company,
+        coa["1100"],
+        coa["1200"],
+        other_party,
+        "60",
+    )
+    .await;
     let svc = reconcile_svc(&pool);
 
-    let code = |e: backbone_accounting::domain::reconcile_graph::ReconcileError| e.code().to_string();
+    let code =
+        |e: backbone_accounting::domain::reconcile_graph::ReconcileError| e.code().to_string();
 
     // Split accounts.
     let e = svc
@@ -494,8 +524,7 @@ async fn matching_group_reads_a_multi_payment_chain() {
     let invoice = post_invoice(&posting, company, coa["1200"], coa["4000"], party, "100").await;
     let mut payments = Vec::new();
     for _ in 0..4 {
-        payments
-            .push(post_receipt(&posting, company, coa["1100"], coa["1200"], party, "25").await);
+        payments.push(post_receipt(&posting, company, coa["1100"], coa["1200"], party, "25").await);
     }
     let svc = reconcile_svc(&pool);
 
@@ -864,10 +893,7 @@ async fn concurrent_reconciles_never_over_edge() {
         loc("payment", p2, coa["1200"]),
         "60",
     );
-    let (a, b) = tokio::join!(
-        svc.reconcile_pair(&first),
-        svc.reconcile_pair(&second),
-    );
+    let (a, b) = tokio::join!(svc.reconcile_pair(&first), svc.reconcile_pair(&second),);
     let applied: Decimal = [a.unwrap().applied, b.unwrap().applied].iter().sum();
     assert_eq!(applied, dec("100"));
 
@@ -913,7 +939,11 @@ async fn concurrent_completions_stamp_one_group() {
     );
     let (a, b) = tokio::join!(svc.reconcile_pair(&first), svc.reconcile_pair(&second));
     let applied: Decimal = [a.unwrap().applied, b.unwrap().applied].iter().sum();
-    assert_eq!(applied, dec("120"), "the two claims exactly consume the invoice");
+    assert_eq!(
+        applied,
+        dec("120"),
+        "the two claims exactly consume the invoice"
+    );
 
     let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
     let p1_line = line_id(&pool, company, "payment", p1, coa["1200"]).await;
@@ -927,7 +957,10 @@ async fn concurrent_completions_stamp_one_group() {
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!(groups, 1, "overlapping completions share one group, no orphan");
+    assert_eq!(
+        groups, 1,
+        "overlapping completions share one group, no orphan"
+    );
     let stamps: Vec<Option<Uuid>> = sqlx::query_scalar(
         "SELECT full_reconcile_id FROM accounting.journal_lines WHERE id = ANY($1) ORDER BY id",
     )
@@ -937,7 +970,10 @@ async fn concurrent_completions_stamp_one_group() {
     .unwrap();
     let uniform = stamps.iter().map(|s| *s).collect::<Option<Vec<Uuid>>>();
     let uniform = uniform.expect("every completed line carries a group");
-    assert!(uniform.windows(2).all(|w| w[0] == w[1]), "one stamp across the component");
+    assert!(
+        uniform.windows(2).all(|w| w[0] == w[1]),
+        "one stamp across the component"
+    );
     let orphans: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM accounting.full_reconciles fr WHERE company_id=$1 AND NOT EXISTS \
          (SELECT 1 FROM accounting.partial_reconciles p WHERE p.full_reconcile_id = fr.id)",
@@ -966,9 +1002,10 @@ async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
     let pool = pool().await;
     let (company, coa) = seed(&pool).await;
     let other = Uuid::new_v4();
-    let app = backbone_accounting::presentation::http::reconcile_handler::create_reconcile_verb_routes(
-        Arc::new(reconcile_svc(&pool)),
-    );
+    let app =
+        backbone_accounting::presentation::http::reconcile_handler::create_reconcile_verb_routes(
+            Arc::new(reconcile_svc(&pool)),
+        );
 
     let pair_body = serde_json::json!({
         "company_id": company,
@@ -1025,7 +1062,11 @@ async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/accounting/reconciliation-groups/{}?company_id={}", Uuid::new_v4(), company))
+                    .uri(format!(
+                        "/accounting/reconciliation-groups/{}?company_id={}",
+                        Uuid::new_v4(),
+                        company
+                    ))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -1043,7 +1084,9 @@ async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
                     .method("POST")
                     .uri(format!("/accounting/unreconcile/{}", Uuid::new_v4()))
                     .header("content-type", "application/json")
-                    .body(Body::from(serde_json::json!({"company_id": company}).to_string()))
+                    .body(Body::from(
+                        serde_json::json!({"company_id": company}).to_string(),
+                    ))
                     .unwrap(),
             )
             .await
