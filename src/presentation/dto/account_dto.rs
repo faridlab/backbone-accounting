@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -18,10 +18,10 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::domain::entity::Account;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::AccountStatus;
 use crate::domain::entity::AccountSubtype;
 use crate::domain::entity::AccountType;
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::NormalBalance;
 
 // =============================================================================
@@ -37,10 +37,7 @@ use crate::domain::entity::NormalBalance;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAccountDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -83,11 +80,7 @@ pub struct CreateAccountDto {
     pub currency: String,
     #[serde(alias = "opening_balance")]
     pub opening_balance: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "opening_balance_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
@@ -95,60 +88,32 @@ pub struct CreateAccountDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_name")]
     pub bank_name: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_account_number"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_number")]
     pub bank_account_number: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_account_name"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_name")]
     pub bank_account_name: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_branch"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_branch")]
     pub bank_branch: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_taxable")]
     pub is_taxable: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_rate")]
     pub tax_rate: Option<Decimal>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "tax_account_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_account_id")]
     pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconcilable")]
     pub is_reconcilable: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "last_reconciled_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
     pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "last_reconciled_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
     pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "budget_amount"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_manual_entry")]
@@ -177,6 +142,12 @@ pub struct CreateAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_cloned")]
     pub is_cloned: bool,
+    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_code")]
+    pub chart_code: Option<String>,
+    #[cfg_attr(feature = "validation", validate(length(max = 20)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_version")]
+    pub chart_version: Option<String>,
 }
 
 // =============================================================================
@@ -192,10 +163,7 @@ pub struct CreateAccountDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAccountDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -238,11 +206,7 @@ pub struct UpdateAccountDto {
     pub currency: String,
     #[serde(alias = "opening_balance")]
     pub opening_balance: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "opening_balance_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
@@ -250,60 +214,32 @@ pub struct UpdateAccountDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_name")]
     pub bank_name: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_account_number"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_number")]
     pub bank_account_number: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_account_name"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_name")]
     pub bank_account_name: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "bank_branch"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_branch")]
     pub bank_branch: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_taxable")]
     pub is_taxable: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_rate")]
     pub tax_rate: Option<Decimal>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "tax_account_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_account_id")]
     pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconcilable")]
     pub is_reconcilable: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "last_reconciled_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
     pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "last_reconciled_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
     pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "budget_amount"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_manual_entry")]
@@ -332,6 +268,12 @@ pub struct UpdateAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_cloned")]
     pub is_cloned: bool,
+    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_code")]
+    pub chart_code: Option<String>,
+    #[cfg_attr(feature = "validation", validate(length(max = 20)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_version")]
+    pub chart_version: Option<String>,
 }
 
 // =============================================================================
@@ -347,10 +289,7 @@ pub struct UpdateAccountDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchAccountDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -396,10 +335,7 @@ pub struct PatchAccountDto {
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance")]
     pub opening_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "opening_balance_date"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "current_balance")]
     pub current_balance: Option<Decimal>,
@@ -427,10 +363,7 @@ pub struct PatchAccountDto {
     pub is_reconcilable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
     pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "last_reconciled_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
     pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "has_budget")]
@@ -465,51 +398,18 @@ pub struct PatchAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_cloned")]
     pub is_cloned: Option<bool>,
+    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "chart_code")]
+    pub chart_code: Option<String>,
+    #[cfg_attr(feature = "validation", validate(length(max = 20)))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "chart_version")]
+    pub chart_version: Option<String>,
 }
 
 impl PatchAccountDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some()
-            || self.account_number.is_some()
-            || self.account_code.is_some()
-            || self.name.is_some()
-            || self.name_en.is_some()
-            || self.description.is_some()
-            || self.account_type.is_some()
-            || self.account_subtype.is_some()
-            || self.normal_balance.is_some()
-            || self.parent_id.is_some()
-            || self.level.is_some()
-            || self.path.is_some()
-            || self.is_header.is_some()
-            || self.is_detail.is_some()
-            || self.currency.is_some()
-            || self.opening_balance.is_some()
-            || self.opening_balance_date.is_some()
-            || self.current_balance.is_some()
-            || self.bank_name.is_some()
-            || self.bank_account_number.is_some()
-            || self.bank_account_name.is_some()
-            || self.bank_branch.is_some()
-            || self.is_taxable.is_some()
-            || self.tax_rate.is_some()
-            || self.tax_account_id.is_some()
-            || self.is_reconcilable.is_some()
-            || self.last_reconciled_at.is_some()
-            || self.last_reconciled_balance.is_some()
-            || self.has_budget.is_some()
-            || self.budget_amount.is_some()
-            || self.allow_manual_entry.is_some()
-            || self.require_cost_center.is_some()
-            || self.require_project.is_some()
-            || self.sort_order.is_some()
-            || self.show_in_reports.is_some()
-            || self.status.is_some()
-            || self.is_system.is_some()
-            || self.notes.is_some()
-            || self.source_id.is_some()
-            || self.is_cloned.is_some()
+        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.name_en.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.level.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.opening_balance.is_some() || self.opening_balance_date.is_some() || self.current_balance.is_some() || self.bank_name.is_some() || self.bank_account_number.is_some() || self.bank_account_name.is_some() || self.bank_branch.is_some() || self.is_taxable.is_some() || self.tax_rate.is_some() || self.tax_account_id.is_some() || self.is_reconcilable.is_some() || self.last_reconciled_at.is_some() || self.last_reconciled_balance.is_some() || self.has_budget.is_some() || self.budget_amount.is_some() || self.allow_manual_entry.is_some() || self.require_cost_center.is_some() || self.require_project.is_some() || self.sort_order.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
     }
 }
 
@@ -525,15 +425,9 @@ impl PatchAccountDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct AccountResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub account_number: String,
@@ -591,6 +485,8 @@ pub struct AccountResponseDto {
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub is_cloned: bool,
+    pub chart_code: Option<String>,
+    pub chart_version: Option<String>,
     pub metadata: AuditMetadata,
 }
 
@@ -702,6 +598,8 @@ impl From<Account> for AccountResponseDto {
             notes: entity.notes,
             source_id: entity.source_id,
             is_cloned: entity.is_cloned,
+            chart_code: entity.chart_code,
+            chart_version: entity.chart_version,
             metadata: entity.metadata,
         }
     }
@@ -764,6 +662,8 @@ impl From<CreateAccountDto> for Account {
             notes: dto.notes,
             source_id: dto.source_id,
             is_cloned: dto.is_cloned,
+            chart_code: dto.chart_code,
+            chart_version: dto.chart_version,
             metadata: AuditMetadata::default(),
         }
     }
@@ -813,6 +713,8 @@ impl From<&Account> for AccountResponseDto {
             notes: entity.notes.clone(),
             source_id: entity.source_id.clone(),
             is_cloned: entity.is_cloned.clone(),
+            chart_code: entity.chart_code.clone(),
+            chart_version: entity.chart_version.clone(),
             metadata: entity.metadata.clone(),
         }
     }
@@ -866,6 +768,8 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
         self.notes = dto.notes;
         self.source_id = dto.source_id;
         self.is_cloned = dto.is_cloned;
+        self.chart_code = dto.chart_code;
+        self.chart_version = dto.chart_version;
         Ok(self)
     }
 }
@@ -878,3 +782,4 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
 // Add custom DTOs specific to Account here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

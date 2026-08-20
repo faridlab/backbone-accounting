@@ -55,6 +55,12 @@ user_owned:
 
   # Reconciliation graph — Odoo-shaped edges + groups, side-effecting unlink.
   - "src/domain/reconcile_graph.rs"
+  # Chart-of-accounts install engine (datasets are data; installs write real rows).
+  - "src/domain/chart_dataset.rs"
+  - "src/domain/repositories/chart_install_repository.rs"
+  - "src/infrastructure/persistence/chart_install_repository.rs"
+  - "src/application/service/chart_install_service.rs"
+  - "src/presentation/http/chart_routes.rs"
   - "src/domain/services/reconcile_rules.rs"
   - "src/domain/repositories/reconcile_graph_repository.rs"
   - "src/infrastructure/persistence/reconcile_graph_repository.rs"
@@ -74,6 +80,7 @@ user_owned:
   - "tests/messaging_bus.rs"
   - "tests/integrity_probes.rs"
   - "tests/journal_workflow_golden_cases.rs"
+  - "tests/chart_install_cases.rs"
   - "tests/rls_probe.rs"
   - "tests/features/**"
 

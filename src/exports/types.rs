@@ -5,11 +5,11 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
-use crate::domain::entity::*;
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
+use crate::domain::entity::*;
 
 // ============================================================================
 // ACCOUNT TYPES
@@ -89,6 +89,8 @@ pub struct AccountDto {
     pub notes: Option<String>,
     pub source_id: Option<Uuid>,
     pub is_cloned: bool,
+    pub chart_code: Option<String>,
+    pub chart_version: Option<String>,
     pub metadata: serde_json::Value,
 }
 

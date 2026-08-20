@@ -17,6 +17,7 @@ pub mod reconciliation_handler;
 pub mod reconciliation_item_handler;
 // <<< CUSTOM
 pub mod accounting_ops_handler;
+pub mod chart_routes;
 pub mod guarded_routes;
 pub mod hierarchy_handler;
 pub mod journal_workflow_handler;
@@ -70,6 +71,7 @@ pub use reconciliation_item_handler::{
 pub use accounting_ops_handler::{
     create_bank_reconciliation_routes, create_period_close_routes, ClosePeriodBody,
 };
+pub use chart_routes::create_chart_routes;
 pub use guarded_routes::create_guarded_accounting_routes;
 pub use hierarchy_handler::create_hierarchy_routes;
 pub use journal_workflow_handler::create_journal_workflow_routes;

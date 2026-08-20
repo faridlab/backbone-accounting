@@ -19,6 +19,7 @@ pub mod reconciliation_item_service;
 pub mod reconciliation_service;
 // <<< CUSTOM
 pub mod bank_reconciliation_service;
+pub mod chart_install_service;
 pub mod journal_workflow_service;
 pub mod period_close_service;
 pub mod posting_service;

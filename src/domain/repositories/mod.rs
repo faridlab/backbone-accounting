@@ -58,6 +58,7 @@ pub use reconciliation_repository::{
 // <<< CUSTOM
 // Hand-authored ports for the GL-posting contract (not schema-derived).
 pub mod bank_reconciliation_repository;
+pub mod chart_install_repository;
 pub mod deferred_tax;
 pub mod hierarchy_repository;
 pub mod journal_workflow_repository;
@@ -68,6 +69,9 @@ pub mod reporting_repository;
 pub use bank_reconciliation_repository::{
     BankReconciliationRepository, BookEntryRow, MatchedPair, ReconciliationCommit, UnmatchedBook,
     UnmatchedStatement,
+};
+pub use chart_install_repository::{
+    ChartAccountRow, ChartInstallRepository, OverlappingAccount, UpsertOutcome,
 };
 pub use deferred_tax::{DeferredTaxLine, DeferredTaxLookup};
 pub use hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};

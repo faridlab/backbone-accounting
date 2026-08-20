@@ -20,6 +20,7 @@ mod reconciliation_repository;
 // Custom persistence modules
 // <<< CUSTOM
 pub mod bank_reconciliation_repository;
+pub mod chart_install_repository;
 pub mod hierarchy_repository;
 pub mod journal_workflow_repository;
 pub mod period_close_repository;
@@ -51,6 +52,7 @@ pub use backbone_orm::repository::{
 // Re-export custom persistence types
 // <<< CUSTOM
 pub use bank_reconciliation_repository::SqlxBankReconciliationRepository;
+pub use chart_install_repository::SqlxChartInstallRepository;
 pub use hierarchy_repository::SqlxHierarchyRepository;
 pub use journal_workflow_repository::SqlxJournalWorkflowRepository;
 pub use period_close_repository::SqlxPeriodCloseRepository;

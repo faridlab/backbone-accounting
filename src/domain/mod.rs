@@ -15,6 +15,7 @@ pub use services::*;
 pub use specifications::*;
 
 // <<< CUSTOM
+pub mod chart_dataset;
 pub mod gl_posting;
 pub mod reconcile_graph;
 // END CUSTOM

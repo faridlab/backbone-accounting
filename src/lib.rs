@@ -84,6 +84,9 @@ pub struct AccountingModule {
     /// Host-implemented cash-basis tax deferral lookup, kept so post-build
     /// service variants (e.g. the exchange-account one) keep the flip wired.
     pub(crate) deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
+    /// Chart install engine over the datasets registered via `with_chart_dataset`.
+    pub(crate) chart_install_service:
+        Arc<crate::application::service::chart_install_service::ChartInstallService>,
     // END CUSTOM
 }
 
@@ -234,6 +237,17 @@ impl AccountingModule {
             .with_deferred_tax_if_set(self.deferred_tax.clone()),
         )
     }
+
+    /// The chart install engine — validates, gates, and writes a registered chart
+    /// dataset into one company's accounts, idempotently. The install VERB itself is
+    /// host-mounted (it orchestrates beyond this module); this handle is the engine
+    /// the host verb drives.
+    pub fn chart_install_service(
+        &self,
+    ) -> std::sync::Arc<crate::application::service::chart_install_service::ChartInstallService>
+    {
+        self.chart_install_service.clone()
+    }
     // END CUSTOM
 }
 
@@ -242,6 +256,7 @@ pub struct AccountingModuleBuilder {
     db_pool: Option<PgPool>,
     // <<< CUSTOM FIELDS
     deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
+    chart_datasets: Vec<Arc<crate::domain::chart_dataset::ChartDataset>>,
     // END CUSTOM
 }
 
@@ -252,6 +267,7 @@ impl AccountingModuleBuilder {
             db_pool: None,
             // <<< CUSTOM INIT
             deferred_tax: None,
+            chart_datasets: Vec::new(),
             // END CUSTOM
         }
     }
@@ -263,6 +279,18 @@ impl AccountingModuleBuilder {
     }
 
     // <<< CUSTOM - custom builder methods
+    /// Register a chart-of-accounts dataset installable through the chart install
+    /// engine. Datasets are data (commonly shipped by an l10n module); registering
+    /// one makes it listable via `GET /accounting/charts` and installable by the
+    /// host-mounted install verb.
+    pub fn with_chart_dataset(
+        mut self,
+        dataset: Arc<crate::domain::chart_dataset::ChartDataset>,
+    ) -> Self {
+        self.chart_datasets.push(dataset);
+        self
+    }
+
     /// Wire the host's cash-basis tax deferral lookup: partial reconciliations
     /// landing on receivable/payable lines flip deferred (on_payment) tax
     /// pro-rata from the transition account onto the real tax account. Hosts
@@ -370,6 +398,17 @@ impl AccountingModuleBuilder {
             )
             .with_deferred_tax_if_set(self.deferred_tax.clone()),
         );
+        // Chart install engine: datasets registered by the host drive idempotent
+        // chart installs onto fresh companies (provenance columns identify own rows).
+        let chart_install_service = std::sync::Arc::new(
+            crate::application::service::chart_install_service::ChartInstallService::new(
+                std::sync::Arc::new(
+                    crate::infrastructure::persistence::chart_install_repository::SqlxChartInstallRepository::new(),
+                ),
+                db_pool.clone(),
+                self.chart_datasets,
+            ),
+        );
         // END CUSTOM
 
         // <<< CUSTOM
@@ -392,6 +431,7 @@ impl AccountingModuleBuilder {
             db_pool,
             reconcile_write_service,
             deferred_tax: self.deferred_tax,
+            chart_install_service,
             // END CUSTOM
         })
     }

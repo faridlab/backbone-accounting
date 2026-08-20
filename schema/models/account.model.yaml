@@ -255,6 +255,21 @@ models:
         attributes: ["@default(false)"]
         description: "True if this is a cloned copy from a platform template"
 
+      # =======================================================================
+      # Chart Provenance — set by the chart install engine; null = manually created.
+      # Identifies which dataset (and version) wrote this row so re-installs can
+      # recognize their own rows and leave manual ones alone.
+      # =======================================================================
+      chart_code:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Chart dataset code this account was installed from (e.g. ID_SAK)"
+
+      chart_version:
+        type: string?
+        attributes: ["@max(20)"]
+        description: "Version of the chart dataset at install time"
+
       metadata:
         type: Metadata
         attributes: ["@audit_metadata"]

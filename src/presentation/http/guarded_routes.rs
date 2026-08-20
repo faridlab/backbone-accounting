@@ -53,4 +53,10 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
                 m.reconcile_write_service(),
             ),
         )
+        // Registered chart datasets — read-only listing. The install verb is
+        // host-mounted (it orchestrates chart + tax across modules and is gated by
+        // the composing service's authority middleware).
+        .merge(crate::presentation::http::chart_routes::create_chart_routes(
+            m.chart_install_service(),
+        ))
 }

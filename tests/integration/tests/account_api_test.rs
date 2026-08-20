@@ -64,6 +64,8 @@ impl TestDataGenerator for AccountTestData {
             "notes": null,
             "source_id": null,
             "is_cloned": false,
+            "chart_code": null,
+            "chart_version": null,
             "metadata": json!({}),
         })
     }
@@ -112,6 +114,8 @@ impl TestDataGenerator for AccountTestData {
             "notes": null,
             "source_id": null,
             "is_cloned": false,
+            "chart_code": null,
+            "chart_version": null,
             "metadata": json!({}),
         })
     }

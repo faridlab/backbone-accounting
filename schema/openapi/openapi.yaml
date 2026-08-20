@@ -4579,6 +4579,14 @@ components:
           format: uuid
         is_cloned:
           type: boolean
+        chart_code:
+          nullable: true
+          type: string
+          maxLength: 50
+        chart_version:
+          nullable: true
+          type: string
+          maxLength: 20
         metadata:
           type: object
 
@@ -4739,6 +4747,14 @@ components:
           format: uuid
         is_cloned:
           type: boolean
+        chart_code:
+          nullable: true
+          type: string
+          maxLength: 50
+        chart_version:
+          nullable: true
+          type: string
+          maxLength: 20
         metadata:
           type: object
 
@@ -4886,6 +4902,14 @@ components:
           format: uuid
         is_cloned:
           type: boolean
+        chart_code:
+          nullable: true
+          type: string
+          maxLength: 50
+        chart_version:
+          nullable: true
+          type: string
+          maxLength: 20
         metadata:
           type: object
 
@@ -5007,6 +5031,14 @@ components:
           format: uuid
         is_cloned:
           type: boolean
+        chart_code:
+          nullable: true
+          type: string
+          maxLength: 50
+        chart_version:
+          nullable: true
+          type: string
+          maxLength: 20
         metadata:
           type: object
 
