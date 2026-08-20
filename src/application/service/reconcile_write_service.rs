@@ -25,7 +25,7 @@
 use std::sync::Arc;
 
 use chrono::{Datelike, Utc};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -36,6 +36,7 @@ use crate::domain::reconcile_graph::{
     EdgeOutcome, LineLocator, LocatorResolution, MatchingGroup, NewPartial, PairRequest,
     PartyResidual, ReconcileError, ReconcileLineSnapshot, ORIGIN_MANUAL,
 };
+use crate::domain::repositories::deferred_tax::DeferredTaxLookup;
 use crate::domain::repositories::posting_repository::{PostingRepository, PostingWrite};
 use crate::domain::repositories::reconcile_graph_repository::ReconcileGraphRepository;
 use crate::domain::services::reconcile_rules;
@@ -47,9 +48,13 @@ fn internal(e: anyhow::Error) -> ReconcileError {
     ReconcileError::Internal(e.to_string())
 }
 
-/// Round to the company-currency scale (2dp).
+/// Round to the company-currency scale (2dp), ties AWAY from zero — the same
+/// strategy the tax engine and billing's `money()` round with, so pro-rata
+/// products land identically on both sides of the seam (a mixed tie-breaking
+/// rule would drift cents exactly where the flip's conservation needs them to
+/// agree).
 fn round2(d: Decimal) -> Decimal {
-    d.round_dp(2)
+    d.round_dp_with_strategy(2, RoundingStrategy::MidpointAwayFromZero)
 }
 
 /// Residual lookup by line id (the repo returns rows ordered by id, not by request).
@@ -73,8 +78,16 @@ fn fx_pair(
     let abs = diff.abs();
     let desc = Some("exchange difference".to_string());
     let fx_dr = diff > Decimal::ZERO;
-    let (fx_d, fx_c) = if fx_dr { (abs, Decimal::ZERO) } else { (Decimal::ZERO, abs) };
-    let (ar_d, ar_c) = if fx_dr { (Decimal::ZERO, abs) } else { (abs, Decimal::ZERO) };
+    let (fx_d, fx_c) = if fx_dr {
+        (abs, Decimal::ZERO)
+    } else {
+        (Decimal::ZERO, abs)
+    };
+    let (ar_d, ar_c) = if fx_dr {
+        (Decimal::ZERO, abs)
+    } else {
+        (abs, Decimal::ZERO)
+    };
     (
         PostingLine {
             account_id: fx_account,
@@ -111,6 +124,9 @@ pub struct ReconcileWriteService {
     posting: Arc<dyn PostingRepository>,
     pool: PgPool,
     exchange_account_id: Option<Uuid>,
+    /// Cash-basis tax deferral lookup (host-implemented). `None` ⇒ no exigibility
+    /// flips: the service stays complete for hosts without a tax module.
+    deferred_tax: Option<Arc<dyn DeferredTaxLookup>>,
 }
 
 impl ReconcileWriteService {
@@ -120,7 +136,28 @@ impl ReconcileWriteService {
         pool: PgPool,
         exchange_account_id: Option<Uuid>,
     ) -> Self {
-        Self { repo, posting, pool, exchange_account_id }
+        Self {
+            repo,
+            posting,
+            pool,
+            exchange_account_id,
+            deferred_tax: None,
+        }
+    }
+
+    /// Wire the host's cash-basis tax deferral lookup. Each partial landing on a
+    /// receivable/payable line then flips the deferred tax pro-rata from the
+    /// transition account to the real tax account (see `post_cash_basis_move`).
+    pub fn with_deferred_tax(mut self, port: Arc<dyn DeferredTaxLookup>) -> Self {
+        self.deferred_tax = Some(port);
+        self
+    }
+
+    /// Option-taking variant for wiring sites that simply forward a builder
+    /// value (`None` leaves the service without flips).
+    pub fn with_deferred_tax_if_set(mut self, port: Option<Arc<dyn DeferredTaxLookup>>) -> Self {
+        self.deferred_tax = port;
+        self
     }
 
     // =========================================================================
@@ -148,9 +185,7 @@ impl ReconcileWriteService {
             {
                 LocatorResolution::One(l) => lines.push(l),
                 LocatorResolution::NotFound => return Err(ReconcileError::LineNotFound),
-                LocatorResolution::Ambiguous(n) => {
-                    return Err(ReconcileError::AmbiguousLocator(n))
-                }
+                LocatorResolution::Ambiguous(n) => return Err(ReconcileError::AmbiguousLocator(n)),
             }
         }
         let (debit, credit) = (lines[0].clone(), lines[1].clone());
@@ -231,8 +266,8 @@ impl ReconcileWriteService {
             };
             let predicted = round2(applied * (hi - lo) / lo);
             let tolerance = Decimal::new(5, 3); // half a company-currency cent
-            // Signed from the reconcilable account's perspective: positive = the account
-            // takes a credit (the debit side retained the delta), negative = a debit.
+                                                // Signed from the reconcilable account's perspective: positive = the account
+                                                // takes a credit (the debit side retained the delta), negative = a debit.
             let diff = if res_c == Decimal::ZERO
                 && res_d > Decimal::ZERO
                 && (res_d - predicted).abs() <= tolerance
@@ -300,9 +335,40 @@ impl ReconcileWriteService {
             }
         }
 
+        // Cash-basis tax exigibility: either side of the pair may sit on a
+        // receivable/payable line whose document carried on_payment tax; the
+        // applied amount flips its deferred share pro-rata from the transition
+        // account onto the real tax account. No lookup / no deferrals ⇒ no-op.
+        self.post_cash_basis_move(
+            conn,
+            req,
+            &debit,
+            partial_id,
+            applied,
+            res_of(&residuals, debit.id),
+            max_date,
+        )
+        .await?;
+        self.post_cash_basis_move(
+            conn,
+            req,
+            &credit,
+            partial_id,
+            applied,
+            res_of(&residuals, credit.id),
+            max_date,
+        )
+        .await?;
+
         // Full-group completion + reverse-then-reconcile pairing, then report.
         let full = self
-            .complete_group_for(conn, req.company_id, &[debit.id, credit.id], exchange_total, now)
+            .complete_group_for(
+                conn,
+                req.company_id,
+                &[debit.id, credit.id],
+                exchange_total,
+                now,
+            )
             .await
             .map_err(|e| internal(e.into()))?;
         self.pair_reversal_counterparts(conn, req.company_id, &[debit.id, credit.id])
@@ -377,6 +443,234 @@ impl ReconcileWriteService {
         Ok(commit.journal_id)
     }
 
+    /// The cash-basis exigibility flip. When a payment event (this partial) lands
+    /// on a receivable/payable line whose document deferred tax onto a transition
+    /// account, the applied fraction of each deferral becomes exigible now. The
+    /// flip journal posts, per deferred line, a real-account leg at the ORIGINAL
+    /// orientation and a mirrored transition-account leg; a derived `caba_pair`
+    /// partial then links the flip's transition leg against the ORIGINAL
+    /// transition line so both reach zero residual together (the `exchange_pair`
+    /// pattern). Stamped `source_type='reconciliation', source_id=<partial id>`:
+    /// the unlink closure walk reverses the flip with its parent automatically.
+    ///
+    /// The per-line amount is the ANCHORED cumulative form — see the comment at
+    /// the computation site for why the anchor is the posted residual, not a
+    /// ratio re-derived from the payment sequence. `res_before` is the side
+    /// line's residual from the PRE-insert snapshot: the exchange-difference
+    /// pairing that runs just before this call may already have applied its
+    /// derived edge on the same line, so the LIVE residual cannot be used for
+    /// the cumulative settlement fraction.
+    async fn post_cash_basis_move(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        req: &PairRequest,
+        side: &ReconcileLineSnapshot,
+        partial_id: Uuid,
+        applied: Decimal,
+        res_before: Decimal,
+        max_date: chrono::NaiveDate,
+    ) -> Result<(), ReconcileError> {
+        // Only receivable/payable settlement lines carry document tax deferrals.
+        if !matches!(
+            side.account_subtype.as_str(),
+            "accounts_receivable" | "accounts_payable"
+        ) {
+            return Ok(());
+        }
+        let Some(port) = self.deferred_tax.as_ref() else {
+            return Ok(()); // no tax module wired: nothing was ever deferred
+        };
+        let base = side.base_amount;
+        if base == Decimal::ZERO {
+            return Ok(()); // no face to pro-rate against
+        }
+        let deferred = port
+            .deferred_lines_on(
+                conn,
+                req.company_id,
+                side.journal_id,
+                side.source_type.as_deref(),
+                side.source_id,
+            )
+            .await
+            .map_err(|e| internal(e.into()))?;
+        if deferred.is_empty() {
+            return Ok(()); // the document accrued no cash-basis tax
+        }
+        // Anchored cumulative flip. The flip TARGET for each deferral is
+        // round2(face × cum_applied/base), with cum_applied taken from the
+        // PRE-insert residual snapshot plus this partial's applied amount; the
+        // amount POSTED is target minus what prior flips already retired (the
+        // transition line's own residual). Anchoring on what was actually
+        // posted — never on a ratio re-derived from the live payment sequence —
+        // is what keeps the ledger exact: across multi-payment cent drift AND
+        // across unlink-and-replace, Σ flips telescopes to the face at full
+        // settlement, no insert can exceed the transition line's remaining
+        // residual, and the terminal step absorbs any cent the intermediate
+        // steps mis-paced.
+        let cum_applied = base - res_before + applied;
+        let anchors: std::collections::HashMap<Uuid, Decimal> = self
+            .repo
+            .residuals_of(
+                conn,
+                req.company_id,
+                &deferred
+                    .iter()
+                    .map(|d| d.source_line_id)
+                    .collect::<Vec<_>>(),
+            )
+            .await
+            .map_err(|e| internal(e.into()))?
+            .into_iter()
+            .collect();
+        // Cent-granular; a delta that rounds to zero (or dips non-positive after
+        // an unlink) is dropped wholesale so the journal never carries
+        // zero-amount or negative legs.
+        let mut flips = Vec::with_capacity(deferred.len());
+        for d in deferred {
+            let target = round2(d.amount * cum_applied / base);
+            let already = d.amount - anchors.get(&d.source_line_id).copied().unwrap_or(d.amount);
+            let amt = target - already;
+            if amt > Decimal::ZERO {
+                flips.push((d, amt));
+            }
+        }
+        if flips.is_empty() {
+            return Ok(());
+        }
+        // G8 — the flip date must fall in an open period.
+        if self
+            .repo
+            .period_closed(conn, req.company_id, max_date)
+            .await
+            .map_err(|e| internal(e.into()))?
+        {
+            return Err(ReconcileError::PeriodClosed);
+        }
+
+        let desc = "tax exigibility flip on payment".to_string();
+        let mut lines = Vec::with_capacity(flips.len() * 2);
+        for (d, amt) in &flips {
+            let (real_d, real_c) = if d.is_debit {
+                (*amt, Decimal::ZERO)
+            } else {
+                (Decimal::ZERO, *amt)
+            };
+            let (tr_d, tr_c) = if d.is_debit {
+                (Decimal::ZERO, *amt)
+            } else {
+                (*amt, Decimal::ZERO)
+            };
+            lines.push(PostingLine {
+                account_id: d.real_account_id,
+                debit: real_d,
+                credit: real_c,
+                party_type: None,
+                party_id: None,
+                cost_center_id: None,
+                project_id: None,
+                department_id: None,
+                description: Some(desc.clone()),
+            });
+            lines.push(PostingLine {
+                account_id: d.transition_account_id,
+                debit: tr_d,
+                credit: tr_c,
+                party_type: None,
+                party_id: None,
+                cost_center_id: None,
+                project_id: None,
+                department_id: None,
+                description: Some(desc.clone()),
+            });
+        }
+        let write = PostingWrite {
+            company_id: req.company_id,
+            branch_id: None,
+            source_type: "reconciliation".to_string(),
+            source_id: partial_id,
+            source_reference: Some(format!("caba:{partial_id}:{}", side.id)),
+            posting_date: max_date,
+            fiscal_period_id: None,
+            fiscal_year: max_date.year(),
+            fiscal_month: max_date.month() as i32,
+            currency: side.currency.clone(),
+            posting_type: "adjustment".to_string(),
+            reverses_post_id: None,
+            reverses_journal_id: None,
+            description: Some("cash-basis tax exigibility flip".into()),
+            idempotency_key: Some(format!("caba:{partial_id}:{}", side.id)),
+            posted_by: req.actor,
+            now: Utc::now(),
+            lines,
+        };
+        let commit = self
+            .posting
+            .commit_posting_on(conn, write)
+            .await
+            .map_err(|e| internal(e.into()))?;
+        let journal_id = commit.journal_id;
+
+        // Derived pairings: each flip's transition leg against the original
+        // transition line it retires. Legs are matched by account + orientation
+        // (amounts are equal per pair, so assignment among equal candidates is
+        // immaterial to the residuals).
+        let legs = self
+            .repo
+            .journal_lines_with_ids(conn, req.company_id, journal_id)
+            .await
+            .map_err(|e| internal(e.into()))?;
+        let mut used = std::collections::HashSet::new();
+        for (d, amt) in &flips {
+            let mirrored_credit = d.is_debit;
+            let leg = legs
+                .iter()
+                .find(|(id, l)| {
+                    !used.contains(id)
+                        && l.account_id == d.transition_account_id
+                        && if mirrored_credit {
+                            l.credit > Decimal::ZERO
+                        } else {
+                            l.debit > Decimal::ZERO
+                        }
+                })
+                .map(|(id, _)| *id)
+                .ok_or_else(|| {
+                    ReconcileError::Internal("flip journal missing transition leg".into())
+                })?;
+            used.insert(leg);
+            let (debit_move_id, credit_move_id) = if d.is_debit {
+                (d.source_line_id, leg)
+            } else {
+                (leg, d.source_line_id)
+            };
+            self.repo
+                .insert_partial(
+                    conn,
+                    &NewPartial {
+                        company_id: req.company_id,
+                        debit_move_id,
+                        credit_move_id,
+                        amount: *amt,
+                        currency: side.currency.clone(),
+                        max_date,
+                        origin: req.origin.clone(),
+                        source_type: Some(req.origin.clone()),
+                        // Derived edges carry the parent partial id — the unlink
+                        // closure walk takes them out with their parent.
+                        source_id: Some(partial_id),
+                        metadata: serde_json::json!({
+                            "rule": "caba_pair",
+                            "parent_partial": partial_id,
+                        }),
+                    },
+                )
+                .await
+                .map_err(|e| internal(e.into()))?;
+        }
+        Ok(())
+    }
+
     /// After a link/unlink: if every line in the affected component is at zero residual,
     /// create the full-reconcile group and stamp everything (Odoo sets the flags only at
     /// full-group completion). Returns the new group id, or `None` while the chain is
@@ -389,14 +683,20 @@ impl ReconcileWriteService {
         exchange_total: Decimal,
         now: chrono::DateTime<Utc>,
     ) -> anyhow::Result<Option<Uuid>> {
-        let comp_lines = self.repo.component_line_ids(conn, company_id, seeds).await?;
+        let comp_lines = self
+            .repo
+            .component_line_ids(conn, company_id, seeds)
+            .await?;
         if comp_lines.is_empty() {
             return Ok(None);
         }
         // Lock the component in id order before deciding (two verbs completing
         // overlapping components must serialize).
         self.repo.lock_lines(conn, company_id, &comp_lines).await?;
-        let residuals = self.repo.residuals_of(conn, company_id, &comp_lines).await?;
+        let residuals = self
+            .repo
+            .residuals_of(conn, company_id, &comp_lines)
+            .await?;
         if residuals.iter().any(|(_, r)| *r != Decimal::ZERO) {
             return Ok(None);
         }
@@ -412,10 +712,11 @@ impl ReconcileWriteService {
             .distinct_group_stamps(conn, company_id, &comp_lines)
             .await?;
         let group = match stamps.as_slice() {
-            [] => self
-                .repo
-                .create_full_group(conn, company_id, exchange_total, now)
-                .await?,
+            [] => {
+                self.repo
+                    .create_full_group(conn, company_id, exchange_total, now)
+                    .await?
+            }
             [existing] => *existing,
             _ => return Ok(None),
         };
@@ -451,8 +752,10 @@ impl ReconcileWriteService {
             if !reconcile_rules::fully_unapplied(&line, residual) {
                 continue;
             }
-            if let Some(counterpart) =
-                self.repo.reversal_counterpart(conn, company_id, &line).await?
+            if let Some(counterpart) = self
+                .repo
+                .reversal_counterpart(conn, company_id, &line)
+                .await?
             {
                 let c_residual = res_of(
                     &self
@@ -486,14 +789,8 @@ impl ReconcileWriteService {
                         },
                     )
                     .await?;
-                self.complete_group_for(
-                    conn,
-                    company_id,
-                    &[d.id, c.id],
-                    Decimal::ZERO,
-                    Utc::now(),
-                )
-                .await?;
+                self.complete_group_for(conn, company_id, &[d.id, c.id], Decimal::ZERO, Utc::now())
+                    .await?;
             }
         }
         Ok(())
@@ -523,9 +820,7 @@ impl ReconcileWriteService {
             {
                 LocatorResolution::One(l) => lines.push(l),
                 LocatorResolution::NotFound => return Err(ReconcileError::LineNotFound),
-                LocatorResolution::Ambiguous(n) => {
-                    return Err(ReconcileError::AmbiguousLocator(n))
-                }
+                LocatorResolution::Ambiguous(n) => return Err(ReconcileError::AmbiguousLocator(n)),
             }
         }
         let mut closure = self
@@ -570,7 +865,11 @@ impl ReconcileWriteService {
             .ok_or(ReconcileError::LineNotFound)?;
         // Lock the affected lines before mutating.
         self.repo
-            .lock_lines(conn, company_id, &[partial.debit_move_id, partial.credit_move_id])
+            .lock_lines(
+                conn,
+                company_id,
+                &[partial.debit_move_id, partial.credit_move_id],
+            )
             .await
             .map_err(|e| internal(e.into()))?;
         let mut closure = vec![partial.clone()];

@@ -18,12 +18,12 @@
 #![allow(unused_imports)]
 
 // Generated modules
-pub mod domain;
-pub mod infrastructure;
 pub mod application;
+pub mod domain;
+pub mod exports;
+pub mod infrastructure;
 pub mod presentation;
 pub mod seeders;
-pub mod exports;
 
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
@@ -37,20 +37,20 @@ pub use application::service::AccountingPostService;
 pub use application::service::CostCenterService;
 pub use application::service::FinancialStatementService;
 pub use application::service::FiscalPeriodService;
-pub use application::service::JournalService;
-pub use application::service::JournalLineService;
-pub use application::service::LedgerService;
-pub use application::service::ReconciliationService;
-pub use application::service::ReconciliationItemService;
 pub use application::service::FullReconcileService;
+pub use application::service::JournalLineService;
+pub use application::service::JournalService;
+pub use application::service::LedgerService;
 pub use application::service::PartialReconcileService;
+pub use application::service::ReconciliationItemService;
+pub use application::service::ReconciliationService;
 
 // Re-exports - Workflows
 pub use application::workflows::*;
 
-use std::sync::Arc;
 use axum::Router;
 use sqlx::PgPool;
+use std::sync::Arc;
 
 /// Accounting module configuration
 ///
@@ -79,7 +79,11 @@ pub struct AccountingModule {
     pub(crate) partial_reconcile_service: Arc<PartialReconcileService>,
     // <<< CUSTOM FIELDS
     pub(crate) db_pool: PgPool,
-    pub(crate) reconcile_write_service: Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>,
+    pub(crate) reconcile_write_service:
+        Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>,
+    /// Host-implemented cash-basis tax deferral lookup, kept so post-build
+    /// service variants (e.g. the exchange-account one) keep the flip wired.
+    pub(crate) deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
     // END CUSTOM
 }
 
@@ -96,33 +100,42 @@ impl AccountingModule {
     /// real deployment; use this only in trusted/admin/seeding contexts.
     pub fn all_crud_routes(&self) -> Router {
         use presentation::http::{
-            create_account_routes,
-            create_accounting_post_routes,
-            create_cost_center_routes,
-            create_financial_statement_routes,
-            create_fiscal_period_routes,
-            create_journal_routes,
-            create_journal_line_routes,
-            create_ledger_routes,
-            create_reconciliation_routes,
-            create_reconciliation_item_routes,
-            create_full_reconcile_routes,
-            create_partial_reconcile_routes,
+            create_account_routes, create_accounting_post_routes, create_cost_center_routes,
+            create_financial_statement_routes, create_fiscal_period_routes,
+            create_full_reconcile_routes, create_journal_line_routes, create_journal_routes,
+            create_ledger_routes, create_partial_reconcile_routes,
+            create_reconciliation_item_routes, create_reconciliation_routes,
         };
 
         Router::new()
             .merge(create_account_routes(self.account_service.clone()))
-            .merge(create_accounting_post_routes(self.accounting_post_service.clone()))
+            .merge(create_accounting_post_routes(
+                self.accounting_post_service.clone(),
+            ))
             .merge(create_cost_center_routes(self.cost_center_service.clone()))
-            .merge(create_financial_statement_routes(self.financial_statement_service.clone()))
-            .merge(create_fiscal_period_routes(self.fiscal_period_service.clone()))
+            .merge(create_financial_statement_routes(
+                self.financial_statement_service.clone(),
+            ))
+            .merge(create_fiscal_period_routes(
+                self.fiscal_period_service.clone(),
+            ))
             .merge(create_journal_routes(self.journal_service.clone()))
-            .merge(create_journal_line_routes(self.journal_line_service.clone()))
+            .merge(create_journal_line_routes(
+                self.journal_line_service.clone(),
+            ))
             .merge(create_ledger_routes(self.ledger_service.clone()))
-            .merge(create_reconciliation_routes(self.reconciliation_service.clone()))
-            .merge(create_reconciliation_item_routes(self.reconciliation_item_service.clone()))
-            .merge(create_full_reconcile_routes(self.full_reconcile_service.clone()))
-            .merge(create_partial_reconcile_routes(self.partial_reconcile_service.clone()))
+            .merge(create_reconciliation_routes(
+                self.reconciliation_service.clone(),
+            ))
+            .merge(create_reconciliation_item_routes(
+                self.reconciliation_item_service.clone(),
+            ))
+            .merge(create_full_reconcile_routes(
+                self.full_reconcile_service.clone(),
+            ))
+            .merge(create_partial_reconcile_routes(
+                self.partial_reconcile_service.clone(),
+            ))
     }
 
     /// Deprecated alias for [`Self::all_crud_routes`]. `routes()` reads like
@@ -130,7 +143,9 @@ impl AccountingModule {
     /// mount exposes unguarded writes. Compose a guarded router (read + validated
     /// writes) for production, or call `all_crud_routes()` to opt into the full
     /// unguarded surface explicitly.
-    #[deprecated(note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface")]
+    #[deprecated(
+        note = "mounts unvalidated generic CRUD; prefer readonly_routes() + validated writes, or all_crud_routes() for the full/unguarded surface"
+    )]
     pub fn routes(&self) -> Router {
         self.all_crud_routes()
     }
@@ -142,33 +157,45 @@ impl AccountingModule {
     /// merge validated write routes (or a write service's HTTP layer) onto it.
     pub fn readonly_routes(&self) -> Router {
         use presentation::http::{
-            create_account_read_routes,
-            create_accounting_post_read_routes,
-            create_cost_center_read_routes,
-            create_financial_statement_read_routes,
-            create_fiscal_period_read_routes,
-            create_journal_read_routes,
-            create_journal_line_read_routes,
-            create_ledger_read_routes,
+            create_account_read_routes, create_accounting_post_read_routes,
+            create_cost_center_read_routes, create_financial_statement_read_routes,
+            create_fiscal_period_read_routes, create_full_reconcile_read_routes,
+            create_journal_line_read_routes, create_journal_read_routes, create_ledger_read_routes,
+            create_partial_reconcile_read_routes, create_reconciliation_item_read_routes,
             create_reconciliation_read_routes,
-            create_reconciliation_item_read_routes,
-            create_full_reconcile_read_routes,
-            create_partial_reconcile_read_routes,
         };
 
         Router::new()
             .merge(create_account_read_routes(self.account_service.clone()))
-            .merge(create_accounting_post_read_routes(self.accounting_post_service.clone()))
-            .merge(create_cost_center_read_routes(self.cost_center_service.clone()))
-            .merge(create_financial_statement_read_routes(self.financial_statement_service.clone()))
-            .merge(create_fiscal_period_read_routes(self.fiscal_period_service.clone()))
+            .merge(create_accounting_post_read_routes(
+                self.accounting_post_service.clone(),
+            ))
+            .merge(create_cost_center_read_routes(
+                self.cost_center_service.clone(),
+            ))
+            .merge(create_financial_statement_read_routes(
+                self.financial_statement_service.clone(),
+            ))
+            .merge(create_fiscal_period_read_routes(
+                self.fiscal_period_service.clone(),
+            ))
             .merge(create_journal_read_routes(self.journal_service.clone()))
-            .merge(create_journal_line_read_routes(self.journal_line_service.clone()))
+            .merge(create_journal_line_read_routes(
+                self.journal_line_service.clone(),
+            ))
             .merge(create_ledger_read_routes(self.ledger_service.clone()))
-            .merge(create_reconciliation_read_routes(self.reconciliation_service.clone()))
-            .merge(create_reconciliation_item_read_routes(self.reconciliation_item_service.clone()))
-            .merge(create_full_reconcile_read_routes(self.full_reconcile_service.clone()))
-            .merge(create_partial_reconcile_read_routes(self.partial_reconcile_service.clone()))
+            .merge(create_reconciliation_read_routes(
+                self.reconciliation_service.clone(),
+            ))
+            .merge(create_reconciliation_item_read_routes(
+                self.reconciliation_item_service.clone(),
+            ))
+            .merge(create_full_reconcile_read_routes(
+                self.full_reconcile_service.clone(),
+            ))
+            .merge(create_partial_reconcile_read_routes(
+                self.partial_reconcile_service.clone(),
+            ))
     }
 
     // <<< CUSTOM METHODS
@@ -203,7 +230,8 @@ impl AccountingModule {
                 ),
                 self.db_pool.clone(),
                 Some(exchange_account_id),
-            ),
+            )
+            .with_deferred_tax_if_set(self.deferred_tax.clone()),
         )
     }
     // END CUSTOM
@@ -212,6 +240,9 @@ impl AccountingModule {
 /// Builder for AccountingModule
 pub struct AccountingModuleBuilder {
     db_pool: Option<PgPool>,
+    // <<< CUSTOM FIELDS
+    deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
+    // END CUSTOM
 }
 
 impl AccountingModuleBuilder {
@@ -219,6 +250,9 @@ impl AccountingModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            // <<< CUSTOM INIT
+            deferred_tax: None,
+            // END CUSTOM
         }
     }
 
@@ -229,11 +263,23 @@ impl AccountingModuleBuilder {
     }
 
     // <<< CUSTOM - custom builder methods
+    /// Wire the host's cash-basis tax deferral lookup: partial reconciliations
+    /// landing on receivable/payable lines flip deferred (on_payment) tax
+    /// pro-rata from the transition account onto the real tax account. Hosts
+    /// without a tax module leave it unset — no flips, everything else works.
+    pub fn with_deferred_tax(
+        mut self,
+        port: Arc<dyn crate::domain::repositories::DeferredTaxLookup>,
+    ) -> Self {
+        self.deferred_tax = Some(port);
+        self
+    }
     // END CUSTOM
 
     /// Build the module with configured dependencies
     pub fn build(self) -> anyhow::Result<AccountingModule> {
-        let db_pool = self.db_pool
+        let db_pool = self
+            .db_pool
             .ok_or_else(|| anyhow::anyhow!("Database pool not configured"))?;
 
         // Account service
@@ -242,19 +288,28 @@ impl AccountingModuleBuilder {
 
         // AccountingPost service
         let accounting_post_repository = Arc::new(AccountingPostRepository::new(db_pool.clone()));
-        let accounting_post_service = Arc::new(AccountingPostService::with_repository(accounting_post_repository.clone()));
+        let accounting_post_service = Arc::new(AccountingPostService::with_repository(
+            accounting_post_repository.clone(),
+        ));
 
         // CostCenter service
         let cost_center_repository = Arc::new(CostCenterRepository::new(db_pool.clone()));
-        let cost_center_service = Arc::new(CostCenterService::with_repository(cost_center_repository.clone()));
+        let cost_center_service = Arc::new(CostCenterService::with_repository(
+            cost_center_repository.clone(),
+        ));
 
         // FinancialStatement service
-        let financial_statement_repository = Arc::new(FinancialStatementRepository::new(db_pool.clone()));
-        let financial_statement_service = Arc::new(FinancialStatementService::with_repository(financial_statement_repository.clone()));
+        let financial_statement_repository =
+            Arc::new(FinancialStatementRepository::new(db_pool.clone()));
+        let financial_statement_service = Arc::new(FinancialStatementService::with_repository(
+            financial_statement_repository.clone(),
+        ));
 
         // FiscalPeriod service
         let fiscal_period_repository = Arc::new(FiscalPeriodRepository::new(db_pool.clone()));
-        let fiscal_period_service = Arc::new(FiscalPeriodService::with_repository(fiscal_period_repository.clone()));
+        let fiscal_period_service = Arc::new(FiscalPeriodService::with_repository(
+            fiscal_period_repository.clone(),
+        ));
 
         // Journal service
         let journal_repository = Arc::new(JournalRepository::new(db_pool.clone()));
@@ -262,7 +317,9 @@ impl AccountingModuleBuilder {
 
         // JournalLine service
         let journal_line_repository = Arc::new(JournalLineRepository::new(db_pool.clone()));
-        let journal_line_service = Arc::new(JournalLineService::with_repository(journal_line_repository.clone()));
+        let journal_line_service = Arc::new(JournalLineService::with_repository(
+            journal_line_repository.clone(),
+        ));
 
         // Ledger service
         let ledger_repository = Arc::new(LedgerRepository::new(db_pool.clone()));
@@ -270,19 +327,29 @@ impl AccountingModuleBuilder {
 
         // Reconciliation service
         let reconciliation_repository = Arc::new(ReconciliationRepository::new(db_pool.clone()));
-        let reconciliation_service = Arc::new(ReconciliationService::with_repository(reconciliation_repository.clone()));
+        let reconciliation_service = Arc::new(ReconciliationService::with_repository(
+            reconciliation_repository.clone(),
+        ));
 
         // ReconciliationItem service
-        let reconciliation_item_repository = Arc::new(ReconciliationItemRepository::new(db_pool.clone()));
-        let reconciliation_item_service = Arc::new(ReconciliationItemService::with_repository(reconciliation_item_repository.clone()));
+        let reconciliation_item_repository =
+            Arc::new(ReconciliationItemRepository::new(db_pool.clone()));
+        let reconciliation_item_service = Arc::new(ReconciliationItemService::with_repository(
+            reconciliation_item_repository.clone(),
+        ));
 
         // FullReconcile service
         let full_reconcile_repository = Arc::new(FullReconcileRepository::new(db_pool.clone()));
-        let full_reconcile_service = Arc::new(FullReconcileService::with_repository(full_reconcile_repository.clone()));
+        let full_reconcile_service = Arc::new(FullReconcileService::with_repository(
+            full_reconcile_repository.clone(),
+        ));
 
         // PartialReconcile service
-        let partial_reconcile_repository = Arc::new(PartialReconcileRepository::new(db_pool.clone()));
-        let partial_reconcile_service = Arc::new(PartialReconcileService::with_repository(partial_reconcile_repository.clone()));
+        let partial_reconcile_repository =
+            Arc::new(PartialReconcileRepository::new(db_pool.clone()));
+        let partial_reconcile_service = Arc::new(PartialReconcileService::with_repository(
+            partial_reconcile_repository.clone(),
+        ));
         // <<< CUSTOM
         // Reconciliation write service: graph port + posting port (reversals of
         // generated moves) over the shared pool; no FX account by default (fail-closed).
@@ -300,7 +367,8 @@ impl AccountingModuleBuilder {
                 reconcile_posting_repository,
                 db_pool.clone(),
                 None,
-            ),
+            )
+            .with_deferred_tax_if_set(self.deferred_tax.clone()),
         );
         // END CUSTOM
 
@@ -323,6 +391,7 @@ impl AccountingModuleBuilder {
             // <<< CUSTOM
             db_pool,
             reconcile_write_service,
+            deferred_tax: self.deferred_tax,
             // END CUSTOM
         })
     }

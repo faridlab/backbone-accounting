@@ -5,113 +5,86 @@
 //! DDD Repository traits - define persistence contracts for aggregates.
 //! Implementations should be in the infrastructure layer.
 
-
 pub mod account_repository;
 pub mod accounting_post_repository;
 pub mod cost_center_repository;
 pub mod financial_statement_repository;
 pub mod fiscal_period_repository;
-pub mod journal_repository;
-pub mod journal_line_repository;
-pub mod ledger_repository;
-pub mod reconciliation_repository;
-pub mod reconciliation_item_repository;
 pub mod full_reconcile_repository;
+pub mod journal_line_repository;
+pub mod journal_repository;
+pub mod ledger_repository;
 pub mod partial_reconcile_repository;
+pub mod reconciliation_item_repository;
+pub mod reconciliation_repository;
 
 // Re-exports
 pub use account_repository::{
-    AccountRepository,
-    AccountPaginationParams,
-    AccountPaginatedResult,
-    AccountFilter,
+    AccountFilter, AccountPaginatedResult, AccountPaginationParams, AccountRepository,
 };
 pub use accounting_post_repository::{
+    AccountingPostFilter, AccountingPostPaginatedResult, AccountingPostPaginationParams,
     AccountingPostRepository,
-    AccountingPostPaginationParams,
-    AccountingPostPaginatedResult,
-    AccountingPostFilter,
 };
 pub use cost_center_repository::{
-    CostCenterRepository,
-    CostCenterPaginationParams,
-    CostCenterPaginatedResult,
-    CostCenterFilter,
+    CostCenterFilter, CostCenterPaginatedResult, CostCenterPaginationParams, CostCenterRepository,
 };
 pub use financial_statement_repository::{
-    FinancialStatementRepository,
-    FinancialStatementPaginationParams,
-    FinancialStatementPaginatedResult,
-    FinancialStatementFilter,
+    FinancialStatementFilter, FinancialStatementPaginatedResult,
+    FinancialStatementPaginationParams, FinancialStatementRepository,
 };
 pub use fiscal_period_repository::{
+    FiscalPeriodFilter, FiscalPeriodPaginatedResult, FiscalPeriodPaginationParams,
     FiscalPeriodRepository,
-    FiscalPeriodPaginationParams,
-    FiscalPeriodPaginatedResult,
-    FiscalPeriodFilter,
-};
-pub use journal_repository::{
-    JournalRepository,
-    JournalPaginationParams,
-    JournalPaginatedResult,
-    JournalFilter,
 };
 pub use journal_line_repository::{
+    JournalLineFilter, JournalLinePaginatedResult, JournalLinePaginationParams,
     JournalLineRepository,
-    JournalLinePaginationParams,
-    JournalLinePaginatedResult,
-    JournalLineFilter,
+};
+pub use journal_repository::{
+    JournalFilter, JournalPaginatedResult, JournalPaginationParams, JournalRepository,
 };
 pub use ledger_repository::{
-    LedgerRepository,
-    LedgerPaginationParams,
-    LedgerPaginatedResult,
-    LedgerFilter,
-};
-pub use reconciliation_repository::{
-    ReconciliationRepository,
-    ReconciliationPaginationParams,
-    ReconciliationPaginatedResult,
-    ReconciliationFilter,
+    LedgerFilter, LedgerPaginatedResult, LedgerPaginationParams, LedgerRepository,
 };
 pub use reconciliation_item_repository::{
-    ReconciliationItemRepository,
-    ReconciliationItemPaginationParams,
-    ReconciliationItemPaginatedResult,
-    ReconciliationItemFilter,
+    ReconciliationItemFilter, ReconciliationItemPaginatedResult,
+    ReconciliationItemPaginationParams, ReconciliationItemRepository,
+};
+pub use reconciliation_repository::{
+    ReconciliationFilter, ReconciliationPaginatedResult, ReconciliationPaginationParams,
+    ReconciliationRepository,
 };
 // <<< CUSTOM
 // Hand-authored ports for the GL-posting contract (not schema-derived).
-pub mod posting_repository;
+pub mod bank_reconciliation_repository;
+pub mod deferred_tax;
+pub mod hierarchy_repository;
 pub mod journal_workflow_repository;
 pub mod period_close_repository;
-pub mod bank_reconciliation_repository;
-pub mod reporting_repository;
-pub mod hierarchy_repository;
+pub mod posting_repository;
 pub mod reconcile_graph_repository;
-pub use posting_repository::{
-    FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
-    PostingCommit, PostingRepository, PostingWrite, ReversalSource,
-};
-pub use journal_workflow_repository::{JournalStatusRow, JournalWorkflowRepository};
-pub use period_close_repository::{PeriodCloseRepository, PeriodRow, PlBalanceRow};
+pub mod reporting_repository;
 pub use bank_reconciliation_repository::{
     BankReconciliationRepository, BookEntryRow, MatchedPair, ReconciliationCommit, UnmatchedBook,
     UnmatchedStatement,
 };
-pub use reporting_repository::{AccountSumRow, ReportingRepository};
+pub use deferred_tax::{DeferredTaxLine, DeferredTaxLookup};
 pub use hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};
+pub use journal_workflow_repository::{JournalStatusRow, JournalWorkflowRepository};
+pub use period_close_repository::{PeriodCloseRepository, PeriodRow, PlBalanceRow};
+pub use posting_repository::{
+    FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
+    PostingCommit, PostingRepository, PostingWrite, ReversalSource,
+};
 pub use reconcile_graph_repository::{JournalReversalMeta, ReconcileGraphRepository};
+pub use reporting_repository::{AccountSumRow, ReportingRepository};
 // END CUSTOM
 pub use full_reconcile_repository::{
+    FullReconcileFilter, FullReconcilePaginatedResult, FullReconcilePaginationParams,
     FullReconcileRepository,
-    FullReconcilePaginationParams,
-    FullReconcilePaginatedResult,
-    FullReconcileFilter,
 };
 pub use partial_reconcile_repository::{
+    PartialReconcileFilter, PartialReconcilePaginatedResult, PartialReconcilePaginationParams,
     PartialReconcileRepository,
-    PartialReconcilePaginationParams,
-    PartialReconcilePaginatedResult,
-    PartialReconcileFilter,
 };
