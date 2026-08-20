@@ -58,7 +58,6 @@ pub struct Account {
     pub account_number: String,
     pub account_code: String,
     pub name: String,
-    pub name_en: Option<String>,
     pub description: Option<String>,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
@@ -72,21 +71,9 @@ pub struct Account {
     pub opening_balance: Decimal,
     pub opening_balance_date: Option<NaiveDate>,
     pub current_balance: Decimal,
-    pub bank_name: Option<String>,
-    pub bank_account_number: Option<String>,
-    pub bank_account_name: Option<String>,
-    pub bank_branch: Option<String>,
-    pub is_taxable: bool,
-    pub tax_rate: Option<Decimal>,
-    pub tax_account_id: Option<Uuid>,
     pub is_reconcilable: bool,
-    pub last_reconciled_at: Option<DateTime<Utc>>,
-    pub last_reconciled_balance: Option<Decimal>,
     pub has_budget: bool,
     pub budget_amount: Option<Decimal>,
-    pub allow_manual_entry: bool,
-    pub require_cost_center: bool,
-    pub require_project: bool,
     pub sort_order: i32,
     pub show_in_reports: bool,
     pub status: AccountStatus,
@@ -108,14 +95,13 @@ impl Account {
     }
 
     /// Create a new Account with required fields
-    pub fn new(company_id: Uuid, account_number: String, account_code: String, name: String, account_type: AccountType, account_subtype: AccountSubtype, normal_balance: NormalBalance, level: i32, is_header: bool, is_detail: bool, currency: String, opening_balance: Decimal, current_balance: Decimal, is_taxable: bool, is_reconcilable: bool, has_budget: bool, allow_manual_entry: bool, require_cost_center: bool, require_project: bool, sort_order: i32, show_in_reports: bool, status: AccountStatus, is_system: bool, is_cloned: bool) -> Self {
+    pub fn new(company_id: Uuid, account_number: String, account_code: String, name: String, account_type: AccountType, account_subtype: AccountSubtype, normal_balance: NormalBalance, level: i32, is_header: bool, is_detail: bool, currency: String, opening_balance: Decimal, current_balance: Decimal, is_reconcilable: bool, has_budget: bool, sort_order: i32, show_in_reports: bool, status: AccountStatus, is_system: bool, is_cloned: bool) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
             account_number,
             account_code,
             name,
-            name_en: None,
             description: None,
             account_type,
             account_subtype,
@@ -129,21 +115,9 @@ impl Account {
             opening_balance,
             opening_balance_date: None,
             current_balance,
-            bank_name: None,
-            bank_account_number: None,
-            bank_account_name: None,
-            bank_branch: None,
-            is_taxable,
-            tax_rate: None,
-            tax_account_id: None,
             is_reconcilable,
-            last_reconciled_at: None,
-            last_reconciled_balance: None,
             has_budget,
             budget_amount: None,
-            allow_manual_entry,
-            require_cost_center,
-            require_project,
             sort_order,
             show_in_reports,
             status,
@@ -217,12 +191,6 @@ impl Account {
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
 
-    /// Set the name_en field (chainable)
-    pub fn with_name_en(mut self, value: String) -> Self {
-        self.name_en = Some(value);
-        self
-    }
-
     /// Set the description field (chainable)
     pub fn with_description(mut self, value: String) -> Self {
         self.description = Some(value);
@@ -244,54 +212,6 @@ impl Account {
     /// Set the opening_balance_date field (chainable)
     pub fn with_opening_balance_date(mut self, value: NaiveDate) -> Self {
         self.opening_balance_date = Some(value);
-        self
-    }
-
-    /// Set the bank_name field (chainable)
-    pub fn with_bank_name(mut self, value: String) -> Self {
-        self.bank_name = Some(value);
-        self
-    }
-
-    /// Set the bank_account_number field (chainable)
-    pub fn with_bank_account_number(mut self, value: String) -> Self {
-        self.bank_account_number = Some(value);
-        self
-    }
-
-    /// Set the bank_account_name field (chainable)
-    pub fn with_bank_account_name(mut self, value: String) -> Self {
-        self.bank_account_name = Some(value);
-        self
-    }
-
-    /// Set the bank_branch field (chainable)
-    pub fn with_bank_branch(mut self, value: String) -> Self {
-        self.bank_branch = Some(value);
-        self
-    }
-
-    /// Set the tax_rate field (chainable)
-    pub fn with_tax_rate(mut self, value: Decimal) -> Self {
-        self.tax_rate = Some(value);
-        self
-    }
-
-    /// Set the tax_account_id field (chainable)
-    pub fn with_tax_account_id(mut self, value: Uuid) -> Self {
-        self.tax_account_id = Some(value);
-        self
-    }
-
-    /// Set the last_reconciled_at field (chainable)
-    pub fn with_last_reconciled_at(mut self, value: DateTime<Utc>) -> Self {
-        self.last_reconciled_at = Some(value);
-        self
-    }
-
-    /// Set the last_reconciled_balance field (chainable)
-    pub fn with_last_reconciled_balance(mut self, value: Decimal) -> Self {
-        self.last_reconciled_balance = Some(value);
         self
     }
 
@@ -345,9 +265,6 @@ impl Account {
                 "name" => {
                     if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
-                "name_en" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.name_en = v; }
-                }
                 "description" => {
                     if let Ok(v) = serde_json::from_value(value) { self.description = v; }
                 }
@@ -387,50 +304,14 @@ impl Account {
                 "current_balance" => {
                     if let Ok(v) = serde_json::from_value(value) { self.current_balance = v; }
                 }
-                "bank_name" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.bank_name = v; }
-                }
-                "bank_account_number" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.bank_account_number = v; }
-                }
-                "bank_account_name" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.bank_account_name = v; }
-                }
-                "bank_branch" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.bank_branch = v; }
-                }
-                "is_taxable" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_taxable = v; }
-                }
-                "tax_rate" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.tax_rate = v; }
-                }
-                "tax_account_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.tax_account_id = v; }
-                }
                 "is_reconcilable" => {
                     if let Ok(v) = serde_json::from_value(value) { self.is_reconcilable = v; }
-                }
-                "last_reconciled_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.last_reconciled_at = v; }
-                }
-                "last_reconciled_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.last_reconciled_balance = v; }
                 }
                 "has_budget" => {
                     if let Ok(v) = serde_json::from_value(value) { self.has_budget = v; }
                 }
                 "budget_amount" => {
                     if let Ok(v) = serde_json::from_value(value) { self.budget_amount = v; }
-                }
-                "allow_manual_entry" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.allow_manual_entry = v; }
-                }
-                "require_cost_center" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.require_cost_center = v; }
-                }
-                "require_project" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.require_project = v; }
                 }
                 "sort_order" => {
                     if let Ok(v) = serde_json::from_value(value) { self.sort_order = v; }
@@ -515,7 +396,6 @@ impl backbone_orm::EntityRepoMeta for Account {
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("parent_id".to_string(), "uuid".to_string());
-        m.insert("tax_account_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("account_type".to_string(), "account_type".to_string());
         m.insert("account_subtype".to_string(), "account_subtype".to_string());
@@ -530,7 +410,7 @@ impl backbone_orm::EntityRepoMeta for Account {
         Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[("parent", "accounts", "parentId"), ("source", "accounts", "sourceId"), ("taxAccount", "accounts", "taxAccountId")]
+        &[("parent", "accounts", "parentId"), ("source", "accounts", "sourceId")]
     }
 }
 
@@ -544,7 +424,6 @@ pub struct AccountBuilder {
     account_number: Option<String>,
     account_code: Option<String>,
     name: Option<String>,
-    name_en: Option<String>,
     description: Option<String>,
     account_type: Option<AccountType>,
     account_subtype: Option<AccountSubtype>,
@@ -558,21 +437,9 @@ pub struct AccountBuilder {
     opening_balance: Option<Decimal>,
     opening_balance_date: Option<NaiveDate>,
     current_balance: Option<Decimal>,
-    bank_name: Option<String>,
-    bank_account_number: Option<String>,
-    bank_account_name: Option<String>,
-    bank_branch: Option<String>,
-    is_taxable: Option<bool>,
-    tax_rate: Option<Decimal>,
-    tax_account_id: Option<Uuid>,
     is_reconcilable: Option<bool>,
-    last_reconciled_at: Option<DateTime<Utc>>,
-    last_reconciled_balance: Option<Decimal>,
     has_budget: Option<bool>,
     budget_amount: Option<Decimal>,
-    allow_manual_entry: Option<bool>,
-    require_cost_center: Option<bool>,
-    require_project: Option<bool>,
     sort_order: Option<i32>,
     show_in_reports: Option<bool>,
     status: Option<AccountStatus>,
@@ -606,12 +473,6 @@ impl AccountBuilder {
     /// Set the name field (required)
     pub fn name(mut self, value: String) -> Self {
         self.name = Some(value);
-        self
-    }
-
-    /// Set the name_en field (optional)
-    pub fn name_en(mut self, value: String) -> Self {
-        self.name_en = Some(value);
         self
     }
 
@@ -693,63 +554,9 @@ impl AccountBuilder {
         self
     }
 
-    /// Set the bank_name field (optional)
-    pub fn bank_name(mut self, value: String) -> Self {
-        self.bank_name = Some(value);
-        self
-    }
-
-    /// Set the bank_account_number field (optional)
-    pub fn bank_account_number(mut self, value: String) -> Self {
-        self.bank_account_number = Some(value);
-        self
-    }
-
-    /// Set the bank_account_name field (optional)
-    pub fn bank_account_name(mut self, value: String) -> Self {
-        self.bank_account_name = Some(value);
-        self
-    }
-
-    /// Set the bank_branch field (optional)
-    pub fn bank_branch(mut self, value: String) -> Self {
-        self.bank_branch = Some(value);
-        self
-    }
-
-    /// Set the is_taxable field (default: `false`)
-    pub fn is_taxable(mut self, value: bool) -> Self {
-        self.is_taxable = Some(value);
-        self
-    }
-
-    /// Set the tax_rate field (optional)
-    pub fn tax_rate(mut self, value: Decimal) -> Self {
-        self.tax_rate = Some(value);
-        self
-    }
-
-    /// Set the tax_account_id field (optional)
-    pub fn tax_account_id(mut self, value: Uuid) -> Self {
-        self.tax_account_id = Some(value);
-        self
-    }
-
     /// Set the is_reconcilable field (default: `false`)
     pub fn is_reconcilable(mut self, value: bool) -> Self {
         self.is_reconcilable = Some(value);
-        self
-    }
-
-    /// Set the last_reconciled_at field (optional)
-    pub fn last_reconciled_at(mut self, value: DateTime<Utc>) -> Self {
-        self.last_reconciled_at = Some(value);
-        self
-    }
-
-    /// Set the last_reconciled_balance field (optional)
-    pub fn last_reconciled_balance(mut self, value: Decimal) -> Self {
-        self.last_reconciled_balance = Some(value);
         self
     }
 
@@ -762,24 +569,6 @@ impl AccountBuilder {
     /// Set the budget_amount field (optional)
     pub fn budget_amount(mut self, value: Decimal) -> Self {
         self.budget_amount = Some(value);
-        self
-    }
-
-    /// Set the allow_manual_entry field (default: `true`)
-    pub fn allow_manual_entry(mut self, value: bool) -> Self {
-        self.allow_manual_entry = Some(value);
-        self
-    }
-
-    /// Set the require_cost_center field (default: `false`)
-    pub fn require_cost_center(mut self, value: bool) -> Self {
-        self.require_cost_center = Some(value);
-        self
-    }
-
-    /// Set the require_project field (default: `false`)
-    pub fn require_project(mut self, value: bool) -> Self {
-        self.require_project = Some(value);
         self
     }
 
@@ -855,7 +644,6 @@ impl AccountBuilder {
             account_number,
             account_code,
             name,
-            name_en: self.name_en,
             description: self.description,
             account_type,
             account_subtype,
@@ -869,21 +657,9 @@ impl AccountBuilder {
             opening_balance: self.opening_balance.unwrap_or(Decimal::from(0)),
             opening_balance_date: self.opening_balance_date,
             current_balance: self.current_balance.unwrap_or(Decimal::from(0)),
-            bank_name: self.bank_name,
-            bank_account_number: self.bank_account_number,
-            bank_account_name: self.bank_account_name,
-            bank_branch: self.bank_branch,
-            is_taxable: self.is_taxable.unwrap_or(false),
-            tax_rate: self.tax_rate,
-            tax_account_id: self.tax_account_id,
             is_reconcilable: self.is_reconcilable.unwrap_or(false),
-            last_reconciled_at: self.last_reconciled_at,
-            last_reconciled_balance: self.last_reconciled_balance,
             has_budget: self.has_budget.unwrap_or(false),
             budget_amount: self.budget_amount,
-            allow_manual_entry: self.allow_manual_entry.unwrap_or(true),
-            require_cost_center: self.require_cost_center.unwrap_or(false),
-            require_project: self.require_project.unwrap_or(false),
             sort_order: self.sort_order.unwrap_or(0),
             show_in_reports: self.show_in_reports.unwrap_or(true),
             status: self.status.unwrap_or_default(),

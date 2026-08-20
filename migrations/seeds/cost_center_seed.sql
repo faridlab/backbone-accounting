@@ -9,7 +9,6 @@
 --     company_id,
 --     code,
 --     name,
---     name_en,
 --     description,
 --     parent_id,
 --     level,

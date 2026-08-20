@@ -4448,12 +4448,8 @@ components:
         - currency
         - opening_balance
         - current_balance
-        - is_taxable
         - is_reconcilable
         - has_budget
-        - allow_manual_entry
-        - require_cost_center
-        - require_project
         - sort_order
         - show_in_reports
         - status
@@ -4474,10 +4470,6 @@ components:
           type: string
           maxLength: 30
         name:
-          type: string
-          maxLength: 100
-        name_en:
-          nullable: true
           type: string
           maxLength: 100
         description:
@@ -4515,51 +4507,13 @@ components:
           format: date
         current_balance:
           type: string
-        bank_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_account_number:
-          nullable: true
-          type: string
-          maxLength: 50
-        bank_account_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_branch:
-          nullable: true
-          type: string
-          maxLength: 100
-        is_taxable:
-          type: boolean
-        tax_rate:
-          nullable: true
-          type: string
-        tax_account_id:
-          nullable: true
-          type: string
-          format: uuid
         is_reconcilable:
           type: boolean
-        last_reconciled_at:
-          nullable: true
-          type: string
-          format: date-time
-        last_reconciled_balance:
-          nullable: true
-          type: string
         has_budget:
           type: boolean
         budget_amount:
           nullable: true
           type: string
-        allow_manual_entry:
-          type: boolean
-        require_cost_center:
-          type: boolean
-        require_project:
-          type: boolean
         sort_order:
           type: integer
           format: int32
@@ -4619,12 +4573,8 @@ components:
         - currency
         - opening_balance
         - current_balance
-        - is_taxable
         - is_reconcilable
         - has_budget
-        - allow_manual_entry
-        - require_cost_center
-        - require_project
         - sort_order
         - show_in_reports
         - status
@@ -4642,10 +4592,6 @@ components:
           type: string
           maxLength: 30
         name:
-          type: string
-          maxLength: 100
-        name_en:
-          nullable: true
           type: string
           maxLength: 100
         description:
@@ -4683,51 +4629,13 @@ components:
           format: date
         current_balance:
           type: string
-        bank_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_account_number:
-          nullable: true
-          type: string
-          maxLength: 50
-        bank_account_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_branch:
-          nullable: true
-          type: string
-          maxLength: 100
-        is_taxable:
-          type: boolean
-        tax_rate:
-          nullable: true
-          type: string
-        tax_account_id:
-          nullable: true
-          type: string
-          format: uuid
         is_reconcilable:
           type: boolean
-        last_reconciled_at:
-          nullable: true
-          type: string
-          format: date-time
-        last_reconciled_balance:
-          nullable: true
-          type: string
         has_budget:
           type: boolean
         budget_amount:
           nullable: true
           type: string
-        allow_manual_entry:
-          type: boolean
-        require_cost_center:
-          type: boolean
-        require_project:
-          type: boolean
         sort_order:
           type: integer
           format: int32
@@ -4774,12 +4682,8 @@ components:
         - currency
         - opening_balance
         - current_balance
-        - is_taxable
         - is_reconcilable
         - has_budget
-        - allow_manual_entry
-        - require_cost_center
-        - require_project
         - sort_order
         - show_in_reports
         - status
@@ -4797,10 +4701,6 @@ components:
           type: string
           maxLength: 30
         name:
-          type: string
-          maxLength: 100
-        name_en:
-          nullable: true
           type: string
           maxLength: 100
         description:
@@ -4838,51 +4738,13 @@ components:
           format: date
         current_balance:
           type: string
-        bank_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_account_number:
-          nullable: true
-          type: string
-          maxLength: 50
-        bank_account_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_branch:
-          nullable: true
-          type: string
-          maxLength: 100
-        is_taxable:
-          type: boolean
-        tax_rate:
-          nullable: true
-          type: string
-        tax_account_id:
-          nullable: true
-          type: string
-          format: uuid
         is_reconcilable:
           type: boolean
-        last_reconciled_at:
-          nullable: true
-          type: string
-          format: date-time
-        last_reconciled_balance:
-          nullable: true
-          type: string
         has_budget:
           type: boolean
         budget_amount:
           nullable: true
           type: string
-        allow_manual_entry:
-          type: boolean
-        require_cost_center:
-          type: boolean
-        require_project:
-          type: boolean
         sort_order:
           type: integer
           format: int32
@@ -4928,10 +4790,6 @@ components:
         name:
           type: string
           maxLength: 100
-        name_en:
-          nullable: true
-          type: string
-          maxLength: 100
         description:
           nullable: true
           type: string
@@ -4967,51 +4825,13 @@ components:
           format: date
         current_balance:
           type: string
-        bank_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_account_number:
-          nullable: true
-          type: string
-          maxLength: 50
-        bank_account_name:
-          nullable: true
-          type: string
-          maxLength: 100
-        bank_branch:
-          nullable: true
-          type: string
-          maxLength: 100
-        is_taxable:
-          type: boolean
-        tax_rate:
-          nullable: true
-          type: string
-        tax_account_id:
-          nullable: true
-          type: string
-          format: uuid
         is_reconcilable:
           type: boolean
-        last_reconciled_at:
-          nullable: true
-          type: string
-          format: date-time
-        last_reconciled_balance:
-          nullable: true
-          type: string
         has_budget:
           type: boolean
         budget_amount:
           nullable: true
           type: string
-        allow_manual_entry:
-          type: boolean
-        require_cost_center:
-          type: boolean
-        require_project:
-          type: boolean
         sort_order:
           type: integer
           format: int32
@@ -5468,10 +5288,6 @@ components:
         name:
           type: string
           maxLength: 100
-        name_en:
-          nullable: true
-          type: string
-          maxLength: 100
         description:
           nullable: true
           type: string
@@ -5531,10 +5347,6 @@ components:
         name:
           type: string
           maxLength: 100
-        name_en:
-          nullable: true
-          type: string
-          maxLength: 100
         description:
           nullable: true
           type: string
@@ -5581,10 +5393,6 @@ components:
         name:
           type: string
           maxLength: 100
-        name_en:
-          nullable: true
-          type: string
-          maxLength: 100
         description:
           nullable: true
           type: string
@@ -5620,10 +5428,6 @@ components:
           type: string
           maxLength: 30
         name:
-          type: string
-          maxLength: 100
-        name_en:
-          nullable: true
           type: string
           maxLength: 100
         description:

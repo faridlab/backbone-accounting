@@ -60,8 +60,6 @@ pub struct ChartAccountDef {
     pub code: String,
     /// Localized name (Indonesian for the SAK chart).
     pub name: String,
-    /// English name, if the source provides one.
-    pub name_en: Option<String>,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
     pub normal_balance: NormalBalance,
@@ -177,7 +175,6 @@ mod tests {
             number: number.to_string(),
             code: number.replace('.', ""),
             name: format!("Account {number}"),
-            name_en: None,
             account_type: AccountType::Asset,
             account_subtype: subtype,
             normal_balance: NormalBalance::Debit,

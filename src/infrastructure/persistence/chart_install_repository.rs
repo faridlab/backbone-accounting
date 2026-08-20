@@ -78,7 +78,7 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
     ) -> anyhow::Result<UpsertOutcome> {
         // `pre` reads the row's pre-statement soft-delete state; `up` reports whether
         // the statement took the INSERT arm (xmax = 0) or the ON CONFLICT UPDATE arm.
-        // Engine-owned fields only — name, status, balances, bank/tax/budget settings
+        // Engine-owned fields only — name, status, balances, budget settings
         // keep whatever the company last set them to.
         let result = sqlx::query(
             r#"WITH pre AS (
@@ -90,12 +90,12 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
                         account_type, account_subtype, normal_balance,
                         parent_id, level, path, is_header, is_detail,
                         currency, is_reconcilable, sort_order,
-                        chart_code, chart_version, name_en)
+                        chart_code, chart_version)
                    VALUES ($1, $2, $3, $4, $5,
                            $6::account_type, $7::account_subtype, $8::normal_balance,
                            $9, $10, $11, $12, $13,
                            $14, $15, $16,
-                           $17, $18, $19)
+                           $17, $18)
                    ON CONFLICT (id) DO UPDATE SET
                        account_number   = EXCLUDED.account_number,
                        account_code     = EXCLUDED.account_code,
@@ -136,9 +136,6 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
         .bind(row.def.sort_order)
         .bind(&row.chart_code)
         .bind(&row.chart_version)
-        // name_en is insert-time-only: the dataset supplies the first English
-        // name; after that it is user-owned like `name` (absent from SET above).
-        .bind(row.def.name_en.as_deref())
         .fetch_one(&mut *tx)
         .await?;
 

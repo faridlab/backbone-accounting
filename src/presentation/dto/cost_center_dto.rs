@@ -5,9 +5,9 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -16,8 +16,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::CostCenter;
+use crate::domain::entity::AuditMetadata;
 
 // =============================================================================
 // Create DTO
@@ -32,10 +32,7 @@ use crate::domain::entity::CostCenter;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateCostCenterDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -44,9 +41,6 @@ pub struct CreateCostCenterDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -80,10 +74,7 @@ pub struct CreateCostCenterDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCostCenterDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -92,9 +83,6 @@ pub struct UpdateCostCenterDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -128,10 +116,7 @@ pub struct UpdateCostCenterDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchCostCenterDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
@@ -142,9 +127,6 @@ pub struct PatchCostCenterDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -169,17 +151,7 @@ pub struct PatchCostCenterDto {
 impl PatchCostCenterDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some()
-            || self.code.is_some()
-            || self.name.is_some()
-            || self.name_en.is_some()
-            || self.description.is_some()
-            || self.parent_id.is_some()
-            || self.level.is_some()
-            || self.is_group.is_some()
-            || self.branch_id.is_some()
-            || self.is_active.is_some()
-            || self.sort_order.is_some()
+        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.level.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.is_active.is_some() || self.sort_order.is_some()
     }
 }
 
@@ -195,21 +167,14 @@ impl PatchCostCenterDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CostCenterResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    pub name_en: Option<String>,
     pub description: Option<String>,
     pub parent_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
@@ -295,7 +260,6 @@ impl From<CostCenter> for CostCenterResponseDto {
             company_id: entity.company_id,
             code: entity.code,
             name: entity.name,
-            name_en: entity.name_en,
             description: entity.description,
             parent_id: entity.parent_id,
             level: entity.level,
@@ -328,7 +292,6 @@ impl From<CreateCostCenterDto> for CostCenter {
             company_id: dto.company_id,
             code: dto.code,
             name: dto.name,
-            name_en: dto.name_en,
             description: dto.description,
             parent_id: dto.parent_id,
             level: dto.level,
@@ -348,7 +311,6 @@ impl From<&CostCenter> for CostCenterResponseDto {
             company_id: entity.company_id.clone(),
             code: entity.code.clone(),
             name: entity.name.clone(),
-            name_en: entity.name_en.clone(),
             description: entity.description.clone(),
             parent_id: entity.parent_id.clone(),
             level: entity.level.clone(),
@@ -372,7 +334,6 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
         self.company_id = dto.company_id;
         self.code = dto.code;
         self.name = dto.name;
-        self.name_en = dto.name_en;
         self.description = dto.description;
         self.parent_id = dto.parent_id;
         self.level = dto.level;
@@ -392,3 +353,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
 // Add custom DTOs specific to CostCenter here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

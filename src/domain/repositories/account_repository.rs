@@ -48,7 +48,6 @@ pub struct AccountFilter {
     pub account_number: Option<String>,
     pub account_code: Option<String>,
     pub name: Option<String>,
-    pub name_en: Option<String>,
     pub description: Option<String>,
     pub account_type: Option<AccountType>,
     pub account_subtype: Option<AccountSubtype>,
@@ -58,17 +57,8 @@ pub struct AccountFilter {
     pub is_header: Option<bool>,
     pub is_detail: Option<bool>,
     pub currency: Option<String>,
-    pub bank_name: Option<String>,
-    pub bank_account_number: Option<String>,
-    pub bank_account_name: Option<String>,
-    pub bank_branch: Option<String>,
-    pub is_taxable: Option<bool>,
-    pub tax_account_id: Option<Uuid>,
     pub is_reconcilable: Option<bool>,
     pub has_budget: Option<bool>,
-    pub allow_manual_entry: Option<bool>,
-    pub require_cost_center: Option<bool>,
-    pub require_project: Option<bool>,
     pub show_in_reports: Option<bool>,
     pub status: Option<AccountStatus>,
     pub is_system: Option<bool>,
@@ -82,7 +72,7 @@ pub struct AccountFilter {
 impl AccountFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.name_en.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.bank_name.is_some() || self.bank_account_number.is_some() || self.bank_account_name.is_some() || self.bank_branch.is_some() || self.is_taxable.is_some() || self.tax_account_id.is_some() || self.is_reconcilable.is_some() || self.has_budget.is_some() || self.allow_manual_entry.is_some() || self.require_cost_center.is_some() || self.require_project.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
+        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.is_reconcilable.is_some() || self.has_budget.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
     }
 }
 

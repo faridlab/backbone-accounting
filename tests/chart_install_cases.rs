@@ -35,7 +35,6 @@ fn def(
         number: number.to_string(),
         code: number.replace('.', ""),
         name: name.to_string(),
-        name_en: None,
         account_type: typ,
         account_subtype: sub,
         normal_balance: bal,

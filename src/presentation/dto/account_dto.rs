@@ -51,9 +51,6 @@ pub struct CreateAccountDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -84,46 +81,14 @@ pub struct CreateAccountDto {
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_name")]
-    pub bank_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_number")]
-    pub bank_account_number: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_name")]
-    pub bank_account_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_branch")]
-    pub bank_branch: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_taxable")]
-    pub is_taxable: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_rate")]
-    pub tax_rate: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_account_id")]
-    pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconcilable")]
     pub is_reconcilable: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
-    pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
-    pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "allow_manual_entry")]
-    pub allow_manual_entry: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "require_cost_center")]
-    pub require_cost_center: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "require_project")]
-    pub require_project: bool,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
     pub sort_order: i32,
@@ -177,9 +142,6 @@ pub struct UpdateAccountDto {
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -210,46 +172,14 @@ pub struct UpdateAccountDto {
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_name")]
-    pub bank_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_number")]
-    pub bank_account_number: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_name")]
-    pub bank_account_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_branch")]
-    pub bank_branch: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_taxable")]
-    pub is_taxable: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_rate")]
-    pub tax_rate: Option<Decimal>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_account_id")]
-    pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconcilable")]
     pub is_reconcilable: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
-    pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
-    pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "allow_manual_entry")]
-    pub allow_manual_entry: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "require_cost_center")]
-    pub require_cost_center: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "require_project")]
-    pub require_project: bool,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
     pub sort_order: i32,
@@ -304,9 +234,6 @@ pub struct PatchAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "name_en")]
-    pub name_en: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -339,46 +266,14 @@ pub struct PatchAccountDto {
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "current_balance")]
     pub current_balance: Option<Decimal>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "bank_name")]
-    pub bank_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "bank_account_number")]
-    pub bank_account_number: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "bank_account_name")]
-    pub bank_account_name: Option<String>,
-    #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "bank_branch")]
-    pub bank_branch: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_taxable")]
-    pub is_taxable: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "tax_rate")]
-    pub tax_rate: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "tax_account_id")]
-    pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reconcilable")]
     pub is_reconcilable: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "last_reconciled_at")]
-    pub last_reconciled_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "last_reconciled_balance")]
-    pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "has_budget")]
     pub has_budget: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "allow_manual_entry")]
-    pub allow_manual_entry: Option<bool>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "require_cost_center")]
-    pub require_cost_center: Option<bool>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "require_project")]
-    pub require_project: Option<bool>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "sort_order")]
     pub sort_order: Option<i32>,
@@ -409,7 +304,7 @@ pub struct PatchAccountDto {
 impl PatchAccountDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.name_en.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.level.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.opening_balance.is_some() || self.opening_balance_date.is_some() || self.current_balance.is_some() || self.bank_name.is_some() || self.bank_account_number.is_some() || self.bank_account_name.is_some() || self.bank_branch.is_some() || self.is_taxable.is_some() || self.tax_rate.is_some() || self.tax_account_id.is_some() || self.is_reconcilable.is_some() || self.last_reconciled_at.is_some() || self.last_reconciled_balance.is_some() || self.has_budget.is_some() || self.budget_amount.is_some() || self.allow_manual_entry.is_some() || self.require_cost_center.is_some() || self.require_project.is_some() || self.sort_order.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
+        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.level.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.opening_balance.is_some() || self.opening_balance_date.is_some() || self.current_balance.is_some() || self.is_reconcilable.is_some() || self.has_budget.is_some() || self.budget_amount.is_some() || self.sort_order.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
     }
 }
 
@@ -435,7 +330,6 @@ pub struct AccountResponseDto {
     pub account_code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    pub name_en: Option<String>,
     pub description: Option<String>,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
@@ -453,27 +347,11 @@ pub struct AccountResponseDto {
     pub opening_balance: Decimal,
     pub opening_balance_date: Option<NaiveDate>,
     pub current_balance: Decimal,
-    pub bank_name: Option<String>,
-    pub bank_account_number: Option<String>,
-    pub bank_account_name: Option<String>,
-    pub bank_branch: Option<String>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_taxable: bool,
-    pub tax_rate: Option<Decimal>,
-    pub tax_account_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub is_reconcilable: bool,
-    pub last_reconciled_at: Option<DateTime<Utc>>,
-    pub last_reconciled_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub has_budget: bool,
     pub budget_amount: Option<Decimal>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub allow_manual_entry: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub require_cost_center: bool,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub require_project: bool,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     pub sort_order: i32,
     #[cfg_attr(feature = "openapi", schema(example = true))]
@@ -562,7 +440,6 @@ impl From<Account> for AccountResponseDto {
             account_number: entity.account_number,
             account_code: entity.account_code,
             name: entity.name,
-            name_en: entity.name_en,
             description: entity.description,
             account_type: entity.account_type,
             account_subtype: entity.account_subtype,
@@ -576,21 +453,9 @@ impl From<Account> for AccountResponseDto {
             opening_balance: entity.opening_balance,
             opening_balance_date: entity.opening_balance_date,
             current_balance: entity.current_balance,
-            bank_name: entity.bank_name,
-            bank_account_number: entity.bank_account_number,
-            bank_account_name: entity.bank_account_name,
-            bank_branch: entity.bank_branch,
-            is_taxable: entity.is_taxable,
-            tax_rate: entity.tax_rate,
-            tax_account_id: entity.tax_account_id,
             is_reconcilable: entity.is_reconcilable,
-            last_reconciled_at: entity.last_reconciled_at,
-            last_reconciled_balance: entity.last_reconciled_balance,
             has_budget: entity.has_budget,
             budget_amount: entity.budget_amount,
-            allow_manual_entry: entity.allow_manual_entry,
-            require_cost_center: entity.require_cost_center,
-            require_project: entity.require_project,
             sort_order: entity.sort_order,
             show_in_reports: entity.show_in_reports,
             status: entity.status,
@@ -626,7 +491,6 @@ impl From<CreateAccountDto> for Account {
             account_number: dto.account_number,
             account_code: dto.account_code,
             name: dto.name,
-            name_en: dto.name_en,
             description: dto.description,
             account_type: dto.account_type,
             account_subtype: dto.account_subtype,
@@ -640,21 +504,9 @@ impl From<CreateAccountDto> for Account {
             opening_balance: dto.opening_balance,
             opening_balance_date: dto.opening_balance_date,
             current_balance: dto.current_balance,
-            bank_name: dto.bank_name,
-            bank_account_number: dto.bank_account_number,
-            bank_account_name: dto.bank_account_name,
-            bank_branch: dto.bank_branch,
-            is_taxable: dto.is_taxable,
-            tax_rate: dto.tax_rate,
-            tax_account_id: dto.tax_account_id,
             is_reconcilable: dto.is_reconcilable,
-            last_reconciled_at: dto.last_reconciled_at,
-            last_reconciled_balance: dto.last_reconciled_balance,
             has_budget: dto.has_budget,
             budget_amount: dto.budget_amount,
-            allow_manual_entry: dto.allow_manual_entry,
-            require_cost_center: dto.require_cost_center,
-            require_project: dto.require_project,
             sort_order: dto.sort_order,
             show_in_reports: dto.show_in_reports,
             status: dto.status,
@@ -677,7 +529,6 @@ impl From<&Account> for AccountResponseDto {
             account_number: entity.account_number.clone(),
             account_code: entity.account_code.clone(),
             name: entity.name.clone(),
-            name_en: entity.name_en.clone(),
             description: entity.description.clone(),
             account_type: entity.account_type.clone(),
             account_subtype: entity.account_subtype.clone(),
@@ -691,21 +542,9 @@ impl From<&Account> for AccountResponseDto {
             opening_balance: entity.opening_balance.clone(),
             opening_balance_date: entity.opening_balance_date.clone(),
             current_balance: entity.current_balance.clone(),
-            bank_name: entity.bank_name.clone(),
-            bank_account_number: entity.bank_account_number.clone(),
-            bank_account_name: entity.bank_account_name.clone(),
-            bank_branch: entity.bank_branch.clone(),
-            is_taxable: entity.is_taxable.clone(),
-            tax_rate: entity.tax_rate.clone(),
-            tax_account_id: entity.tax_account_id.clone(),
             is_reconcilable: entity.is_reconcilable.clone(),
-            last_reconciled_at: entity.last_reconciled_at.clone(),
-            last_reconciled_balance: entity.last_reconciled_balance.clone(),
             has_budget: entity.has_budget.clone(),
             budget_amount: entity.budget_amount.clone(),
-            allow_manual_entry: entity.allow_manual_entry.clone(),
-            require_cost_center: entity.require_cost_center.clone(),
-            require_project: entity.require_project.clone(),
             sort_order: entity.sort_order.clone(),
             show_in_reports: entity.show_in_reports.clone(),
             status: entity.status.clone(),
@@ -732,7 +571,6 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
         self.account_number = dto.account_number;
         self.account_code = dto.account_code;
         self.name = dto.name;
-        self.name_en = dto.name_en;
         self.description = dto.description;
         self.account_type = dto.account_type;
         self.account_subtype = dto.account_subtype;
@@ -746,21 +584,9 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
         self.opening_balance = dto.opening_balance;
         self.opening_balance_date = dto.opening_balance_date;
         self.current_balance = dto.current_balance;
-        self.bank_name = dto.bank_name;
-        self.bank_account_number = dto.bank_account_number;
-        self.bank_account_name = dto.bank_account_name;
-        self.bank_branch = dto.bank_branch;
-        self.is_taxable = dto.is_taxable;
-        self.tax_rate = dto.tax_rate;
-        self.tax_account_id = dto.tax_account_id;
         self.is_reconcilable = dto.is_reconcilable;
-        self.last_reconciled_at = dto.last_reconciled_at;
-        self.last_reconciled_balance = dto.last_reconciled_balance;
         self.has_budget = dto.has_budget;
         self.budget_amount = dto.budget_amount;
-        self.allow_manual_entry = dto.allow_manual_entry;
-        self.require_cost_center = dto.require_cost_center;
-        self.require_project = dto.require_project;
         self.sort_order = dto.sort_order;
         self.show_in_reports = dto.show_in_reports;
         self.status = dto.status;

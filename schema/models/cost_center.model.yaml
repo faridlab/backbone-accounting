@@ -34,11 +34,6 @@ models:
         attributes: ["@required", "@max(100)"]
         description: "Cost center name"
 
-      name_en:
-        type: string?
-        attributes: ["@max(100)"]
-        description: "English name"
-
       description:
         type: string?
         attributes: ["@max(500)"]

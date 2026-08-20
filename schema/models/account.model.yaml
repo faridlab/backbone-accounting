@@ -44,11 +44,6 @@ models:
         attributes: ["@required", "@max(100)"]
         description: "Account name"
 
-      name_en:
-        type: string?
-        attributes: ["@max(100)"]
-        description: "English name"
-
       description:
         type: string?
         attributes: ["@max(500)"]
@@ -123,62 +118,12 @@ models:
         description: "Current balance (updated by ledger)"
 
       # =======================================================================
-      # Bank Account Details (for bank type accounts)
-      # =======================================================================
-      bank_name:
-        type: string?
-        attributes: ["@max(100)"]
-        description: "Bank name (if bank account)"
-
-      bank_account_number:
-        type: string?
-        attributes: ["@max(50)"]
-        description: "Bank account number"
-
-      bank_account_name:
-        type: string?
-        attributes: ["@max(100)"]
-        description: "Bank account holder name"
-
-      bank_branch:
-        type: string?
-        attributes: ["@max(100)"]
-        description: "Bank branch"
-
-      # =======================================================================
-      # Tax Settings
-      # =======================================================================
-      is_taxable:
-        type: bool
-        attributes: ["@default(false)"]
-        description: "Subject to tax"
-
-      tax_rate:
-        type: decimal?
-        attributes: ["@precision(5,2)", "@range(0, 100)"]
-        description: "Default tax rate %"
-
-      tax_account_id:
-        type: uuid?
-        attributes: ["@foreign_key(Account.id)"]
-        description: "Related tax account"
-
-      # =======================================================================
       # Reconciliation Settings
       # =======================================================================
       is_reconcilable:
         type: bool
         attributes: ["@default(false)"]
         description: "Requires reconciliation (e.g., bank accounts)"
-
-      last_reconciled_at:
-        type: datetime?
-        description: "Last reconciliation date"
-
-      last_reconciled_balance:
-        type: decimal?
-        attributes: ["@precision(18,2)"]
-        description: "Balance at last reconciliation"
 
       # =======================================================================
       # Budget
@@ -192,24 +137,6 @@ models:
         type: decimal?
         attributes: ["@precision(18,2)"]
         description: "Budget amount (monthly)"
-
-      # =======================================================================
-      # Settings
-      # =======================================================================
-      allow_manual_entry:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Allow manual journal entries"
-
-      require_cost_center:
-        type: bool
-        attributes: ["@default(false)"]
-        description: "Require cost center for transactions"
-
-      require_project:
-        type: bool
-        attributes: ["@default(false)"]
-        description: "Require project for transactions"
 
       # =======================================================================
       # Display
@@ -300,12 +227,6 @@ models:
         attributes: ["@one_to_many"]
         description: "Cloned copies of this template"
         inverse: source
-
-      tax_account:
-        type: Account?
-        attributes: ["@one", "@foreign_key(tax_account_id)"]
-        description: "Related tax account"
-        inverse: tax_accounts
 
       journal_lines:
         type: JournalLine[]
