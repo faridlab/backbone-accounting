@@ -1,12 +1,12 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
+use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
-use super::AuditMetadata;
-use super::StatementStatus;
 use super::StatementType;
+use super::StatementStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for FinancialStatement
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -14,15 +14,9 @@ use super::StatementType;
 pub struct FinancialStatementId(pub Uuid);
 
 impl FinancialStatementId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for FinancialStatementId {
@@ -39,28 +33,20 @@ impl std::str::FromStr for FinancialStatementId {
 }
 
 impl From<Uuid> for FinancialStatementId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<FinancialStatementId> for Uuid {
-    fn from(id: FinancialStatementId) -> Self {
-        id.0
-    }
+    fn from(id: FinancialStatementId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for FinancialStatementId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for FinancialStatementId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -139,24 +125,7 @@ impl FinancialStatement {
     }
 
     /// Create a new FinancialStatement with required fields
-    pub fn new(
-        company_id: Uuid,
-        statement_number: String,
-        statement_type: StatementType,
-        name: String,
-        fiscal_year: i32,
-        as_of_date: NaiveDate,
-        is_comparative: bool,
-        status: StatementStatus,
-        balance_check: bool,
-        trial_balance_check: bool,
-        line_items: serde_json::Value,
-        comparative_data: serde_json::Value,
-        variance_data: serde_json::Value,
-        notes: serde_json::Value,
-        generation_parameters: serde_json::Value,
-        currency: String,
-    ) -> Self {
+    pub fn new(company_id: Uuid, statement_number: String, statement_type: StatementType, name: String, fiscal_year: i32, as_of_date: NaiveDate, is_comparative: bool, status: StatementStatus, balance_check: bool, trial_balance_check: bool, line_items: serde_json::Value, comparative_data: serde_json::Value, variance_data: serde_json::Value, notes: serde_json::Value, generation_parameters: serde_json::Value, currency: String) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -278,6 +247,7 @@ impl FinancialStatement {
     pub fn status(&self) -> &StatementStatus {
         &self.status
     }
+
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -562,309 +532,187 @@ impl FinancialStatement {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.company_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "statement_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.statement_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.statement_number = v; }
                 }
                 "statement_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.statement_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.statement_type = v; }
                 }
                 "name" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.name = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.name = v; }
                 }
                 "fiscal_period_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_period_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_period_id = v; }
                 }
                 "fiscal_year" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_year = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_year = v; }
                 }
                 "fiscal_month" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_month = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_month = v; }
                 }
                 "as_of_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.as_of_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.as_of_date = v; }
                 }
                 "period_start" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.period_start = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.period_start = v; }
                 }
                 "period_end" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.period_end = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.period_end = v; }
                 }
                 "is_comparative" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_comparative = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.is_comparative = v; }
                 }
                 "comparative_period_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.comparative_period_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.comparative_period_id = v; }
                 }
                 "comparative_as_of_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.comparative_as_of_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.comparative_as_of_date = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "total_current_assets" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_current_assets = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_current_assets = v; }
                 }
                 "total_non_current_assets" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_non_current_assets = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_non_current_assets = v; }
                 }
                 "total_assets" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_assets = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_assets = v; }
                 }
                 "total_current_liabilities" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_current_liabilities = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_current_liabilities = v; }
                 }
                 "total_non_current_liabilities" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_non_current_liabilities = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_non_current_liabilities = v; }
                 }
                 "total_liabilities" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_liabilities = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_liabilities = v; }
                 }
                 "total_equity" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_equity = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_equity = v; }
                 }
                 "balance_check" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.balance_check = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.balance_check = v; }
                 }
                 "balance_difference" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.balance_difference = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.balance_difference = v; }
                 }
                 "total_revenue" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_revenue = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_revenue = v; }
                 }
                 "total_cogs" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_cogs = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_cogs = v; }
                 }
                 "gross_profit" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.gross_profit = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.gross_profit = v; }
                 }
                 "gross_profit_margin" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.gross_profit_margin = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.gross_profit_margin = v; }
                 }
                 "total_operating_expenses" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_operating_expenses = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_operating_expenses = v; }
                 }
                 "operating_income" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.operating_income = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.operating_income = v; }
                 }
                 "operating_margin" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.operating_margin = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.operating_margin = v; }
                 }
                 "total_other_income" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_other_income = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_other_income = v; }
                 }
                 "total_other_expenses" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_other_expenses = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_other_expenses = v; }
                 }
                 "income_before_tax" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.income_before_tax = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.income_before_tax = v; }
                 }
                 "tax_expense" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.tax_expense = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.tax_expense = v; }
                 }
                 "net_income" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.net_income = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.net_income = v; }
                 }
                 "net_profit_margin" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.net_profit_margin = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.net_profit_margin = v; }
                 }
                 "cash_from_operations" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.cash_from_operations = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.cash_from_operations = v; }
                 }
                 "cash_from_investing" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.cash_from_investing = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.cash_from_investing = v; }
                 }
                 "cash_from_financing" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.cash_from_financing = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.cash_from_financing = v; }
                 }
                 "net_cash_change" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.net_cash_change = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.net_cash_change = v; }
                 }
                 "beginning_cash" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.beginning_cash = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.beginning_cash = v; }
                 }
                 "ending_cash" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.ending_cash = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.ending_cash = v; }
                 }
                 "total_debits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_debits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_debits = v; }
                 }
                 "total_credits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_credits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_credits = v; }
                 }
                 "trial_balance_check" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.trial_balance_check = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.trial_balance_check = v; }
                 }
                 "line_items" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.line_items = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.line_items = v; }
                 }
                 "comparative_data" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.comparative_data = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.comparative_data = v; }
                 }
                 "variance_data" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.variance_data = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.variance_data = v; }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
                 }
                 "management_notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.management_notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.management_notes = v; }
                 }
                 "generated_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.generated_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.generated_at = v; }
                 }
                 "generated_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.generated_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.generated_by = v; }
                 }
                 "generation_parameters" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.generation_parameters = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.generation_parameters = v; }
                 }
                 "reviewed_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reviewed_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reviewed_at = v; }
                 }
                 "reviewed_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reviewed_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reviewed_by = v; }
                 }
                 "approved_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.approved_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.approved_at = v; }
                 }
                 "approved_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.approved_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.approved_by = v; }
                 }
                 "published_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.published_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.published_at = v; }
                 }
                 "pdf_url" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.pdf_url = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.pdf_url = v; }
                 }
                 "excel_url" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.excel_url = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.excel_url = v; }
                 }
                 "currency" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.currency = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.currency = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -1375,22 +1223,12 @@ impl FinancialStatementBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<FinancialStatement, String> {
-        let company_id = self
-            .company_id
-            .ok_or_else(|| "company_id is required".to_string())?;
-        let statement_number = self
-            .statement_number
-            .ok_or_else(|| "statement_number is required".to_string())?;
-        let statement_type = self
-            .statement_type
-            .ok_or_else(|| "statement_type is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
+        let statement_number = self.statement_number.ok_or_else(|| "statement_number is required".to_string())?;
+        let statement_type = self.statement_type.ok_or_else(|| "statement_type is required".to_string())?;
         let name = self.name.ok_or_else(|| "name is required".to_string())?;
-        let fiscal_year = self
-            .fiscal_year
-            .ok_or_else(|| "fiscal_year is required".to_string())?;
-        let as_of_date = self
-            .as_of_date
-            .ok_or_else(|| "as_of_date is required".to_string())?;
+        let fiscal_year = self.fiscal_year.ok_or_else(|| "fiscal_year is required".to_string())?;
+        let as_of_date = self.as_of_date.ok_or_else(|| "as_of_date is required".to_string())?;
 
         Ok(FinancialStatement {
             id: Uuid::new_v4(),

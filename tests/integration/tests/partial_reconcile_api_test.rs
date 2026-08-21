@@ -71,22 +71,10 @@ impl TestDataGenerator for PartialReconcileTestData {
 
     async fn seed_dependencies(&self, api: &ApiTest) -> Vec<(String, String)> {
         let mut deps: Vec<(String, String)> = Vec::new();
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/journal_lines",
-            &super::journal_line_api_test::JournalLineTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/journal_lines", &super::journal_line_api_test::JournalLineTestData).await {
             deps.push(("debit_move_id".to_string(), id));
         }
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/journal_lines",
-            &super::journal_line_api_test::JournalLineTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/journal_lines", &super::journal_line_api_test::JournalLineTestData).await {
             deps.push(("credit_move_id".to_string(), id));
         }
         deps

@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the ReconciliationItem aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{ReconciliationItem, ReconciliationItemStatus};
@@ -72,29 +72,7 @@ pub struct ReconciliationItemFilter {
 impl ReconciliationItemFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.reconciliation_id.is_some()
-            || self.company_id.is_some()
-            || self.source.is_some()
-            || self.ledger_id.is_some()
-            || self.journal_id.is_some()
-            || self.book_reference.is_some()
-            || self.book_description.is_some()
-            || self.statement_reference.is_some()
-            || self.statement_description.is_some()
-            || self.status.is_some()
-            || self.matched_with_id.is_some()
-            || self.match_method.is_some()
-            || self.has_difference.is_some()
-            || self.difference_reason.is_some()
-            || self.requires_adjustment.is_some()
-            || self.adjustment_type.is_some()
-            || self.adjustment_journal_id.is_some()
-            || self.is_written_off.is_some()
-            || self.write_off_reason.is_some()
-            || self.write_off_approved_by.is_some()
-            || self.is_outstanding.is_some()
-            || self.outstanding_type.is_some()
-            || self.notes.is_some()
+        self.reconciliation_id.is_some() || self.company_id.is_some() || self.source.is_some() || self.ledger_id.is_some() || self.journal_id.is_some() || self.book_reference.is_some() || self.book_description.is_some() || self.statement_reference.is_some() || self.statement_description.is_some() || self.status.is_some() || self.matched_with_id.is_some() || self.match_method.is_some() || self.has_difference.is_some() || self.difference_reason.is_some() || self.requires_adjustment.is_some() || self.adjustment_type.is_some() || self.adjustment_journal_id.is_some() || self.is_written_off.is_some() || self.write_off_reason.is_some() || self.write_off_approved_by.is_some() || self.is_outstanding.is_some() || self.outstanding_type.is_some() || self.notes.is_some()
     }
 }
 
@@ -104,6 +82,7 @@ impl ReconciliationItemFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait ReconciliationItemRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -118,11 +97,7 @@ pub trait ReconciliationItemRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<ReconciliationItem>>;
 
     /// Update reconciliation_item by ID
-    async fn update(
-        &self,
-        id: &str,
-        entity: &ReconciliationItem,
-    ) -> Result<Option<ReconciliationItem>>;
+    async fn update(&self, id: &str, entity: &ReconciliationItem) -> Result<Option<ReconciliationItem>>;
 
     /// Delete reconciliation_item by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -132,17 +107,10 @@ pub trait ReconciliationItemRepository: Send + Sync {
     // =========================================================================
 
     /// List reconciliation_item with pagination
-    async fn list(
-        &self,
-        params: ReconciliationItemPaginationParams,
-    ) -> Result<ReconciliationItemPaginatedResult>;
+    async fn list(&self, params: ReconciliationItemPaginationParams) -> Result<ReconciliationItemPaginatedResult>;
 
     /// List reconciliation_item with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: ReconciliationItemPaginationParams,
-        filters: ReconciliationItemFilter,
-    ) -> Result<ReconciliationItemPaginatedResult>;
+    async fn list_with_filters(&self, params: ReconciliationItemPaginationParams, filters: ReconciliationItemFilter) -> Result<ReconciliationItemPaginatedResult>;
 
     /// Count all reconciliation_item entities
     async fn count(&self) -> Result<u64>;

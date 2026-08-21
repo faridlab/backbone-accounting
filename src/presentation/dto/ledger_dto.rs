@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,9 +17,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AccountType;
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::Ledger;
+use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::AccountType;
 use crate::domain::entity::NormalBalance;
 use crate::domain::entity::PartyType;
 
@@ -36,16 +36,10 @@ use crate::domain::entity::PartyType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateLedgerDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "account_id")]
     pub account_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -60,20 +54,14 @@ pub struct CreateLedgerDto {
     pub account_type: AccountType,
     #[serde(alias = "normal_balance")]
     pub normal_balance: NormalBalance,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "journal_id")]
     pub journal_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "journal_number")]
     pub journal_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "journal_line_id")]
     pub journal_line_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
@@ -82,11 +70,7 @@ pub struct CreateLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "posting_date")]
     pub posting_date: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "fiscal_period_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(range(min = 2020), range(max = 2100)))]
     #[cfg_attr(feature = "openapi", schema(example = 42))]
@@ -123,52 +107,28 @@ pub struct CreateLedgerDto {
     pub party_type: Option<PartyType>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "party_id")]
     pub party_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "cost_center_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cost_center_id")]
     pub cost_center_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "project_id")]
     pub project_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "department_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "department_id")]
     pub department_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dimensions: Option<serde_json::Value>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "source_type"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "source_reference"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconciled")]
     pub is_reconciled: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reconciliation_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
     pub reconciliation_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reconciled_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_opening_balance")]
@@ -182,17 +142,9 @@ pub struct CreateLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversed")]
     pub is_reversed: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reversed_by_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reverses_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
     pub reverses_id: Option<Uuid>,
 }
 
@@ -209,16 +161,10 @@ pub struct CreateLedgerDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateLedgerDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "account_id")]
     pub account_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -233,20 +179,14 @@ pub struct UpdateLedgerDto {
     pub account_type: AccountType,
     #[serde(alias = "normal_balance")]
     pub normal_balance: NormalBalance,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "journal_id")]
     pub journal_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "journal_number")]
     pub journal_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "journal_line_id")]
     pub journal_line_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
@@ -255,11 +195,7 @@ pub struct UpdateLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "posting_date")]
     pub posting_date: NaiveDate,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "fiscal_period_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
     pub fiscal_period_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(range(min = 2020), range(max = 2100)))]
     #[cfg_attr(feature = "openapi", schema(example = 42))]
@@ -296,52 +232,28 @@ pub struct UpdateLedgerDto {
     pub party_type: Option<PartyType>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "party_id")]
     pub party_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "cost_center_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cost_center_id")]
     pub cost_center_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "project_id")]
     pub project_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "department_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "department_id")]
     pub department_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dimensions: Option<serde_json::Value>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "source_type"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "source_reference"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reconciled")]
     pub is_reconciled: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reconciliation_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
     pub reconciliation_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reconciled_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_opening_balance")]
@@ -355,17 +267,9 @@ pub struct UpdateLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_reversed")]
     pub is_reversed: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reversed_by_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
     pub reversed_by_id: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reverses_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
     pub reverses_id: Option<Uuid>,
 }
 
@@ -382,16 +286,10 @@ pub struct UpdateLedgerDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchLedgerDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "account_id")]
     pub account_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -406,20 +304,14 @@ pub struct PatchLedgerDto {
     pub account_type: Option<AccountType>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "normal_balance")]
     pub normal_balance: Option<NormalBalance>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_id")]
     pub journal_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_number")]
     pub journal_number: Option<String>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_line_id")]
     pub journal_line_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
@@ -511,48 +403,7 @@ pub struct PatchLedgerDto {
 impl PatchLedgerDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some()
-            || self.account_id.is_some()
-            || self.account_number.is_some()
-            || self.account_name.is_some()
-            || self.account_type.is_some()
-            || self.normal_balance.is_some()
-            || self.journal_id.is_some()
-            || self.journal_number.is_some()
-            || self.journal_line_id.is_some()
-            || self.transaction_date.is_some()
-            || self.posting_date.is_some()
-            || self.fiscal_period_id.is_some()
-            || self.fiscal_year.is_some()
-            || self.fiscal_month.is_some()
-            || self.description.is_some()
-            || self.reference.is_some()
-            || self.currency.is_some()
-            || self.debit_amount.is_some()
-            || self.credit_amount.is_some()
-            || self.balance_before.is_some()
-            || self.balance_after.is_some()
-            || self.balance_change.is_some()
-            || self.sequence_number.is_some()
-            || self.branch_id.is_some()
-            || self.party_type.is_some()
-            || self.party_id.is_some()
-            || self.cost_center_id.is_some()
-            || self.project_id.is_some()
-            || self.department_id.is_some()
-            || self.dimensions.is_some()
-            || self.source_type.is_some()
-            || self.source_id.is_some()
-            || self.source_reference.is_some()
-            || self.is_reconciled.is_some()
-            || self.reconciliation_id.is_some()
-            || self.reconciled_at.is_some()
-            || self.is_opening_balance.is_some()
-            || self.is_closing_entry.is_some()
-            || self.is_adjustment.is_some()
-            || self.is_reversed.is_some()
-            || self.reversed_by_id.is_some()
-            || self.reverses_id.is_some()
+        self.company_id.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.account_type.is_some() || self.normal_balance.is_some() || self.journal_id.is_some() || self.journal_number.is_some() || self.journal_line_id.is_some() || self.transaction_date.is_some() || self.posting_date.is_some() || self.fiscal_period_id.is_some() || self.fiscal_year.is_some() || self.fiscal_month.is_some() || self.description.is_some() || self.reference.is_some() || self.currency.is_some() || self.debit_amount.is_some() || self.credit_amount.is_some() || self.balance_before.is_some() || self.balance_after.is_some() || self.balance_change.is_some() || self.sequence_number.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.dimensions.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.reconciled_at.is_some() || self.is_opening_balance.is_some() || self.is_closing_entry.is_some() || self.is_adjustment.is_some() || self.is_reversed.is_some() || self.reversed_by_id.is_some() || self.reverses_id.is_some()
     }
 }
 
@@ -568,20 +419,11 @@ impl PatchLedgerDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct LedgerResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub company_id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub account_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub account_number: String,
@@ -589,17 +431,11 @@ pub struct LedgerResponseDto {
     pub account_name: String,
     pub account_type: AccountType,
     pub normal_balance: NormalBalance,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub journal_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub journal_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub journal_line_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     pub transaction_date: NaiveDate,

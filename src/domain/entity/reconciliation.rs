@@ -1,12 +1,12 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
+use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
-use super::AuditMetadata;
-use super::ReconciliationStatus;
 use super::ReconciliationType;
+use super::ReconciliationStatus;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for Reconciliation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -14,15 +14,9 @@ use super::ReconciliationType;
 pub struct ReconciliationId(pub Uuid);
 
 impl ReconciliationId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for ReconciliationId {
@@ -39,28 +33,20 @@ impl std::str::FromStr for ReconciliationId {
 }
 
 impl From<Uuid> for ReconciliationId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<ReconciliationId> for Uuid {
-    fn from(id: ReconciliationId) -> Self {
-        id.0
-    }
+    fn from(id: ReconciliationId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for ReconciliationId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for ReconciliationId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -126,42 +112,7 @@ impl Reconciliation {
     }
 
     /// Create a new Reconciliation with required fields
-    pub fn new(
-        company_id: Uuid,
-        reconciliation_number: String,
-        account_id: Uuid,
-        account_number: String,
-        account_name: String,
-        reconciliation_type: ReconciliationType,
-        period_start: NaiveDate,
-        period_end: NaiveDate,
-        statement_date: NaiveDate,
-        opening_book_balance: Decimal,
-        opening_statement_balance: Decimal,
-        closing_book_balance: Decimal,
-        closing_statement_balance: Decimal,
-        total_matched_debits: Decimal,
-        total_matched_credits: Decimal,
-        matched_count: i32,
-        total_unmatched_book_debits: Decimal,
-        total_unmatched_book_credits: Decimal,
-        unmatched_book_count: i32,
-        total_unmatched_statement_debits: Decimal,
-        total_unmatched_statement_credits: Decimal,
-        unmatched_statement_count: i32,
-        outstanding_deposits: Decimal,
-        outstanding_checks: Decimal,
-        deposits_in_transit: Decimal,
-        bank_charges: Decimal,
-        bank_interest: Decimal,
-        nsf_checks: Decimal,
-        other_adjustments: Decimal,
-        difference: Decimal,
-        is_balanced: bool,
-        status: ReconciliationStatus,
-        has_adjusting_entries: bool,
-        adjusting_journal_ids: serde_json::Value,
-    ) -> Self {
+    pub fn new(company_id: Uuid, reconciliation_number: String, account_id: Uuid, account_number: String, account_name: String, reconciliation_type: ReconciliationType, period_start: NaiveDate, period_end: NaiveDate, statement_date: NaiveDate, opening_book_balance: Decimal, opening_statement_balance: Decimal, closing_book_balance: Decimal, closing_statement_balance: Decimal, total_matched_debits: Decimal, total_matched_credits: Decimal, matched_count: i32, total_unmatched_book_debits: Decimal, total_unmatched_book_credits: Decimal, unmatched_book_count: i32, total_unmatched_statement_debits: Decimal, total_unmatched_statement_credits: Decimal, unmatched_statement_count: i32, outstanding_deposits: Decimal, outstanding_checks: Decimal, deposits_in_transit: Decimal, bank_charges: Decimal, bank_interest: Decimal, nsf_checks: Decimal, other_adjustments: Decimal, difference: Decimal, is_balanced: bool, status: ReconciliationStatus, has_adjusting_entries: bool, adjusting_journal_ids: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -271,6 +222,7 @@ impl Reconciliation {
         &self.status
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -368,244 +320,148 @@ impl Reconciliation {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.company_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "reconciliation_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reconciliation_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reconciliation_number = v; }
                 }
                 "account_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.account_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.account_id = v; }
                 }
                 "account_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.account_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.account_number = v; }
                 }
                 "account_name" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.account_name = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.account_name = v; }
                 }
                 "reconciliation_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reconciliation_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reconciliation_type = v; }
                 }
                 "period_start" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.period_start = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.period_start = v; }
                 }
                 "period_end" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.period_end = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.period_end = v; }
                 }
                 "statement_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.statement_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.statement_date = v; }
                 }
                 "opening_book_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.opening_book_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.opening_book_balance = v; }
                 }
                 "opening_statement_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.opening_statement_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.opening_statement_balance = v; }
                 }
                 "previous_reconciliation_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.previous_reconciliation_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.previous_reconciliation_id = v; }
                 }
                 "closing_book_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.closing_book_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.closing_book_balance = v; }
                 }
                 "closing_statement_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.closing_statement_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.closing_statement_balance = v; }
                 }
                 "total_matched_debits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_matched_debits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_matched_debits = v; }
                 }
                 "total_matched_credits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_matched_credits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_matched_credits = v; }
                 }
                 "matched_count" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.matched_count = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.matched_count = v; }
                 }
                 "total_unmatched_book_debits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_unmatched_book_debits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_unmatched_book_debits = v; }
                 }
                 "total_unmatched_book_credits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_unmatched_book_credits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_unmatched_book_credits = v; }
                 }
                 "unmatched_book_count" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.unmatched_book_count = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.unmatched_book_count = v; }
                 }
                 "total_unmatched_statement_debits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_unmatched_statement_debits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_unmatched_statement_debits = v; }
                 }
                 "total_unmatched_statement_credits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_unmatched_statement_credits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_unmatched_statement_credits = v; }
                 }
                 "unmatched_statement_count" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.unmatched_statement_count = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.unmatched_statement_count = v; }
                 }
                 "outstanding_deposits" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.outstanding_deposits = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.outstanding_deposits = v; }
                 }
                 "outstanding_checks" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.outstanding_checks = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.outstanding_checks = v; }
                 }
                 "deposits_in_transit" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.deposits_in_transit = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.deposits_in_transit = v; }
                 }
                 "bank_charges" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.bank_charges = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.bank_charges = v; }
                 }
                 "bank_interest" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.bank_interest = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.bank_interest = v; }
                 }
                 "nsf_checks" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.nsf_checks = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.nsf_checks = v; }
                 }
                 "other_adjustments" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.other_adjustments = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.other_adjustments = v; }
                 }
                 "adjusted_book_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.adjusted_book_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.adjusted_book_balance = v; }
                 }
                 "adjusted_statement_balance" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.adjusted_statement_balance = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.adjusted_statement_balance = v; }
                 }
                 "difference" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.difference = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.difference = v; }
                 }
                 "is_balanced" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_balanced = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.is_balanced = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "started_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.started_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.started_at = v; }
                 }
                 "started_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.started_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.started_by = v; }
                 }
                 "completed_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.completed_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.completed_at = v; }
                 }
                 "completed_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.completed_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.completed_by = v; }
                 }
                 "reviewed_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reviewed_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reviewed_at = v; }
                 }
                 "reviewed_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reviewed_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reviewed_by = v; }
                 }
                 "has_adjusting_entries" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.has_adjusting_entries = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.has_adjusting_entries = v; }
                 }
                 "adjusting_journal_ids" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.adjusting_journal_ids = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.adjusting_journal_ids = v; }
                 }
                 "statement_source" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.statement_source = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.statement_source = v; }
                 }
                 "statement_file_url" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.statement_file_url = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.statement_file_url = v; }
                 }
                 "import_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.import_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.import_date = v; }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
                 }
                 "discrepancy_notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.discrepancy_notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.discrepancy_notes = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -664,10 +520,7 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("account_id".to_string(), "uuid".to_string());
         m.insert("previous_reconciliation_id".to_string(), "uuid".to_string());
-        m.insert(
-            "reconciliation_type".to_string(),
-            "reconciliation_type".to_string(),
-        );
+        m.insert("reconciliation_type".to_string(), "reconciliation_type".to_string());
         m.insert("status".to_string(), "reconciliation_status".to_string());
         m
     }
@@ -678,14 +531,7 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
         Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[
-            ("account", "accounts", "accountId"),
-            (
-                "previousReconciliation",
-                "reconciliations",
-                "previousReconciliationId",
-            ),
-        ]
+        &[("account", "accounts", "accountId"), ("previousReconciliation", "reconciliations", "previousReconciliationId")]
     }
 }
 
@@ -1038,42 +884,18 @@ impl ReconciliationBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Reconciliation, String> {
-        let company_id = self
-            .company_id
-            .ok_or_else(|| "company_id is required".to_string())?;
-        let reconciliation_number = self
-            .reconciliation_number
-            .ok_or_else(|| "reconciliation_number is required".to_string())?;
-        let account_id = self
-            .account_id
-            .ok_or_else(|| "account_id is required".to_string())?;
-        let account_number = self
-            .account_number
-            .ok_or_else(|| "account_number is required".to_string())?;
-        let account_name = self
-            .account_name
-            .ok_or_else(|| "account_name is required".to_string())?;
-        let period_start = self
-            .period_start
-            .ok_or_else(|| "period_start is required".to_string())?;
-        let period_end = self
-            .period_end
-            .ok_or_else(|| "period_end is required".to_string())?;
-        let statement_date = self
-            .statement_date
-            .ok_or_else(|| "statement_date is required".to_string())?;
-        let opening_book_balance = self
-            .opening_book_balance
-            .ok_or_else(|| "opening_book_balance is required".to_string())?;
-        let opening_statement_balance = self
-            .opening_statement_balance
-            .ok_or_else(|| "opening_statement_balance is required".to_string())?;
-        let closing_book_balance = self
-            .closing_book_balance
-            .ok_or_else(|| "closing_book_balance is required".to_string())?;
-        let closing_statement_balance = self
-            .closing_statement_balance
-            .ok_or_else(|| "closing_statement_balance is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
+        let reconciliation_number = self.reconciliation_number.ok_or_else(|| "reconciliation_number is required".to_string())?;
+        let account_id = self.account_id.ok_or_else(|| "account_id is required".to_string())?;
+        let account_number = self.account_number.ok_or_else(|| "account_number is required".to_string())?;
+        let account_name = self.account_name.ok_or_else(|| "account_name is required".to_string())?;
+        let period_start = self.period_start.ok_or_else(|| "period_start is required".to_string())?;
+        let period_end = self.period_end.ok_or_else(|| "period_end is required".to_string())?;
+        let statement_date = self.statement_date.ok_or_else(|| "statement_date is required".to_string())?;
+        let opening_book_balance = self.opening_book_balance.ok_or_else(|| "opening_book_balance is required".to_string())?;
+        let opening_statement_balance = self.opening_statement_balance.ok_or_else(|| "opening_statement_balance is required".to_string())?;
+        let closing_book_balance = self.closing_book_balance.ok_or_else(|| "closing_book_balance is required".to_string())?;
+        let closing_statement_balance = self.closing_statement_balance.ok_or_else(|| "closing_statement_balance is required".to_string())?;
 
         Ok(Reconciliation {
             id: Uuid::new_v4(),
@@ -1094,19 +916,11 @@ impl ReconciliationBuilder {
             total_matched_debits: self.total_matched_debits.unwrap_or(Decimal::from(0)),
             total_matched_credits: self.total_matched_credits.unwrap_or(Decimal::from(0)),
             matched_count: self.matched_count.unwrap_or(0),
-            total_unmatched_book_debits: self
-                .total_unmatched_book_debits
-                .unwrap_or(Decimal::from(0)),
-            total_unmatched_book_credits: self
-                .total_unmatched_book_credits
-                .unwrap_or(Decimal::from(0)),
+            total_unmatched_book_debits: self.total_unmatched_book_debits.unwrap_or(Decimal::from(0)),
+            total_unmatched_book_credits: self.total_unmatched_book_credits.unwrap_or(Decimal::from(0)),
             unmatched_book_count: self.unmatched_book_count.unwrap_or(0),
-            total_unmatched_statement_debits: self
-                .total_unmatched_statement_debits
-                .unwrap_or(Decimal::from(0)),
-            total_unmatched_statement_credits: self
-                .total_unmatched_statement_credits
-                .unwrap_or(Decimal::from(0)),
+            total_unmatched_statement_debits: self.total_unmatched_statement_debits.unwrap_or(Decimal::from(0)),
+            total_unmatched_statement_credits: self.total_unmatched_statement_credits.unwrap_or(Decimal::from(0)),
             unmatched_statement_count: self.unmatched_statement_count.unwrap_or(0),
             outstanding_deposits: self.outstanding_deposits.unwrap_or(Decimal::from(0)),
             outstanding_checks: self.outstanding_checks.unwrap_or(Decimal::from(0)),

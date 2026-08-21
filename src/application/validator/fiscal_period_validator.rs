@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<FiscalPeriod>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::FiscalPeriod;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::FiscalPeriod;
 
 /// Validator type alias for FiscalPeriod entities.
 pub type FiscalPeriodValidator = EntityValidator<FiscalPeriod>;
@@ -15,23 +15,13 @@ pub type FiscalPeriodValidator = EntityValidator<FiscalPeriod>;
 /// Build a validator for FiscalPeriod with all schema-defined field rules.
 pub fn fiscal_period_validator() -> FiscalPeriodValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("period_code", |e: &FiscalPeriod| {
-            &e.period_code
-        }))
+        .rule(RequiredString::new("period_code", |e: &FiscalPeriod| &e.period_code))
         .rule(RequiredString::new("name", |e: &FiscalPeriod| &e.name))
-        .rule(NonNegative::new("fiscal_year", |e: &FiscalPeriod| {
-            e.fiscal_year as i64
-        }))
+        .rule(NonNegative::new("fiscal_year", |e: &FiscalPeriod| e.fiscal_year as i64))
         .rule(NonNegative::new("level", |e: &FiscalPeriod| e.level as i64))
-        .rule(OptionalNotBlank::new("lock_reason", |e: &FiscalPeriod| {
-            e.lock_reason.as_deref()
-        }))
-        .rule(NonNegative::new("journal_count", |e: &FiscalPeriod| {
-            e.journal_count as i64
-        }))
-        .rule(OptionalNotBlank::new("notes", |e: &FiscalPeriod| {
-            e.notes.as_deref()
-        }))
+        .rule(OptionalNotBlank::new("lock_reason", |e: &FiscalPeriod| e.lock_reason.as_deref()))
+        .rule(NonNegative::new("journal_count", |e: &FiscalPeriod| e.journal_count as i64))
+        .rule(OptionalNotBlank::new("notes", |e: &FiscalPeriod| e.notes.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

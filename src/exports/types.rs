@@ -217,7 +217,7 @@ pub struct CostCenterDto {
     pub level: i32,
     pub is_group: bool,
     pub branch_id: Option<Uuid>,
-    pub is_active: bool,
+    pub status: CostCenterStatus,
     pub sort_order: i32,
     pub metadata: serde_json::Value,
 }
@@ -227,6 +227,7 @@ pub struct CostCenterDto {
 pub struct CostCenterSummary {
     pub id: CostCenterId,
     pub name: String,
+    pub status: CostCenterStatus,
 }
 
 /// Reference to CostCenter for foreign key relationships

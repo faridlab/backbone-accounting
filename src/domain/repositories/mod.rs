@@ -5,55 +5,74 @@
 //! DDD Repository traits - define persistence contracts for aggregates.
 //! Implementations should be in the infrastructure layer.
 
+
 pub mod account_repository;
 pub mod accounting_post_repository;
 pub mod cost_center_repository;
 pub mod financial_statement_repository;
 pub mod fiscal_period_repository;
-pub mod full_reconcile_repository;
-pub mod journal_line_repository;
 pub mod journal_repository;
+pub mod journal_line_repository;
 pub mod ledger_repository;
-pub mod partial_reconcile_repository;
-pub mod reconciliation_item_repository;
 pub mod reconciliation_repository;
+pub mod reconciliation_item_repository;
+pub mod full_reconcile_repository;
+pub mod partial_reconcile_repository;
 
 // Re-exports
 pub use account_repository::{
-    AccountFilter, AccountPaginatedResult, AccountPaginationParams, AccountRepository,
+    AccountRepository,
+    AccountPaginationParams,
+    AccountPaginatedResult,
+    AccountFilter,
 };
 pub use accounting_post_repository::{
-    AccountingPostFilter, AccountingPostPaginatedResult, AccountingPostPaginationParams,
     AccountingPostRepository,
+    AccountingPostPaginationParams,
+    AccountingPostPaginatedResult,
+    AccountingPostFilter,
 };
 pub use cost_center_repository::{
-    CostCenterFilter, CostCenterPaginatedResult, CostCenterPaginationParams, CostCenterRepository,
+    CostCenterRepository,
+    CostCenterPaginationParams,
+    CostCenterPaginatedResult,
+    CostCenterFilter,
 };
 pub use financial_statement_repository::{
-    FinancialStatementFilter, FinancialStatementPaginatedResult,
-    FinancialStatementPaginationParams, FinancialStatementRepository,
+    FinancialStatementRepository,
+    FinancialStatementPaginationParams,
+    FinancialStatementPaginatedResult,
+    FinancialStatementFilter,
 };
 pub use fiscal_period_repository::{
-    FiscalPeriodFilter, FiscalPeriodPaginatedResult, FiscalPeriodPaginationParams,
     FiscalPeriodRepository,
-};
-pub use journal_line_repository::{
-    JournalLineFilter, JournalLinePaginatedResult, JournalLinePaginationParams,
-    JournalLineRepository,
+    FiscalPeriodPaginationParams,
+    FiscalPeriodPaginatedResult,
+    FiscalPeriodFilter,
 };
 pub use journal_repository::{
-    JournalFilter, JournalPaginatedResult, JournalPaginationParams, JournalRepository,
+    JournalRepository,
+    JournalPaginationParams,
+    JournalPaginatedResult,
+    JournalFilter,
+};
+pub use journal_line_repository::{
+    JournalLineRepository,
+    JournalLinePaginationParams,
+    JournalLinePaginatedResult,
+    JournalLineFilter,
 };
 pub use ledger_repository::{
-    LedgerFilter, LedgerPaginatedResult, LedgerPaginationParams, LedgerRepository,
-};
-pub use reconciliation_item_repository::{
-    ReconciliationItemFilter, ReconciliationItemPaginatedResult,
-    ReconciliationItemPaginationParams, ReconciliationItemRepository,
+    LedgerRepository,
+    LedgerPaginationParams,
+    LedgerPaginatedResult,
+    LedgerFilter,
 };
 pub use reconciliation_repository::{
-    ReconciliationFilter, ReconciliationPaginatedResult, ReconciliationPaginationParams,
     ReconciliationRepository,
+    ReconciliationPaginationParams,
+    ReconciliationPaginatedResult,
+    ReconciliationFilter,
 };
 // <<< CUSTOM
 // Hand-authored ports for the GL-posting contract (not schema-derived).
@@ -84,11 +103,21 @@ pub use posting_repository::{
 pub use reconcile_graph_repository::{JournalReversalMeta, ReconcileGraphRepository};
 pub use reporting_repository::{AccountSumRow, ReportingRepository};
 // END CUSTOM
+pub use reconciliation_item_repository::{
+    ReconciliationItemRepository,
+    ReconciliationItemPaginationParams,
+    ReconciliationItemPaginatedResult,
+    ReconciliationItemFilter,
+};
 pub use full_reconcile_repository::{
-    FullReconcileFilter, FullReconcilePaginatedResult, FullReconcilePaginationParams,
     FullReconcileRepository,
+    FullReconcilePaginationParams,
+    FullReconcilePaginatedResult,
+    FullReconcileFilter,
 };
 pub use partial_reconcile_repository::{
-    PartialReconcileFilter, PartialReconcilePaginatedResult, PartialReconcilePaginationParams,
     PartialReconcileRepository,
+    PartialReconcilePaginationParams,
+    PartialReconcilePaginatedResult,
+    PartialReconcileFilter,
 };

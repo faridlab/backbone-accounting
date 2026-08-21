@@ -140,13 +140,7 @@ impl TestDataGenerator for ReconciliationTestData {
 
     async fn seed_dependencies(&self, api: &ApiTest) -> Vec<(String, String)> {
         let mut deps: Vec<(String, String)> = Vec::new();
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/accounts",
-            &super::account_api_test::AccountTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/accounts", &super::account_api_test::AccountTestData).await {
             deps.push(("account_id".to_string(), id));
         }
         deps

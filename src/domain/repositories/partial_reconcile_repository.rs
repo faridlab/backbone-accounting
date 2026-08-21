@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the PartialReconcile aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{PartialReconcile, ReconcileOrigin};
@@ -58,15 +58,7 @@ pub struct PartialReconcileFilter {
 impl PartialReconcileFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some()
-            || self.debit_move_id.is_some()
-            || self.credit_move_id.is_some()
-            || self.full_reconcile_id.is_some()
-            || self.exchange_move_id.is_some()
-            || self.currency.is_some()
-            || self.origin.is_some()
-            || self.source_type.is_some()
-            || self.source_id.is_some()
+        self.company_id.is_some() || self.debit_move_id.is_some() || self.credit_move_id.is_some() || self.full_reconcile_id.is_some() || self.exchange_move_id.is_some() || self.currency.is_some() || self.origin.is_some() || self.source_type.is_some() || self.source_id.is_some()
     }
 }
 
@@ -76,6 +68,7 @@ impl PartialReconcileFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait PartialReconcileRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -90,8 +83,7 @@ pub trait PartialReconcileRepository: Send + Sync {
     async fn find_all(&self) -> Result<Vec<PartialReconcile>>;
 
     /// Update partial_reconcile by ID
-    async fn update(&self, id: &str, entity: &PartialReconcile)
-        -> Result<Option<PartialReconcile>>;
+    async fn update(&self, id: &str, entity: &PartialReconcile) -> Result<Option<PartialReconcile>>;
 
     /// Delete partial_reconcile by ID
     async fn delete(&self, id: &str) -> Result<bool>;
@@ -101,17 +93,10 @@ pub trait PartialReconcileRepository: Send + Sync {
     // =========================================================================
 
     /// List partial_reconcile with pagination
-    async fn list(
-        &self,
-        params: PartialReconcilePaginationParams,
-    ) -> Result<PartialReconcilePaginatedResult>;
+    async fn list(&self, params: PartialReconcilePaginationParams) -> Result<PartialReconcilePaginatedResult>;
 
     /// List partial_reconcile with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: PartialReconcilePaginationParams,
-        filters: PartialReconcileFilter,
-    ) -> Result<PartialReconcilePaginatedResult>;
+    async fn list_with_filters(&self, params: PartialReconcilePaginationParams, filters: PartialReconcileFilter) -> Result<PartialReconcilePaginatedResult>;
 
     /// Count all partial_reconcile entities
     async fn count(&self) -> Result<u64>;

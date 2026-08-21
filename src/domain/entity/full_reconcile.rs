@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
 /// Strongly-typed ID for FullReconcile
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,15 +10,9 @@ use uuid::Uuid;
 pub struct FullReconcileId(pub Uuid);
 
 impl FullReconcileId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for FullReconcileId {
@@ -35,28 +29,20 @@ impl std::str::FromStr for FullReconcileId {
 }
 
 impl From<Uuid> for FullReconcileId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<FullReconcileId> for Uuid {
-    fn from(id: FullReconcileId) -> Self {
-        id.0
-    }
+    fn from(id: FullReconcileId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for FullReconcileId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for FullReconcileId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -109,6 +95,7 @@ impl FullReconcile {
         &self.updated_at
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -128,24 +115,16 @@ impl FullReconcile {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.company_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "exchange_total" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.exchange_total = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.exchange_total = v; }
                 }
                 "reconciled_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reconciled_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reconciled_at = v; }
                 }
                 "metadata" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.metadata = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.metadata = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -253,9 +232,7 @@ impl FullReconcileBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<FullReconcile, String> {
-        let company_id = self
-            .company_id
-            .ok_or_else(|| "company_id is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
 
         Ok(FullReconcile {
             id: Uuid::new_v4(),

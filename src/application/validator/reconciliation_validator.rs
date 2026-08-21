@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<Reconciliation>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::Reconciliation;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::Reconciliation;
 
 /// Validator type alias for Reconciliation entities.
 pub type ReconciliationValidator = EntityValidator<Reconciliation>;
@@ -15,43 +15,16 @@ pub type ReconciliationValidator = EntityValidator<Reconciliation>;
 /// Build a validator for Reconciliation with all schema-defined field rules.
 pub fn reconciliation_validator() -> ReconciliationValidator {
     EntityValidator::new()
-        .rule(RequiredString::new(
-            "reconciliation_number",
-            |e: &Reconciliation| &e.reconciliation_number,
-        ))
-        .rule(RequiredString::new(
-            "account_number",
-            |e: &Reconciliation| &e.account_number,
-        ))
-        .rule(RequiredString::new("account_name", |e: &Reconciliation| {
-            &e.account_name
-        }))
-        .rule(NonNegative::new("matched_count", |e: &Reconciliation| {
-            e.matched_count as i64
-        }))
-        .rule(NonNegative::new(
-            "unmatched_book_count",
-            |e: &Reconciliation| e.unmatched_book_count as i64,
-        ))
-        .rule(NonNegative::new(
-            "unmatched_statement_count",
-            |e: &Reconciliation| e.unmatched_statement_count as i64,
-        ))
-        .rule(OptionalNotBlank::new(
-            "statement_source",
-            |e: &Reconciliation| e.statement_source.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "statement_file_url",
-            |e: &Reconciliation| e.statement_file_url.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new("notes", |e: &Reconciliation| {
-            e.notes.as_deref()
-        }))
-        .rule(OptionalNotBlank::new(
-            "discrepancy_notes",
-            |e: &Reconciliation| e.discrepancy_notes.as_deref(),
-        ))
+        .rule(RequiredString::new("reconciliation_number", |e: &Reconciliation| &e.reconciliation_number))
+        .rule(RequiredString::new("account_number", |e: &Reconciliation| &e.account_number))
+        .rule(RequiredString::new("account_name", |e: &Reconciliation| &e.account_name))
+        .rule(NonNegative::new("matched_count", |e: &Reconciliation| e.matched_count as i64))
+        .rule(NonNegative::new("unmatched_book_count", |e: &Reconciliation| e.unmatched_book_count as i64))
+        .rule(NonNegative::new("unmatched_statement_count", |e: &Reconciliation| e.unmatched_statement_count as i64))
+        .rule(OptionalNotBlank::new("statement_source", |e: &Reconciliation| e.statement_source.as_deref()))
+        .rule(OptionalNotBlank::new("statement_file_url", |e: &Reconciliation| e.statement_file_url.as_deref()))
+        .rule(OptionalNotBlank::new("notes", |e: &Reconciliation| e.notes.as_deref()))
+        .rule(OptionalNotBlank::new("discrepancy_notes", |e: &Reconciliation| e.discrepancy_notes.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

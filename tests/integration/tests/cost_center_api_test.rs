@@ -32,7 +32,7 @@ impl TestDataGenerator for CostCenterTestData {
             "level": 1,
             "is_group": false,
             "branch_id": null,
-            "is_active": false,
+            "status": "active",
             "sort_order": 1,
             "metadata": json!({}),
         })
@@ -50,7 +50,7 @@ impl TestDataGenerator for CostCenterTestData {
             "level": 1,
             "is_group": false,
             "branch_id": null,
-            "is_active": false,
+            "status": "active",
             "sort_order": 1,
             "metadata": json!({}),
         })

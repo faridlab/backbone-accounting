@@ -21,6 +21,7 @@ pub enum PostingSourceType {
     Maintenance,
     Equity,
     Manual,
+    Reconciliation,
 }
 
 impl std::fmt::Display for PostingSourceType {
@@ -38,6 +39,7 @@ impl std::fmt::Display for PostingSourceType {
             Self::Maintenance => write!(f, "maintenance"),
             Self::Equity => write!(f, "equity"),
             Self::Manual => write!(f, "manual"),
+            Self::Reconciliation => write!(f, "reconciliation"),
         }
     }
 }
@@ -59,6 +61,7 @@ impl FromStr for PostingSourceType {
             "maintenance" => Ok(Self::Maintenance),
             "equity" => Ok(Self::Equity),
             "manual" => Ok(Self::Manual),
+            "reconciliation" => Ok(Self::Reconciliation),
             _ => Err(format!("Unknown PostingSourceType variant: {}", s)),
         }
     }

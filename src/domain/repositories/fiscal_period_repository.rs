@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the FiscalPeriod aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{FiscalPeriod, PeriodStatus, PeriodType};
@@ -66,23 +66,7 @@ pub struct FiscalPeriodFilter {
 impl FiscalPeriodFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some()
-            || self.period_code.is_some()
-            || self.name.is_some()
-            || self.period_type.is_some()
-            || self.parent_id.is_some()
-            || self.status.is_some()
-            || self.is_current.is_some()
-            || self.opening_balance_set.is_some()
-            || self.opening_balance_by.is_some()
-            || self.closing_started_by.is_some()
-            || self.closed_by.is_some()
-            || self.locked_by.is_some()
-            || self.lock_reason.is_some()
-            || self.allow_adjustments.is_some()
-            || self.balance_sheet_generated.is_some()
-            || self.income_statement_generated.is_some()
-            || self.notes.is_some()
+        self.company_id.is_some() || self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.parent_id.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_by.is_some() || self.closing_started_by.is_some() || self.closed_by.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.allow_adjustments.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.notes.is_some()
     }
 }
 
@@ -92,6 +76,7 @@ impl FiscalPeriodFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait FiscalPeriodRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -116,17 +101,10 @@ pub trait FiscalPeriodRepository: Send + Sync {
     // =========================================================================
 
     /// List fiscal_period with pagination
-    async fn list(
-        &self,
-        params: FiscalPeriodPaginationParams,
-    ) -> Result<FiscalPeriodPaginatedResult>;
+    async fn list(&self, params: FiscalPeriodPaginationParams) -> Result<FiscalPeriodPaginatedResult>;
 
     /// List fiscal_period with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: FiscalPeriodPaginationParams,
-        filters: FiscalPeriodFilter,
-    ) -> Result<FiscalPeriodPaginatedResult>;
+    async fn list_with_filters(&self, params: FiscalPeriodPaginationParams, filters: FiscalPeriodFilter) -> Result<FiscalPeriodPaginatedResult>;
 
     /// Count all fiscal_period entities
     async fn count(&self) -> Result<u64>;
@@ -148,10 +126,7 @@ pub trait FiscalPeriodRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<FiscalPeriod>>;
 
     /// List soft-deleted fiscal_period entities
-    async fn list_deleted(
-        &self,
-        params: FiscalPeriodPaginationParams,
-    ) -> Result<FiscalPeriodPaginatedResult>;
+    async fn list_deleted(&self, params: FiscalPeriodPaginationParams) -> Result<FiscalPeriodPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

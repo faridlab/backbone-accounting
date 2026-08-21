@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<ReconciliationItem>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::ReconciliationItem;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::ReconciliationItem;
 
 /// Validator type alias for ReconciliationItem entities.
 pub type ReconciliationItemValidator = EntityValidator<ReconciliationItem>;
@@ -15,48 +15,17 @@ pub type ReconciliationItemValidator = EntityValidator<ReconciliationItem>;
 /// Build a validator for ReconciliationItem with all schema-defined field rules.
 pub fn reconciliation_item_validator() -> ReconciliationItemValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("source", |e: &ReconciliationItem| {
-            &e.source
-        }))
-        .rule(OptionalNotBlank::new(
-            "book_reference",
-            |e: &ReconciliationItem| e.book_reference.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "book_description",
-            |e: &ReconciliationItem| e.book_description.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "statement_reference",
-            |e: &ReconciliationItem| e.statement_reference.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "statement_description",
-            |e: &ReconciliationItem| e.statement_description.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "match_method",
-            |e: &ReconciliationItem| e.match_method.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "difference_reason",
-            |e: &ReconciliationItem| e.difference_reason.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "adjustment_type",
-            |e: &ReconciliationItem| e.adjustment_type.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "write_off_reason",
-            |e: &ReconciliationItem| e.write_off_reason.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "outstanding_type",
-            |e: &ReconciliationItem| e.outstanding_type.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new("notes", |e: &ReconciliationItem| {
-            e.notes.as_deref()
-        }))
+        .rule(RequiredString::new("source", |e: &ReconciliationItem| &e.source))
+        .rule(OptionalNotBlank::new("book_reference", |e: &ReconciliationItem| e.book_reference.as_deref()))
+        .rule(OptionalNotBlank::new("book_description", |e: &ReconciliationItem| e.book_description.as_deref()))
+        .rule(OptionalNotBlank::new("statement_reference", |e: &ReconciliationItem| e.statement_reference.as_deref()))
+        .rule(OptionalNotBlank::new("statement_description", |e: &ReconciliationItem| e.statement_description.as_deref()))
+        .rule(OptionalNotBlank::new("match_method", |e: &ReconciliationItem| e.match_method.as_deref()))
+        .rule(OptionalNotBlank::new("difference_reason", |e: &ReconciliationItem| e.difference_reason.as_deref()))
+        .rule(OptionalNotBlank::new("adjustment_type", |e: &ReconciliationItem| e.adjustment_type.as_deref()))
+        .rule(OptionalNotBlank::new("write_off_reason", |e: &ReconciliationItem| e.write_off_reason.as_deref()))
+        .rule(OptionalNotBlank::new("outstanding_type", |e: &ReconciliationItem| e.outstanding_type.as_deref()))
+        .rule(OptionalNotBlank::new("notes", |e: &ReconciliationItem| e.notes.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

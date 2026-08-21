@@ -61,10 +61,11 @@ models:
         attributes: ["@exclude_from_foreign_key_check"]
         description: "Associated branch # logical FK to organization.Branch.id"
 
-      is_active:
-        type: bool
-        attributes: ["@default(true)"]
-        description: "Active for posting"
+      # replaces is_active (boolean flipped to lifecycle enum)
+      status:
+        type: CostCenterStatus
+        attributes: ["@default(active)"]
+        description: "Lifecycle (only an active cost center accepts postings)"
 
       sort_order:
         type: int
@@ -108,4 +109,14 @@ models:
       - type: index
         fields: [company_id, parent_id, sort_order]
       - type: index
-        fields: [company_id, is_active]
+        fields: [company_id, status]
+
+enums:
+  - name: CostCenterStatus
+    description: "Lifecycle of a cost center"
+    variants:
+      - name: active
+        description: "Accepts postings"
+        default: true
+      - name: inactive
+        description: "Retired cost center; historical postings keep their reference"

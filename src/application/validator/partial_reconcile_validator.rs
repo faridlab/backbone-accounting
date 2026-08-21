@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<PartialReconcile>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::PartialReconcile;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::PartialReconcile;
 
 /// Validator type alias for PartialReconcile entities.
 pub type PartialReconcileValidator = EntityValidator<PartialReconcile>;
@@ -15,13 +15,8 @@ pub type PartialReconcileValidator = EntityValidator<PartialReconcile>;
 /// Build a validator for PartialReconcile with all schema-defined field rules.
 pub fn partial_reconcile_validator() -> PartialReconcileValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("currency", |e: &PartialReconcile| {
-            &e.currency
-        }))
-        .rule(OptionalNotBlank::new(
-            "source_type",
-            |e: &PartialReconcile| e.source_type.as_deref(),
-        ))
+        .rule(RequiredString::new("currency", |e: &PartialReconcile| &e.currency))
+        .rule(OptionalNotBlank::new("source_type", |e: &PartialReconcile| e.source_type.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

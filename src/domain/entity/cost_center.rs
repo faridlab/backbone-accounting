@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+
+use super::CostCenterStatus;
 use super::AuditMetadata;
 
 /// Strongly-typed ID for CostCenter
@@ -56,7 +58,7 @@ pub struct CostCenter {
     pub level: i32,
     pub is_group: bool,
     pub branch_id: Option<Uuid>,
-    pub is_active: bool,
+    pub status: CostCenterStatus,
     pub sort_order: i32,
     #[serde(default)]
     #[sqlx(json)]
@@ -70,7 +72,7 @@ impl CostCenter {
     }
 
     /// Create a new CostCenter with required fields
-    pub fn new(company_id: Uuid, code: String, name: String, level: i32, is_group: bool, is_active: bool, sort_order: i32) -> Self {
+    pub fn new(company_id: Uuid, code: String, name: String, level: i32, is_group: bool, status: CostCenterStatus, sort_order: i32) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -81,7 +83,7 @@ impl CostCenter {
             level,
             is_group,
             branch_id: None,
-            is_active,
+            status,
             sort_order,
             metadata: AuditMetadata::default(),
         }
@@ -135,6 +137,11 @@ impl CostCenter {
     /// Get who deleted this entity
     pub fn deleted_by(&self) -> Option<&Uuid> {
         self.metadata.deleted_by.as_ref()
+    }
+
+    /// Get the current status
+    pub fn status(&self) -> &CostCenterStatus {
+        &self.status
     }
 
 
@@ -192,8 +199,8 @@ impl CostCenter {
                 "branch_id" => {
                     if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
                 }
-                "is_active" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.is_active = v; }
+                "status" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "sort_order" => {
                     if let Ok(v) = serde_json::from_value(value) { self.sort_order = v; }
@@ -255,6 +262,7 @@ impl backbone_orm::EntityRepoMeta for CostCenter {
         m.insert("company_id".to_string(), "uuid".to_string());
         m.insert("parent_id".to_string(), "uuid".to_string());
         m.insert("branch_id".to_string(), "uuid".to_string());
+        m.insert("status".to_string(), "cost_center_status".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
@@ -282,7 +290,7 @@ pub struct CostCenterBuilder {
     level: Option<i32>,
     is_group: Option<bool>,
     branch_id: Option<Uuid>,
-    is_active: Option<bool>,
+    status: Option<CostCenterStatus>,
     sort_order: Option<i32>,
 }
 
@@ -335,9 +343,9 @@ impl CostCenterBuilder {
         self
     }
 
-    /// Set the is_active field (default: `true`)
-    pub fn is_active(mut self, value: bool) -> Self {
-        self.is_active = Some(value);
+    /// Set the status field (default: `CostCenterStatus::default()`)
+    pub fn status(mut self, value: CostCenterStatus) -> Self {
+        self.status = Some(value);
         self
     }
 
@@ -365,7 +373,7 @@ impl CostCenterBuilder {
             level: self.level.unwrap_or(0),
             is_group: self.is_group.unwrap_or(false),
             branch_id: self.branch_id,
-            is_active: self.is_active.unwrap_or(true),
+            status: self.status.unwrap_or_default(),
             sort_order: self.sort_order.unwrap_or(0),
             metadata: AuditMetadata::default(),
         })

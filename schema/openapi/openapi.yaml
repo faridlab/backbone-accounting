@@ -5272,7 +5272,7 @@ components:
         - name
         - level
         - is_group
-        - is_active
+        - status
         - sort_order
         - metadata
       properties:
@@ -5305,8 +5305,8 @@ components:
           nullable: true
           type: string
           format: uuid
-        is_active:
-          type: boolean
+        status:
+          type: string
         sort_order:
           type: integer
           format: int32
@@ -5334,7 +5334,7 @@ components:
         - name
         - level
         - is_group
-        - is_active
+        - status
         - sort_order
         - metadata
       properties:
@@ -5364,8 +5364,8 @@ components:
           nullable: true
           type: string
           format: uuid
-        is_active:
-          type: boolean
+        status:
+          type: string
         sort_order:
           type: integer
           format: int32
@@ -5380,7 +5380,7 @@ components:
         - name
         - level
         - is_group
-        - is_active
+        - status
         - sort_order
         - metadata
       properties:
@@ -5410,8 +5410,8 @@ components:
           nullable: true
           type: string
           format: uuid
-        is_active:
-          type: boolean
+        status:
+          type: string
         sort_order:
           type: integer
           format: int32
@@ -5447,8 +5447,8 @@ components:
           nullable: true
           type: string
           format: uuid
-        is_active:
-          type: boolean
+        status:
+          type: string
         sort_order:
           type: integer
           format: int32

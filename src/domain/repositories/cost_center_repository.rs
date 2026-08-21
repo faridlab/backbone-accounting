@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::domain::entity::CostCenter;
+use crate::domain::entity::{CostCenter, CostCenterStatus};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -51,13 +51,13 @@ pub struct CostCenterFilter {
     pub parent_id: Option<Uuid>,
     pub is_group: Option<bool>,
     pub branch_id: Option<Uuid>,
-    pub is_active: Option<bool>,
+    pub status: Option<CostCenterStatus>,
 }
 
 impl CostCenterFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.is_active.is_some()
+        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.status.is_some()
     }
 }
 

@@ -1,13 +1,13 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
+use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
-use super::AuditMetadata;
+use super::JournalType;
 use super::JournalSource;
 use super::JournalStatus;
-use super::JournalType;
+use super::AuditMetadata;
 
 /// Strongly-typed ID for Journal
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -15,15 +15,9 @@ use super::JournalType;
 pub struct JournalId(pub Uuid);
 
 impl JournalId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for JournalId {
@@ -40,28 +34,20 @@ impl std::str::FromStr for JournalId {
 }
 
 impl From<Uuid> for JournalId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<JournalId> for Uuid {
-    fn from(id: JournalId) -> Self {
-        id.0
-    }
+    fn from(id: JournalId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for JournalId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for JournalId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -124,25 +110,7 @@ impl Journal {
     }
 
     /// Create a new Journal with required fields
-    pub fn new(
-        company_id: Uuid,
-        journal_number: String,
-        journal_type: JournalType,
-        transaction_date: NaiveDate,
-        description: String,
-        currency: String,
-        total_debit: Decimal,
-        total_credit: Decimal,
-        line_count: i32,
-        source: JournalSource,
-        is_reversed: bool,
-        is_reversing: bool,
-        auto_reverse: bool,
-        status: JournalStatus,
-        requires_approval: bool,
-        is_voided: bool,
-        attachments: serde_json::Value,
-    ) -> Self {
+    pub fn new(company_id: Uuid, journal_number: String, journal_type: JournalType, transaction_date: NaiveDate, description: String, currency: String, total_debit: Decimal, total_credit: Decimal, line_count: i32, source: JournalSource, is_reversed: bool, is_reversing: bool, auto_reverse: bool, status: JournalStatus, requires_approval: bool, is_voided: bool, attachments: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -248,6 +216,7 @@ impl Journal {
     pub fn status(&self) -> &JournalStatus {
         &self.status
     }
+
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -430,229 +399,139 @@ impl Journal {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.company_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
                 }
                 "journal_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.journal_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.journal_number = v; }
                 }
                 "reference_number" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reference_number = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reference_number = v; }
                 }
                 "journal_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.journal_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.journal_type = v; }
                 }
                 "branch_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.branch_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
                 }
                 "transaction_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.transaction_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.transaction_date = v; }
                 }
                 "posting_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.posting_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.posting_date = v; }
                 }
                 "fiscal_period_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_period_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_period_id = v; }
                 }
                 "fiscal_year" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_year = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_year = v; }
                 }
                 "fiscal_month" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.fiscal_month = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.fiscal_month = v; }
                 }
                 "description" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.description = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.description = v; }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.notes = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
                 }
                 "currency" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.currency = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.currency = v; }
                 }
                 "total_debit" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_debit = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_debit = v; }
                 }
                 "total_credit" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.total_credit = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.total_credit = v; }
                 }
                 "line_count" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.line_count = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.line_count = v; }
                 }
                 "source" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.source = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.source = v; }
                 }
                 "source_type" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.source_type = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.source_type = v; }
                 }
                 "source_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.source_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.source_id = v; }
                 }
                 "source_reference" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.source_reference = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.source_reference = v; }
                 }
                 "is_reversed" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_reversed = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.is_reversed = v; }
                 }
                 "reversed_by_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reversed_by_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reversed_by_id = v; }
                 }
                 "reversed_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reversed_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reversed_at = v; }
                 }
                 "reversal_reason" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reversal_reason = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reversal_reason = v; }
                 }
                 "reverses_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reverses_id = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reverses_id = v; }
                 }
                 "is_reversing" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_reversing = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.is_reversing = v; }
                 }
                 "auto_reverse" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.auto_reverse = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.auto_reverse = v; }
                 }
                 "auto_reverse_date" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.auto_reverse_date = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.auto_reverse_date = v; }
                 }
                 "status" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.status = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.status = v; }
                 }
                 "requires_approval" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.requires_approval = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.requires_approval = v; }
                 }
                 "approval_threshold" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.approval_threshold = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.approval_threshold = v; }
                 }
                 "submitted_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.submitted_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.submitted_at = v; }
                 }
                 "submitted_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.submitted_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.submitted_by = v; }
                 }
                 "approved_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.approved_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.approved_at = v; }
                 }
                 "approved_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.approved_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.approved_by = v; }
                 }
                 "rejected_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.rejected_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.rejected_at = v; }
                 }
                 "rejected_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.rejected_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.rejected_by = v; }
                 }
                 "rejection_reason" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.rejection_reason = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.rejection_reason = v; }
                 }
                 "posted_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.posted_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.posted_at = v; }
                 }
                 "posted_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.posted_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.posted_by = v; }
                 }
                 "is_voided" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.is_voided = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.is_voided = v; }
                 }
                 "voided_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.voided_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.voided_at = v; }
                 }
                 "voided_by" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.voided_by = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.voided_by = v; }
                 }
                 "void_reason" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.void_reason = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.void_reason = v; }
                 }
                 "attachments" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.attachments = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.attachments = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -726,11 +605,7 @@ impl backbone_orm::EntityRepoMeta for Journal {
         Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[
-            ("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"),
-            ("reversedBy", "journals", "reversedById"),
-            ("reverses", "journals", "reversesId"),
-        ]
+        &[("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("reversedBy", "journals", "reversedById"), ("reverses", "journals", "reversesId")]
     }
 }
 
@@ -1062,18 +937,10 @@ impl JournalBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<Journal, String> {
-        let company_id = self
-            .company_id
-            .ok_or_else(|| "company_id is required".to_string())?;
-        let journal_number = self
-            .journal_number
-            .ok_or_else(|| "journal_number is required".to_string())?;
-        let transaction_date = self
-            .transaction_date
-            .ok_or_else(|| "transaction_date is required".to_string())?;
-        let description = self
-            .description
-            .ok_or_else(|| "description is required".to_string())?;
+        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
+        let journal_number = self.journal_number.ok_or_else(|| "journal_number is required".to_string())?;
+        let transaction_date = self.transaction_date.ok_or_else(|| "transaction_date is required".to_string())?;
+        let description = self.description.ok_or_else(|| "description is required".to_string())?;
 
         Ok(Journal {
             id: Uuid::new_v4(),

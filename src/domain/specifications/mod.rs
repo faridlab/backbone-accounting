@@ -4,20 +4,20 @@
 //!
 //! Combinators (AND/OR/NOT) come from `backbone_core::Specification`.
 
-pub use backbone_core::{AndSpecification, NotSpecification, OrSpecification, Specification};
+pub use backbone_core::{Specification, AndSpecification, OrSpecification, NotSpecification};
 
 pub mod account_specification;
 pub mod accounting_post_specification;
 pub mod cost_center_specification;
 pub mod financial_statement_specification;
 pub mod fiscal_period_specification;
-pub mod full_reconcile_specification;
-pub mod journal_line_specification;
 pub mod journal_specification;
+pub mod journal_line_specification;
 pub mod ledger_specification;
-pub mod partial_reconcile_specification;
-pub mod reconciliation_item_specification;
 pub mod reconciliation_specification;
+pub mod reconciliation_item_specification;
+pub mod full_reconcile_specification;
+pub mod partial_reconcile_specification;
 
 // <<< CUSTOM
 // END CUSTOM

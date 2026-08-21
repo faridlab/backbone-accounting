@@ -608,4 +608,3 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
 // Add custom DTOs specific to Account here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

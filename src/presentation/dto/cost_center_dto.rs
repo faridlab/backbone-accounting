@@ -18,6 +18,7 @@ use validator::Validate;
 
 use crate::domain::entity::CostCenter;
 use crate::domain::entity::AuditMetadata;
+use crate::domain::entity::CostCenterStatus;
 
 // =============================================================================
 // Create DTO
@@ -53,9 +54,7 @@ pub struct CreateCostCenterDto {
     pub is_group: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: CostCenterStatus,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
     pub sort_order: i32,
@@ -95,9 +94,7 @@ pub struct UpdateCostCenterDto {
     pub is_group: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_active")]
-    pub is_active: bool,
+    pub status: CostCenterStatus,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
     pub sort_order: i32,
@@ -140,9 +137,8 @@ pub struct PatchCostCenterDto {
     pub is_group: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "is_active")]
-    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<CostCenterStatus>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "sort_order")]
     pub sort_order: Option<i32>,
@@ -151,7 +147,7 @@ pub struct PatchCostCenterDto {
 impl PatchCostCenterDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.level.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.is_active.is_some() || self.sort_order.is_some()
+        self.company_id.is_some() || self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.level.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.status.is_some() || self.sort_order.is_some()
     }
 }
 
@@ -182,8 +178,7 @@ pub struct CostCenterResponseDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub is_group: bool,
     pub branch_id: Option<Uuid>,
-    #[cfg_attr(feature = "openapi", schema(example = true))]
-    pub is_active: bool,
+    pub status: CostCenterStatus,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     pub sort_order: i32,
     pub metadata: AuditMetadata,
@@ -265,7 +260,7 @@ impl From<CostCenter> for CostCenterResponseDto {
             level: entity.level,
             is_group: entity.is_group,
             branch_id: entity.branch_id,
-            is_active: entity.is_active,
+            status: entity.status,
             sort_order: entity.sort_order,
             metadata: entity.metadata,
         }
@@ -297,7 +292,7 @@ impl From<CreateCostCenterDto> for CostCenter {
             level: dto.level,
             is_group: dto.is_group,
             branch_id: dto.branch_id,
-            is_active: dto.is_active,
+            status: dto.status,
             sort_order: dto.sort_order,
             metadata: AuditMetadata::default(),
         }
@@ -316,7 +311,7 @@ impl From<&CostCenter> for CostCenterResponseDto {
             level: entity.level.clone(),
             is_group: entity.is_group.clone(),
             branch_id: entity.branch_id.clone(),
-            is_active: entity.is_active.clone(),
+            status: entity.status.clone(),
             sort_order: entity.sort_order.clone(),
             metadata: entity.metadata.clone(),
         }
@@ -339,7 +334,7 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
         self.level = dto.level;
         self.is_group = dto.is_group;
         self.branch_id = dto.branch_id;
-        self.is_active = dto.is_active;
+        self.status = dto.status;
         self.sort_order = dto.sort_order;
         Ok(self)
     }
@@ -353,4 +348,3 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
 // Add custom DTOs specific to CostCenter here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
-

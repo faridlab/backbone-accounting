@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -17,8 +17,8 @@ use utoipa::ToSchema;
 #[cfg(feature = "validation")]
 use validator::Validate;
 
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::Reconciliation;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::ReconciliationStatus;
 use crate::domain::entity::ReconciliationType;
 
@@ -35,20 +35,14 @@ use crate::domain::entity::ReconciliationType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateReconciliationDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "reconciliation_number")]
     pub reconciliation_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "account_id")]
     pub account_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -74,11 +68,7 @@ pub struct CreateReconciliationDto {
     pub opening_book_balance: Decimal,
     #[serde(alias = "opening_statement_balance")]
     pub opening_statement_balance: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "previous_reconciliation_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "previous_reconciliation_id")]
     pub previous_reconciliation_id: Option<Uuid>,
     #[serde(alias = "closing_book_balance")]
     pub closing_book_balance: Decimal,
@@ -119,17 +109,9 @@ pub struct CreateReconciliationDto {
     pub nsf_checks: Decimal,
     #[serde(alias = "other_adjustments")]
     pub other_adjustments: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_book_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_book_balance")]
     pub adjusted_book_balance: Option<Decimal>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_statement_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_statement_balance")]
     pub adjusted_statement_balance: Option<Decimal>,
     pub difference: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
@@ -140,29 +122,13 @@ pub struct CreateReconciliationDto {
     pub started_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "started_by")]
     pub started_by: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "completed_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "completed_at")]
     pub completed_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "completed_by"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "completed_by")]
     pub completed_by: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reviewed_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reviewed_by"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
     pub reviewed_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_adjusting_entries")]
@@ -170,34 +136,18 @@ pub struct CreateReconciliationDto {
     #[serde(alias = "adjusting_journal_ids")]
     pub adjusting_journal_ids: serde_json::Value,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "statement_source"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statement_source")]
     pub statement_source: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "statement_file_url"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statement_file_url")]
     pub statement_file_url: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "import_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "import_date")]
     pub import_date: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "discrepancy_notes"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "discrepancy_notes")]
     pub discrepancy_notes: Option<String>,
 }
 
@@ -214,20 +164,14 @@ pub struct CreateReconciliationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateReconciliationDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "reconciliation_number")]
     pub reconciliation_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(alias = "account_id")]
     pub account_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -253,11 +197,7 @@ pub struct UpdateReconciliationDto {
     pub opening_book_balance: Decimal,
     #[serde(alias = "opening_statement_balance")]
     pub opening_statement_balance: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "previous_reconciliation_id"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "previous_reconciliation_id")]
     pub previous_reconciliation_id: Option<Uuid>,
     #[serde(alias = "closing_book_balance")]
     pub closing_book_balance: Decimal,
@@ -298,17 +238,9 @@ pub struct UpdateReconciliationDto {
     pub nsf_checks: Decimal,
     #[serde(alias = "other_adjustments")]
     pub other_adjustments: Decimal,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_book_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_book_balance")]
     pub adjusted_book_balance: Option<Decimal>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_statement_balance"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_statement_balance")]
     pub adjusted_statement_balance: Option<Decimal>,
     pub difference: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
@@ -319,29 +251,13 @@ pub struct UpdateReconciliationDto {
     pub started_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "started_by")]
     pub started_by: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "completed_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "completed_at")]
     pub completed_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "completed_by"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "completed_by")]
     pub completed_by: Option<Uuid>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reviewed_at"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
     pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "reviewed_by"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
     pub reviewed_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_adjusting_entries")]
@@ -349,34 +265,18 @@ pub struct UpdateReconciliationDto {
     #[serde(alias = "adjusting_journal_ids")]
     pub adjusting_journal_ids: serde_json::Value,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "statement_source"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statement_source")]
     pub statement_source: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 500)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "statement_file_url"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "statement_file_url")]
     pub statement_file_url: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "import_date"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "import_date")]
     pub import_date: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        alias = "discrepancy_notes"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "discrepancy_notes")]
     pub discrepancy_notes: Option<String>,
 }
 
@@ -393,23 +293,14 @@ pub struct UpdateReconciliationDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchReconciliationDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 30)))]
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "reconciliation_number"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "reconciliation_number")]
     pub reconciliation_number: Option<String>,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "account_id")]
     pub account_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -431,80 +322,38 @@ pub struct PatchReconciliationDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "statement_date")]
     pub statement_date: Option<NaiveDate>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "opening_book_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_book_balance")]
     pub opening_book_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "opening_statement_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_statement_balance")]
     pub opening_statement_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "previous_reconciliation_id"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "previous_reconciliation_id")]
     pub previous_reconciliation_id: Option<Uuid>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "closing_book_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "closing_book_balance")]
     pub closing_book_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "closing_statement_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "closing_statement_balance")]
     pub closing_statement_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_matched_debits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_matched_debits")]
     pub total_matched_debits: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_matched_credits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_matched_credits")]
     pub total_matched_credits: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "matched_count")]
     pub matched_count: Option<i32>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_unmatched_book_debits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_unmatched_book_debits")]
     pub total_unmatched_book_debits: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_unmatched_book_credits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_unmatched_book_credits")]
     pub total_unmatched_book_credits: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "unmatched_book_count"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "unmatched_book_count")]
     pub unmatched_book_count: Option<i32>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_unmatched_statement_debits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_unmatched_statement_debits")]
     pub total_unmatched_statement_debits: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "total_unmatched_statement_credits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "total_unmatched_statement_credits")]
     pub total_unmatched_statement_credits: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "unmatched_statement_count"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "unmatched_statement_count")]
     pub unmatched_statement_count: Option<i32>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "outstanding_deposits"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "outstanding_deposits")]
     pub outstanding_deposits: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "outstanding_checks")]
     pub outstanding_checks: Option<Decimal>,
@@ -518,15 +367,9 @@ pub struct PatchReconciliationDto {
     pub nsf_checks: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "other_adjustments")]
     pub other_adjustments: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_book_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "adjusted_book_balance")]
     pub adjusted_book_balance: Option<Decimal>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusted_statement_balance"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "adjusted_statement_balance")]
     pub adjusted_statement_balance: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub difference: Option<Decimal>,
@@ -548,15 +391,9 @@ pub struct PatchReconciliationDto {
     #[serde(skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
     pub reviewed_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "has_adjusting_entries"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "has_adjusting_entries")]
     pub has_adjusting_entries: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "adjusting_journal_ids"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "adjusting_journal_ids")]
     pub adjusting_journal_ids: Option<serde_json::Value>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "statement_source")]
@@ -577,54 +414,7 @@ pub struct PatchReconciliationDto {
 impl PatchReconciliationDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some()
-            || self.reconciliation_number.is_some()
-            || self.account_id.is_some()
-            || self.account_number.is_some()
-            || self.account_name.is_some()
-            || self.reconciliation_type.is_some()
-            || self.period_start.is_some()
-            || self.period_end.is_some()
-            || self.statement_date.is_some()
-            || self.opening_book_balance.is_some()
-            || self.opening_statement_balance.is_some()
-            || self.previous_reconciliation_id.is_some()
-            || self.closing_book_balance.is_some()
-            || self.closing_statement_balance.is_some()
-            || self.total_matched_debits.is_some()
-            || self.total_matched_credits.is_some()
-            || self.matched_count.is_some()
-            || self.total_unmatched_book_debits.is_some()
-            || self.total_unmatched_book_credits.is_some()
-            || self.unmatched_book_count.is_some()
-            || self.total_unmatched_statement_debits.is_some()
-            || self.total_unmatched_statement_credits.is_some()
-            || self.unmatched_statement_count.is_some()
-            || self.outstanding_deposits.is_some()
-            || self.outstanding_checks.is_some()
-            || self.deposits_in_transit.is_some()
-            || self.bank_charges.is_some()
-            || self.bank_interest.is_some()
-            || self.nsf_checks.is_some()
-            || self.other_adjustments.is_some()
-            || self.adjusted_book_balance.is_some()
-            || self.adjusted_statement_balance.is_some()
-            || self.difference.is_some()
-            || self.is_balanced.is_some()
-            || self.status.is_some()
-            || self.started_at.is_some()
-            || self.started_by.is_some()
-            || self.completed_at.is_some()
-            || self.completed_by.is_some()
-            || self.reviewed_at.is_some()
-            || self.reviewed_by.is_some()
-            || self.has_adjusting_entries.is_some()
-            || self.adjusting_journal_ids.is_some()
-            || self.statement_source.is_some()
-            || self.statement_file_url.is_some()
-            || self.import_date.is_some()
-            || self.notes.is_some()
-            || self.discrepancy_notes.is_some()
+        self.company_id.is_some() || self.reconciliation_number.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.reconciliation_type.is_some() || self.period_start.is_some() || self.period_end.is_some() || self.statement_date.is_some() || self.opening_book_balance.is_some() || self.opening_statement_balance.is_some() || self.previous_reconciliation_id.is_some() || self.closing_book_balance.is_some() || self.closing_statement_balance.is_some() || self.total_matched_debits.is_some() || self.total_matched_credits.is_some() || self.matched_count.is_some() || self.total_unmatched_book_debits.is_some() || self.total_unmatched_book_credits.is_some() || self.unmatched_book_count.is_some() || self.total_unmatched_statement_debits.is_some() || self.total_unmatched_statement_credits.is_some() || self.unmatched_statement_count.is_some() || self.outstanding_deposits.is_some() || self.outstanding_checks.is_some() || self.deposits_in_transit.is_some() || self.bank_charges.is_some() || self.bank_interest.is_some() || self.nsf_checks.is_some() || self.other_adjustments.is_some() || self.adjusted_book_balance.is_some() || self.adjusted_statement_balance.is_some() || self.difference.is_some() || self.is_balanced.is_some() || self.status.is_some() || self.started_at.is_some() || self.started_by.is_some() || self.completed_at.is_some() || self.completed_by.is_some() || self.reviewed_at.is_some() || self.reviewed_by.is_some() || self.has_adjusting_entries.is_some() || self.adjusting_journal_ids.is_some() || self.statement_source.is_some() || self.statement_file_url.is_some() || self.import_date.is_some() || self.notes.is_some() || self.discrepancy_notes.is_some()
     }
 }
 
@@ -640,22 +430,13 @@ impl PatchReconciliationDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct ReconciliationResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub reconciliation_number: String,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub account_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub account_number: String,
@@ -745,12 +526,7 @@ pub struct ReconciliationListResponseDto {
 
 impl ReconciliationListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(
-        items: Vec<ReconciliationResponseDto>,
-        total: u64,
-        page: u32,
-        per_page: u32,
-    ) -> Self {
+    pub fn new(items: Vec<ReconciliationResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {

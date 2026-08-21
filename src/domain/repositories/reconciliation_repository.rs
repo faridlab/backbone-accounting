@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the Reconciliation aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{Reconciliation, ReconciliationStatus, ReconciliationType};
@@ -66,23 +66,7 @@ pub struct ReconciliationFilter {
 impl ReconciliationFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some()
-            || self.reconciliation_number.is_some()
-            || self.account_id.is_some()
-            || self.account_number.is_some()
-            || self.account_name.is_some()
-            || self.reconciliation_type.is_some()
-            || self.previous_reconciliation_id.is_some()
-            || self.is_balanced.is_some()
-            || self.status.is_some()
-            || self.started_by.is_some()
-            || self.completed_by.is_some()
-            || self.reviewed_by.is_some()
-            || self.has_adjusting_entries.is_some()
-            || self.statement_source.is_some()
-            || self.statement_file_url.is_some()
-            || self.notes.is_some()
-            || self.discrepancy_notes.is_some()
+        self.company_id.is_some() || self.reconciliation_number.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.reconciliation_type.is_some() || self.previous_reconciliation_id.is_some() || self.is_balanced.is_some() || self.status.is_some() || self.started_by.is_some() || self.completed_by.is_some() || self.reviewed_by.is_some() || self.has_adjusting_entries.is_some() || self.statement_source.is_some() || self.statement_file_url.is_some() || self.notes.is_some() || self.discrepancy_notes.is_some()
     }
 }
 
@@ -92,6 +76,7 @@ impl ReconciliationFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait ReconciliationRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -116,17 +101,10 @@ pub trait ReconciliationRepository: Send + Sync {
     // =========================================================================
 
     /// List reconciliation with pagination
-    async fn list(
-        &self,
-        params: ReconciliationPaginationParams,
-    ) -> Result<ReconciliationPaginatedResult>;
+    async fn list(&self, params: ReconciliationPaginationParams) -> Result<ReconciliationPaginatedResult>;
 
     /// List reconciliation with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: ReconciliationPaginationParams,
-        filters: ReconciliationFilter,
-    ) -> Result<ReconciliationPaginatedResult>;
+    async fn list_with_filters(&self, params: ReconciliationPaginationParams, filters: ReconciliationFilter) -> Result<ReconciliationPaginatedResult>;
 
     /// Count all reconciliation entities
     async fn count(&self) -> Result<u64>;
@@ -148,10 +126,7 @@ pub trait ReconciliationRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Reconciliation>>;
 
     /// List soft-deleted reconciliation entities
-    async fn list_deleted(
-        &self,
-        params: ReconciliationPaginationParams,
-    ) -> Result<ReconciliationPaginatedResult>;
+    async fn list_deleted(&self, params: ReconciliationPaginationParams) -> Result<ReconciliationPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

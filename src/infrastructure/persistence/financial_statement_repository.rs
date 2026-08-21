@@ -23,9 +23,7 @@ pub struct FinancialStatementRepository(
 
 impl std::ops::Deref for FinancialStatementRepository {
     type Target = backbone_orm::GenericCrudRepository<FinancialStatement, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl FinancialStatementRepository {
@@ -35,8 +33,4 @@ impl FinancialStatementRepository {
     }
 }
 
-backbone_core::impl_crud_repository!(
-    FinancialStatementRepository,
-    FinancialStatement,
-    soft_delete
-);
+backbone_core::impl_crud_repository!(FinancialStatementRepository, FinancialStatement, soft_delete);

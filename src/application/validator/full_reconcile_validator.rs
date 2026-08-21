@@ -5,8 +5,8 @@
 //! Returns an `EntityValidator<FullReconcile>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use crate::domain::entity::FullReconcile;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
 
 /// Validator type alias for FullReconcile entities.
 pub type FullReconcileValidator = EntityValidator<FullReconcile>;
@@ -16,7 +16,7 @@ pub fn full_reconcile_validator() -> FullReconcileValidator {
     EntityValidator::new()
     // <<< CUSTOM RULES
     // END CUSTOM RULES
-    // No schema-derived rules — add custom rules above.
+        // No schema-derived rules — add custom rules above.
 }
 
 // <<< CUSTOM
