@@ -191,6 +191,8 @@ pub fn map_source(source_type: &str, posting_type: &str) -> (&'static str, &'sta
         "inventory" => ("general", "system"),
         // Reconciliation-generated moves (exchange difference now, cash-basis tax later).
         "reconciliation" => ("general", "system"),
+        // Gateway settlement's fee companion post — provider-notified, never keyed by hand.
+        "gateway_fee" => ("general", "system"),
         _ => ("general", "manual"),
     }
 }
