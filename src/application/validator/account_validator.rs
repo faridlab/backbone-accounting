@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<Account>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 use crate::domain::entity::Account;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 
 /// Validator type alias for Account entities.
 pub type AccountValidator = EntityValidator<Account>;
@@ -15,16 +15,30 @@ pub type AccountValidator = EntityValidator<Account>;
 /// Build a validator for Account with all schema-defined field rules.
 pub fn account_validator() -> AccountValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("account_number", |e: &Account| &e.account_number))
-        .rule(RequiredString::new("account_code", |e: &Account| &e.account_code))
+        .rule(RequiredString::new("account_number", |e: &Account| {
+            &e.account_number
+        }))
+        .rule(RequiredString::new("account_code", |e: &Account| {
+            &e.account_code
+        }))
         .rule(RequiredString::new("name", |e: &Account| &e.name))
-        .rule(OptionalNotBlank::new("description", |e: &Account| e.description.as_deref()))
+        .rule(OptionalNotBlank::new("description", |e: &Account| {
+            e.description.as_deref()
+        }))
         .rule(NonNegative::new("level", |e: &Account| e.level as i64))
-        .rule(OptionalNotBlank::new("path", |e: &Account| e.path.as_deref()))
+        .rule(OptionalNotBlank::new("path", |e: &Account| {
+            e.path.as_deref()
+        }))
         .rule(RequiredString::new("currency", |e: &Account| &e.currency))
-        .rule(OptionalNotBlank::new("notes", |e: &Account| e.notes.as_deref()))
-        .rule(OptionalNotBlank::new("chart_code", |e: &Account| e.chart_code.as_deref()))
-        .rule(OptionalNotBlank::new("chart_version", |e: &Account| e.chart_version.as_deref()))
+        .rule(OptionalNotBlank::new("notes", |e: &Account| {
+            e.notes.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("chart_code", |e: &Account| {
+            e.chart_code.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("chart_version", |e: &Account| {
+            e.chart_version.as_deref()
+        }))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

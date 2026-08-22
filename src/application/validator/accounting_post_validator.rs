@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<AccountingPost>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 use crate::domain::entity::AccountingPost;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 
 /// Validator type alias for AccountingPost entities.
 pub type AccountingPostValidator = EntityValidator<AccountingPost>;
@@ -15,13 +15,29 @@ pub type AccountingPostValidator = EntityValidator<AccountingPost>;
 /// Build a validator for AccountingPost with all schema-defined field rules.
 pub fn accounting_post_validator() -> AccountingPostValidator {
     EntityValidator::new()
-        .rule(OptionalNotBlank::new("source_reference", |e: &AccountingPost| e.source_reference.as_deref()))
-        .rule(RequiredString::new("currency", |e: &AccountingPost| &e.currency))
-        .rule(NonNegative::new("retry_count", |e: &AccountingPost| e.retry_count as i64))
-        .rule(NonNegative::new("max_retries", |e: &AccountingPost| e.max_retries as i64))
-        .rule(OptionalNotBlank::new("error_code", |e: &AccountingPost| e.error_code.as_deref()))
-        .rule(OptionalNotBlank::new("error_message", |e: &AccountingPost| e.error_message.as_deref()))
-        .rule(OptionalNotBlank::new("notes", |e: &AccountingPost| e.notes.as_deref()))
+        .rule(OptionalNotBlank::new(
+            "source_reference",
+            |e: &AccountingPost| e.source_reference.as_deref(),
+        ))
+        .rule(RequiredString::new("currency", |e: &AccountingPost| {
+            &e.currency
+        }))
+        .rule(NonNegative::new("retry_count", |e: &AccountingPost| {
+            e.retry_count as i64
+        }))
+        .rule(NonNegative::new("max_retries", |e: &AccountingPost| {
+            e.max_retries as i64
+        }))
+        .rule(OptionalNotBlank::new("error_code", |e: &AccountingPost| {
+            e.error_code.as_deref()
+        }))
+        .rule(OptionalNotBlank::new(
+            "error_message",
+            |e: &AccountingPost| e.error_message.as_deref(),
+        ))
+        .rule(OptionalNotBlank::new("notes", |e: &AccountingPost| {
+            e.notes.as_deref()
+        }))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

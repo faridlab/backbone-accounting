@@ -22,7 +22,7 @@
 //! That makes re-install an idempotent upsert by construction and gives tax
 //! orchestration (which runs after install, keyed on account codes) a stable map.
 
-use crate::domain::chart_dataset::{ChartDataset, DatasetError, validate_dataset};
+use crate::domain::chart_dataset::{validate_dataset, ChartDataset, DatasetError};
 use crate::domain::repositories::chart_install_repository::{
     ChartAccountRow, ChartInstallRepository, UpsertOutcome,
 };
@@ -193,14 +193,20 @@ impl ChartInstallService {
             .map_err(anyhow::Error::from)?;
 
         if self.repo.company_has_postings(&mut tx, company_id).await? {
-            return Err(ChartInstallError::ChartHasPostings(ds.code.clone(), company_id));
+            return Err(ChartInstallError::ChartHasPostings(
+                ds.code.clone(),
+                company_id,
+            ));
         }
 
         // Overlap gate — an existing non-deleted account colliding on number or code
         // is fine ONLY if it is exactly our own row (deterministic id + our chart_code,
         // which also covers version bumps). Everything else (manual rows, another
         // chart's rows) is a named conflict, never absorbed.
-        let overlaps = self.repo.overlapping_accounts(&mut tx, company_id, &ds).await?;
+        let overlaps = self
+            .repo
+            .overlapping_accounts(&mut tx, company_id, &ds)
+            .await?;
         let conflicts: Vec<(String, String)> = overlaps
             .into_iter()
             .filter(|o| {

@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateCostCenterDto, UpdateCostCenterDto};
 use crate::domain::entity::CostCenter;
 use crate::infrastructure::persistence::CostCenterRepository;
+use crate::presentation::dto::{CreateCostCenterDto, UpdateCostCenterDto};
 
 /// Application service for CostCenter entities.
 ///
@@ -25,12 +25,8 @@ use crate::infrastructure::persistence::CostCenterRepository;
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type CostCenterService = GenericCrudService<
-    CostCenter,
-    CreateCostCenterDto,
-    UpdateCostCenterDto,
-    CostCenterRepository,
->;
+pub type CostCenterService =
+    GenericCrudService<CostCenter, CreateCostCenterDto, UpdateCostCenterDto, CostCenterRepository>;
 
 // <<< CUSTOM
 // END CUSTOM

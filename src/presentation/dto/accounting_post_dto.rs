@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -36,18 +36,28 @@ use crate::domain::entity::PostingType;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAccountingPostDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
     #[serde(alias = "source_type")]
     pub source_type: PostingSourceType,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "source_id")]
     pub source_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_reference"
+    )]
     pub source_reference: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "journal_id")]
     pub journal_id: Option<Uuid>,
@@ -61,7 +71,11 @@ pub struct CreateAccountingPostDto {
     pub total_debit: Decimal,
     #[serde(alias = "total_credit")]
     pub total_credit: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "scheduled_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "scheduled_at"
+    )]
     pub scheduled_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_at")]
     pub posted_at: Option<DateTime<Utc>>,
@@ -73,17 +87,33 @@ pub struct CreateAccountingPostDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "max_retries")]
     pub max_retries: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "next_retry_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "next_retry_at"
+    )]
     pub next_retry_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "error_code")]
     pub error_code: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "error_message")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "error_message"
+    )]
     pub error_message: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_post_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reverses_post_id"
+    )]
     pub reverses_post_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_post_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_by_post_id"
+    )]
     pub reversed_by_post_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_by")]
     pub posted_by: Option<Uuid>,
@@ -105,18 +135,28 @@ pub struct CreateAccountingPostDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAccountingPostDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
     #[serde(alias = "source_type")]
     pub source_type: PostingSourceType,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "source_id")]
     pub source_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "source_reference"
+    )]
     pub source_reference: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "journal_id")]
     pub journal_id: Option<Uuid>,
@@ -130,7 +170,11 @@ pub struct UpdateAccountingPostDto {
     pub total_debit: Decimal,
     #[serde(alias = "total_credit")]
     pub total_credit: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "scheduled_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "scheduled_at"
+    )]
     pub scheduled_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_at")]
     pub posted_at: Option<DateTime<Utc>>,
@@ -142,17 +186,33 @@ pub struct UpdateAccountingPostDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "max_retries")]
     pub max_retries: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "next_retry_at")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "next_retry_at"
+    )]
     pub next_retry_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "validation", validate(length(max = 50)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "error_code")]
     pub error_code: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 1000)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "error_message")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "error_message"
+    )]
     pub error_message: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_post_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reverses_post_id"
+    )]
     pub reverses_post_id: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_post_id")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "reversed_by_post_id"
+    )]
     pub reversed_by_post_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_by")]
     pub posted_by: Option<Uuid>,
@@ -174,14 +234,20 @@ pub struct UpdateAccountingPostDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchAccountingPostDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<PostingSourceType>,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 100)))]
@@ -234,7 +300,29 @@ pub struct PatchAccountingPostDto {
 impl PatchAccountingPostDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.branch_id.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.journal_id.is_some() || self.posting_type.is_some() || self.posting_status.is_some() || self.currency.is_some() || self.total_debit.is_some() || self.total_credit.is_some() || self.scheduled_at.is_some() || self.posted_at.is_some() || self.failed_at.is_some() || self.retry_count.is_some() || self.max_retries.is_some() || self.next_retry_at.is_some() || self.error_code.is_some() || self.error_message.is_some() || self.reverses_post_id.is_some() || self.reversed_by_post_id.is_some() || self.posted_by.is_some() || self.notes.is_some()
+        self.company_id.is_some()
+            || self.branch_id.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
+            || self.source_reference.is_some()
+            || self.journal_id.is_some()
+            || self.posting_type.is_some()
+            || self.posting_status.is_some()
+            || self.currency.is_some()
+            || self.total_debit.is_some()
+            || self.total_credit.is_some()
+            || self.scheduled_at.is_some()
+            || self.posted_at.is_some()
+            || self.failed_at.is_some()
+            || self.retry_count.is_some()
+            || self.max_retries.is_some()
+            || self.next_retry_at.is_some()
+            || self.error_code.is_some()
+            || self.error_message.is_some()
+            || self.reverses_post_id.is_some()
+            || self.reversed_by_post_id.is_some()
+            || self.posted_by.is_some()
+            || self.notes.is_some()
     }
 }
 
@@ -250,13 +338,22 @@ impl PatchAccountingPostDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct AccountingPostResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: PostingSourceType,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub source_id: Uuid,
     pub source_reference: Option<String>,
     pub journal_id: Option<Uuid>,
@@ -313,7 +410,12 @@ pub struct AccountingPostListResponseDto {
 
 impl AccountingPostListResponseDto {
     /// Create a new list response from items and pagination info
-    pub fn new(items: Vec<AccountingPostResponseDto>, total: u64, page: u32, per_page: u32) -> Self {
+    pub fn new(
+        items: Vec<AccountingPostResponseDto>,
+        total: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Self {
         let total_pages = if per_page > 0 {
             ((total as f64) / (per_page as f64)).ceil() as u32
         } else {

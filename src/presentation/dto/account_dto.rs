@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
+use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, NaiveDate};
-use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -18,10 +18,10 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::domain::entity::Account;
-use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::AccountStatus;
 use crate::domain::entity::AccountSubtype;
 use crate::domain::entity::AccountType;
+use crate::domain::entity::AuditMetadata;
 use crate::domain::entity::NormalBalance;
 
 // =============================================================================
@@ -37,7 +37,10 @@ use crate::domain::entity::NormalBalance;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAccountDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -77,7 +80,11 @@ pub struct CreateAccountDto {
     pub currency: String,
     #[serde(alias = "opening_balance")]
     pub opening_balance: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
@@ -87,7 +94,11 @@ pub struct CreateAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "budget_amount"
+    )]
     pub budget_amount: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
@@ -111,7 +122,11 @@ pub struct CreateAccountDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_code")]
     pub chart_code: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_version")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "chart_version"
+    )]
     pub chart_version: Option<String>,
 }
 
@@ -128,7 +143,10 @@ pub struct CreateAccountDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAccountDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(alias = "company_id")]
     pub company_id: Uuid,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -168,7 +186,11 @@ pub struct UpdateAccountDto {
     pub currency: String,
     #[serde(alias = "opening_balance")]
     pub opening_balance: Decimal,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(alias = "current_balance")]
     pub current_balance: Decimal,
@@ -178,7 +200,11 @@ pub struct UpdateAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "has_budget")]
     pub has_budget: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "budget_amount"
+    )]
     pub budget_amount: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(alias = "sort_order")]
@@ -202,7 +228,11 @@ pub struct UpdateAccountDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_code")]
     pub chart_code: Option<String>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_version")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "chart_version"
+    )]
     pub chart_version: Option<String>,
 }
 
@@ -219,7 +249,10 @@ pub struct UpdateAccountDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchAccountDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
     pub company_id: Option<Uuid>,
     #[cfg_attr(feature = "validation", validate(length(max = 20)))]
@@ -262,7 +295,10 @@ pub struct PatchAccountDto {
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance")]
     pub opening_balance: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "opening_balance_date"
+    )]
     pub opening_balance_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "current_balance")]
     pub current_balance: Option<Decimal>,
@@ -304,7 +340,35 @@ pub struct PatchAccountDto {
 impl PatchAccountDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.level.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.opening_balance.is_some() || self.opening_balance_date.is_some() || self.current_balance.is_some() || self.is_reconcilable.is_some() || self.has_budget.is_some() || self.budget_amount.is_some() || self.sort_order.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
+        self.company_id.is_some()
+            || self.account_number.is_some()
+            || self.account_code.is_some()
+            || self.name.is_some()
+            || self.description.is_some()
+            || self.account_type.is_some()
+            || self.account_subtype.is_some()
+            || self.normal_balance.is_some()
+            || self.parent_id.is_some()
+            || self.level.is_some()
+            || self.path.is_some()
+            || self.is_header.is_some()
+            || self.is_detail.is_some()
+            || self.currency.is_some()
+            || self.opening_balance.is_some()
+            || self.opening_balance_date.is_some()
+            || self.current_balance.is_some()
+            || self.is_reconcilable.is_some()
+            || self.has_budget.is_some()
+            || self.budget_amount.is_some()
+            || self.sort_order.is_some()
+            || self.show_in_reports.is_some()
+            || self.status.is_some()
+            || self.is_system.is_some()
+            || self.notes.is_some()
+            || self.source_id.is_some()
+            || self.is_cloned.is_some()
+            || self.chart_code.is_some()
+            || self.chart_version.is_some()
     }
 }
 
@@ -320,9 +384,15 @@ impl PatchAccountDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct AccountResponseDto {
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub id: Uuid,
-    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
+    #[cfg_attr(
+        feature = "openapi",
+        schema(example = "550e8400-e29b-41d4-a716-446655440000")
+    )]
     pub company_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub account_number: String,

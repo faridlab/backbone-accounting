@@ -46,6 +46,12 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
         .merge(create_accounting_post_read_routes(
             m.accounting_post_service.clone(),
         ))
+        // Financial reports — read-only, computed on the fly (no stored statements).
+        .merge(
+            crate::presentation::http::reporting_handler::create_reporting_routes(
+                m.reporting_service(),
+            ),
+        )
         // Reconciliation verbs — the ONLY write surface onto the reconciliation graph.
         // The graph tables themselves mount nothing here (and are `enabled: false`).
         .merge(
@@ -56,7 +62,7 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
         // Registered chart datasets — read-only listing. The install verb is
         // host-mounted (it orchestrates chart + tax across modules and is gated by
         // the composing service's authority middleware).
-        .merge(crate::presentation::http::chart_routes::create_chart_routes(
-            m.chart_install_service(),
-        ))
+        .merge(
+            crate::presentation::http::chart_routes::create_chart_routes(m.chart_install_service()),
+        )
 }

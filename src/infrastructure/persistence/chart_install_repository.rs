@@ -6,7 +6,7 @@
 
 use crate::domain::chart_dataset::ChartDataset;
 use crate::domain::repositories::chart_install_repository::{
-    ChartInstallRepository, ChartAccountRow, OverlappingAccount, UpsertOutcome,
+    ChartAccountRow, ChartInstallRepository, OverlappingAccount, UpsertOutcome,
 };
 use sqlx::Row;
 use uuid::Uuid;

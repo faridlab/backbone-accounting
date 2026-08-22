@@ -15,6 +15,7 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use backbone_accounting::application::service::reconcile_write_service::ReconcileWriteService;
+use backbone_accounting::domain::repositories::reporting_repository::ReportingRepository;
 use backbone_accounting::infrastructure::persistence::{
     SqlxPostingRepository, SqlxReconcileGraphRepository,
 };
@@ -441,4 +442,210 @@ async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
     let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}"))
         .execute(&admin)
         .await;
+}
+
+// Reporting reads under the restricted role — the bare-pool regression probe.
+//
+// The reporting repository's reads must ride the company-scoped helpers: a bare pooled
+// fetch under the app role loses `set_config(is_local)` and the RLS fence silently
+// empties the result (HTTP 200, zero rows — green on superuser DSNs, empty under the
+// app role). This probe pins the scoped shape: the caller's company reads fine, another
+// tenant's explicit company_id parameter still returns nothing, and an unscoped bare
+// read under the restricted role returns nothing (which is exactly why the scope is
+// load-bearing).
+#[tokio::test]
+async fn reporting_reads_scoped_under_restricted_role() {
+    let _guard = ROLE_DDL_LOCK.lock().await;
+    let admin = admin().await;
+    bootstrap_role(&admin).await;
+    for table in [
+        "accounts",
+        "ledgers",
+        "journals",
+        "journal_lines",
+        "partial_reconciles",
+    ] {
+        sqlx::query(&format!("GRANT SELECT ON accounting.{table} TO {ROLE}"))
+            .execute(&admin)
+            .await
+            .unwrap();
+    }
+
+    let company_a = Uuid::new_v4();
+    let company_b = Uuid::new_v4();
+    for (company, number) in [(company_a, "1100"), (company_b, "2200")] {
+        sqlx::query(
+            r#"INSERT INTO accounting.accounts
+                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                 normal_balance, is_detail, is_header, status)
+               VALUES ($1,$2,$3,$3,'probe','asset'::account_type,'bank'::account_subtype,
+                       'debit'::normal_balance, TRUE, FALSE, 'active'::account_status)"#,
+        )
+        .bind(Uuid::new_v4())
+        .bind(company)
+        .bind(number)
+        .execute(&admin)
+        .await
+        .unwrap();
+    }
+
+    // Company A also gets a posted AR line + ledger row so the GL, partner-ledger, and aged
+    // reads — the residual-subquery legs — are exercised under the fence, not just the
+    // account directory.
+    let ar = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.accounts
+            (id, company_id, account_number, account_code, name, account_type, account_subtype,
+             normal_balance, is_detail, is_header, status)
+           VALUES ($1,$2,'1200','1200','probe AR','asset'::account_type,
+                   'accounts_receivable'::account_subtype,'debit'::normal_balance,
+                   TRUE, FALSE, 'active'::account_status)"#,
+    )
+    .bind(ar)
+    .bind(company_a)
+    .execute(&admin)
+    .await
+    .unwrap();
+    let party = Uuid::new_v4();
+    let journal = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.journals
+             (id, company_id, journal_number, journal_type, source, transaction_date,
+              description, currency, status)
+           VALUES ($1,$2,'RLP-1','general'::journal_type,'manual'::journal_source,'2026-06-15',
+                   'reporting probe','IDR','posted'::journal_status)"#,
+    )
+    .bind(journal)
+    .bind(company_a)
+    .execute(&admin)
+    .await
+    .unwrap();
+    let jline = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.journal_lines
+             (id, journal_id, company_id, line_number, account_id, account_number,
+              account_name, debit_amount, credit_amount, base_debit_amount,
+              base_credit_amount, is_posted, party_type, party_id)
+           VALUES ($1,$2,$3,1,$4,'1200','probe AR',100,0,100,0,TRUE,
+                   'customer'::party_type,$5)"#,
+    )
+    .bind(jline)
+    .bind(journal)
+    .bind(company_a)
+    .bind(ar)
+    .bind(party)
+    .execute(&admin)
+    .await
+    .unwrap();
+    sqlx::query(
+        r#"INSERT INTO accounting.ledgers
+             (id, company_id, account_id, account_number, account_name, account_type,
+              normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
+              posting_date, description, currency, debit_amount, credit_amount,
+              balance_before, balance_after, balance_change, sequence_number, party_type, party_id,
+              fiscal_year, fiscal_month)
+           VALUES ($1,$2,$3,'1200','probe AR','asset'::account_type,'debit'::normal_balance,
+                   $4,'RLP-1',$5,'2026-06-15','2026-06-15','reporting probe','IDR',
+                   100,0,0,100,100,1,'customer'::party_type,$6,2026,6)"#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(company_a)
+    .bind(ar)
+    .bind(journal)
+    .bind(jline)
+    .bind(party)
+    .execute(&admin)
+    .await
+    .unwrap();
+
+    let restricted = restricted().await;
+    let repo =
+        backbone_accounting::infrastructure::persistence::reporting_repository::SqlxReportingRepository::new(
+            restricted.clone(),
+        );
+
+    // Scoped to A: A's account is visible — the scoped read does not silently empty.
+    let (scoped_a, scoped_b, gl, pl, aged) =
+        backbone_orm::company_scope::with_company_scope(Some(company_a), async {
+            let a = repo.account_directory(company_a).await.unwrap();
+            let b = repo.account_directory(company_b).await.unwrap();
+            let gl = repo
+                .gl_lines(
+                    company_a,
+                    None,
+                    None,
+                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+                    10,
+                    0,
+                )
+                .await
+                .unwrap();
+            let pl = repo
+                .party_ledger_lines(
+                    company_a,
+                    "customer",
+                    party,
+                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+                )
+                .await
+                .unwrap();
+            let aged = repo
+                .aged_open_items(
+                    company_a,
+                    "accounts_receivable",
+                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+                )
+                .await
+                .unwrap();
+            (a, b, gl, pl, aged)
+        })
+        .await;
+    assert_eq!(
+        scoped_a.len(),
+        2,
+        "scoped read must see the caller's company"
+    );
+    let numbers: Vec<&str> = scoped_a.iter().map(|n| n.account_number.as_str()).collect();
+    assert!(numbers.contains(&"1100") && numbers.contains(&"1200"));
+    assert!(
+        scoped_b.is_empty(),
+        "cross-tenant parameter must not leak rows"
+    );
+    assert_eq!(gl.len(), 1, "scoped GL read must see the ledger row");
+    assert_eq!(
+        pl.len(),
+        1,
+        "scoped partner-ledger read must see the AR line"
+    );
+    assert_eq!(
+        pl[0].residual,
+        100.into(),
+        "residual subquery rides the fence"
+    );
+    assert_eq!(aged.len(), 1, "scoped aged read must see the open item");
+
+    // Unscoped bare read under the restricted role: the fence empties it (no app.company_id
+    // on the pooled connection) — the failure mode this probe guards against regressing into.
+    let unscoped = repo.account_directory(company_a).await.unwrap();
+    assert!(
+        unscoped.is_empty(),
+        "unscoped read under the app role must not bypass the fence"
+    );
+    let unscoped_gl = repo
+        .gl_lines(
+            company_a,
+            None,
+            None,
+            chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+            10,
+            0,
+        )
+        .await
+        .unwrap();
+    assert!(
+        unscoped_gl.is_empty(),
+        "unscoped GL read under the app role must not bypass the fence"
+    );
+
+    teardown_role(&admin).await;
 }

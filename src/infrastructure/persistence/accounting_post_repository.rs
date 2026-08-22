@@ -23,7 +23,9 @@ pub struct AccountingPostRepository(
 
 impl std::ops::Deref for AccountingPostRepository {
     type Target = backbone_orm::GenericCrudRepository<AccountingPost, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl AccountingPostRepository {

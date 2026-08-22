@@ -5,11 +5,11 @@
 //! This trait defines the repository contract for the Ledger aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::entity::{Ledger, AccountType, NormalBalance, PartyType};
+use crate::domain::entity::{AccountType, Ledger, NormalBalance, PartyType};
 
 /// Pagination parameters for list queries
 #[derive(Debug, Clone, Default)]
@@ -79,7 +79,36 @@ pub struct LedgerFilter {
 impl LedgerFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.account_id.is_some() || self.account_number.is_some() || self.account_name.is_some() || self.account_type.is_some() || self.normal_balance.is_some() || self.journal_id.is_some() || self.journal_number.is_some() || self.journal_line_id.is_some() || self.fiscal_period_id.is_some() || self.description.is_some() || self.reference.is_some() || self.currency.is_some() || self.branch_id.is_some() || self.party_type.is_some() || self.party_id.is_some() || self.cost_center_id.is_some() || self.project_id.is_some() || self.department_id.is_some() || self.source_type.is_some() || self.source_id.is_some() || self.source_reference.is_some() || self.is_reconciled.is_some() || self.reconciliation_id.is_some() || self.is_opening_balance.is_some() || self.is_closing_entry.is_some() || self.is_adjustment.is_some() || self.is_reversed.is_some() || self.reversed_by_id.is_some() || self.reverses_id.is_some()
+        self.company_id.is_some()
+            || self.account_id.is_some()
+            || self.account_number.is_some()
+            || self.account_name.is_some()
+            || self.account_type.is_some()
+            || self.normal_balance.is_some()
+            || self.journal_id.is_some()
+            || self.journal_number.is_some()
+            || self.journal_line_id.is_some()
+            || self.fiscal_period_id.is_some()
+            || self.description.is_some()
+            || self.reference.is_some()
+            || self.currency.is_some()
+            || self.branch_id.is_some()
+            || self.party_type.is_some()
+            || self.party_id.is_some()
+            || self.cost_center_id.is_some()
+            || self.project_id.is_some()
+            || self.department_id.is_some()
+            || self.source_type.is_some()
+            || self.source_id.is_some()
+            || self.source_reference.is_some()
+            || self.is_reconciled.is_some()
+            || self.reconciliation_id.is_some()
+            || self.is_opening_balance.is_some()
+            || self.is_closing_entry.is_some()
+            || self.is_adjustment.is_some()
+            || self.is_reversed.is_some()
+            || self.reversed_by_id.is_some()
+            || self.reverses_id.is_some()
     }
 }
 
@@ -89,7 +118,6 @@ impl LedgerFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait LedgerRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -117,7 +145,11 @@ pub trait LedgerRepository: Send + Sync {
     async fn list(&self, params: LedgerPaginationParams) -> Result<LedgerPaginatedResult>;
 
     /// List ledger with pagination and filters
-    async fn list_with_filters(&self, params: LedgerPaginationParams, filters: LedgerFilter) -> Result<LedgerPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: LedgerPaginationParams,
+        filters: LedgerFilter,
+    ) -> Result<LedgerPaginatedResult>;
 
     /// Count all ledger entities
     async fn count(&self) -> Result<u64>;

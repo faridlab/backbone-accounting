@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use rust_decimal::Decimal;
 
-use super::PostingSourceType;
-use super::PostingType;
-use super::PostingStatus;
 use super::AuditMetadata;
+use super::PostingSourceType;
+use super::PostingStatus;
+use super::PostingType;
 
 /// Strongly-typed ID for AccountingPost
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -15,9 +15,15 @@ use super::AuditMetadata;
 pub struct AccountingPostId(pub Uuid);
 
 impl AccountingPostId {
-    pub fn new(id: Uuid) -> Self { Self(id) }
-    pub fn generate() -> Self { Self(Uuid::new_v4()) }
-    pub fn into_inner(self) -> Uuid { self.0 }
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
 }
 
 impl std::fmt::Display for AccountingPostId {
@@ -34,20 +40,28 @@ impl std::str::FromStr for AccountingPostId {
 }
 
 impl From<Uuid> for AccountingPostId {
-    fn from(id: Uuid) -> Self { Self(id) }
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
 }
 
 impl From<AccountingPostId> for Uuid {
-    fn from(id: AccountingPostId) -> Self { id.0 }
+    fn from(id: AccountingPostId) -> Self {
+        id.0
+    }
 }
 
 impl AsRef<Uuid> for AccountingPostId {
-    fn as_ref(&self) -> &Uuid { &self.0 }
+    fn as_ref(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl std::ops::Deref for AccountingPostId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -88,7 +102,18 @@ impl AccountingPost {
     }
 
     /// Create a new AccountingPost with required fields
-    pub fn new(company_id: Uuid, source_type: PostingSourceType, source_id: Uuid, posting_type: PostingType, posting_status: PostingStatus, currency: String, total_debit: Decimal, total_credit: Decimal, retry_count: i32, max_retries: i32) -> Self {
+    pub fn new(
+        company_id: Uuid,
+        source_type: PostingSourceType,
+        source_id: Uuid,
+        posting_type: PostingType,
+        posting_status: PostingStatus,
+        currency: String,
+        total_debit: Decimal,
+        total_credit: Decimal,
+        retry_count: i32,
+        max_retries: i32,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             company_id,
@@ -167,7 +192,6 @@ impl AccountingPost {
     pub fn deleted_by(&self) -> Option<&Uuid> {
         self.metadata.deleted_by.as_ref()
     }
-
 
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
@@ -260,73 +284,119 @@ impl AccountingPost {
         for (key, value) in fields {
             match key.as_str() {
                 "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.company_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.company_id = v;
+                    }
                 }
                 "branch_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.branch_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.branch_id = v;
+                    }
                 }
                 "source_type" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.source_type = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.source_type = v;
+                    }
                 }
                 "source_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.source_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.source_id = v;
+                    }
                 }
                 "source_reference" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.source_reference = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.source_reference = v;
+                    }
                 }
                 "journal_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.journal_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.journal_id = v;
+                    }
                 }
                 "posting_type" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.posting_type = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.posting_type = v;
+                    }
                 }
                 "posting_status" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.posting_status = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.posting_status = v;
+                    }
                 }
                 "currency" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.currency = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.currency = v;
+                    }
                 }
                 "total_debit" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.total_debit = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.total_debit = v;
+                    }
                 }
                 "total_credit" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.total_credit = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.total_credit = v;
+                    }
                 }
                 "scheduled_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.scheduled_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.scheduled_at = v;
+                    }
                 }
                 "posted_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.posted_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.posted_at = v;
+                    }
                 }
                 "failed_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.failed_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.failed_at = v;
+                    }
                 }
                 "retry_count" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.retry_count = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.retry_count = v;
+                    }
                 }
                 "max_retries" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.max_retries = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.max_retries = v;
+                    }
                 }
                 "next_retry_at" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.next_retry_at = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.next_retry_at = v;
+                    }
                 }
                 "error_code" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.error_code = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.error_code = v;
+                    }
                 }
                 "error_message" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.error_message = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.error_message = v;
+                    }
                 }
                 "reverses_post_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.reverses_post_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.reverses_post_id = v;
+                    }
                 }
                 "reversed_by_post_id" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.reversed_by_post_id = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.reversed_by_post_id = v;
+                    }
                 }
                 "posted_by" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.posted_by = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.posted_by = v;
+                    }
                 }
                 "notes" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.notes = v; }
+                    if let Ok(v) = serde_json::from_value(value) {
+                        self.notes = v;
+                    }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -400,7 +470,11 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
         Some("company_id")
     }
     fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
-        &[("journal", "journals", "journalId"), ("reversesPost", "accounting_posts", "reversesPostId"), ("reversedByPost", "accounting_posts", "reversedByPostId")]
+        &[
+            ("journal", "journals", "journalId"),
+            ("reversesPost", "accounting_posts", "reversesPostId"),
+            ("reversedByPost", "accounting_posts", "reversedByPostId"),
+        ]
     }
 }
 
@@ -578,9 +652,15 @@ impl AccountingPostBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<AccountingPost, String> {
-        let company_id = self.company_id.ok_or_else(|| "company_id is required".to_string())?;
-        let source_type = self.source_type.ok_or_else(|| "source_type is required".to_string())?;
-        let source_id = self.source_id.ok_or_else(|| "source_id is required".to_string())?;
+        let company_id = self
+            .company_id
+            .ok_or_else(|| "company_id is required".to_string())?;
+        let source_type = self
+            .source_type
+            .ok_or_else(|| "source_type is required".to_string())?;
+        let source_id = self
+            .source_id
+            .ok_or_else(|| "source_id is required".to_string())?;
 
         Ok(AccountingPost {
             id: Uuid::new_v4(),

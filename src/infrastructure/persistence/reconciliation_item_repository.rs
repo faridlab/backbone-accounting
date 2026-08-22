@@ -23,7 +23,9 @@ pub struct ReconciliationItemRepository(
 
 impl std::ops::Deref for ReconciliationItemRepository {
     type Target = backbone_orm::GenericCrudRepository<ReconciliationItem, backbone_orm::HardDelete>;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl ReconciliationItemRepository {
@@ -33,4 +35,8 @@ impl ReconciliationItemRepository {
     }
 }
 
-backbone_core::impl_crud_repository!(ReconciliationItemRepository, ReconciliationItem, no_soft_delete);
+backbone_core::impl_crud_repository!(
+    ReconciliationItemRepository,
+    ReconciliationItem,
+    no_soft_delete
+);

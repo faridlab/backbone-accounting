@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
-use crate::presentation::dto::{CreateJournalLineDto, UpdateJournalLineDto};
 use crate::domain::entity::JournalLine;
 use crate::infrastructure::persistence::JournalLineRepository;
+use crate::presentation::dto::{CreateJournalLineDto, UpdateJournalLineDto};
 
 /// Application service for JournalLine entities.
 ///

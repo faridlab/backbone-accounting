@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the Account aggregate.
 //! Implementation is in the infrastructure layer.
 
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::entity::{Account, AccountStatus, AccountSubtype, AccountType, NormalBalance};
@@ -72,7 +72,29 @@ pub struct AccountFilter {
 impl AccountFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some() || self.account_number.is_some() || self.account_code.is_some() || self.name.is_some() || self.description.is_some() || self.account_type.is_some() || self.account_subtype.is_some() || self.normal_balance.is_some() || self.parent_id.is_some() || self.path.is_some() || self.is_header.is_some() || self.is_detail.is_some() || self.currency.is_some() || self.is_reconcilable.is_some() || self.has_budget.is_some() || self.show_in_reports.is_some() || self.status.is_some() || self.is_system.is_some() || self.notes.is_some() || self.source_id.is_some() || self.is_cloned.is_some() || self.chart_code.is_some() || self.chart_version.is_some()
+        self.company_id.is_some()
+            || self.account_number.is_some()
+            || self.account_code.is_some()
+            || self.name.is_some()
+            || self.description.is_some()
+            || self.account_type.is_some()
+            || self.account_subtype.is_some()
+            || self.normal_balance.is_some()
+            || self.parent_id.is_some()
+            || self.path.is_some()
+            || self.is_header.is_some()
+            || self.is_detail.is_some()
+            || self.currency.is_some()
+            || self.is_reconcilable.is_some()
+            || self.has_budget.is_some()
+            || self.show_in_reports.is_some()
+            || self.status.is_some()
+            || self.is_system.is_some()
+            || self.notes.is_some()
+            || self.source_id.is_some()
+            || self.is_cloned.is_some()
+            || self.chart_code.is_some()
+            || self.chart_version.is_some()
     }
 }
 
@@ -82,7 +104,6 @@ impl AccountFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait AccountRepository: Send + Sync {
-
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -110,7 +131,11 @@ pub trait AccountRepository: Send + Sync {
     async fn list(&self, params: AccountPaginationParams) -> Result<AccountPaginatedResult>;
 
     /// List account with pagination and filters
-    async fn list_with_filters(&self, params: AccountPaginationParams, filters: AccountFilter) -> Result<AccountPaginatedResult>;
+    async fn list_with_filters(
+        &self,
+        params: AccountPaginationParams,
+        filters: AccountFilter,
+    ) -> Result<AccountPaginatedResult>;
 
     /// Count all account entities
     async fn count(&self) -> Result<u64>;
@@ -132,7 +157,8 @@ pub trait AccountRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<Account>>;
 
     /// List soft-deleted account entities
-    async fn list_deleted(&self, params: AccountPaginationParams) -> Result<AccountPaginatedResult>;
+    async fn list_deleted(&self, params: AccountPaginationParams)
+        -> Result<AccountPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

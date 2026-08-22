@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<JournalLine>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
-use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 use crate::domain::entity::JournalLine;
+use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
 
 /// Validator type alias for JournalLine entities.
 pub type JournalLineValidator = EntityValidator<JournalLine>;
@@ -15,13 +15,28 @@ pub type JournalLineValidator = EntityValidator<JournalLine>;
 /// Build a validator for JournalLine with all schema-defined field rules.
 pub fn journal_line_validator() -> JournalLineValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("account_number", |e: &JournalLine| &e.account_number))
-        .rule(RequiredString::new("account_name", |e: &JournalLine| &e.account_name))
-        .rule(RequiredString::new("currency", |e: &JournalLine| &e.currency))
-        .rule(OptionalNotBlank::new("description", |e: &JournalLine| e.description.as_deref()))
-        .rule(OptionalNotBlank::new("source_type", |e: &JournalLine| e.source_type.as_deref()))
-        .rule(OptionalNotBlank::new("source_reference", |e: &JournalLine| e.source_reference.as_deref()))
-        .rule(OptionalNotBlank::new("unit", |e: &JournalLine| e.unit.as_deref()))
+        .rule(RequiredString::new("account_number", |e: &JournalLine| {
+            &e.account_number
+        }))
+        .rule(RequiredString::new("account_name", |e: &JournalLine| {
+            &e.account_name
+        }))
+        .rule(RequiredString::new("currency", |e: &JournalLine| {
+            &e.currency
+        }))
+        .rule(OptionalNotBlank::new("description", |e: &JournalLine| {
+            e.description.as_deref()
+        }))
+        .rule(OptionalNotBlank::new("source_type", |e: &JournalLine| {
+            e.source_type.as_deref()
+        }))
+        .rule(OptionalNotBlank::new(
+            "source_reference",
+            |e: &JournalLine| e.source_reference.as_deref(),
+        ))
+        .rule(OptionalNotBlank::new("unit", |e: &JournalLine| {
+            e.unit.as_deref()
+        }))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

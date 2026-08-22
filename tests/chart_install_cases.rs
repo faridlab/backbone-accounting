@@ -5,9 +5,7 @@
 use backbone_accounting::application::service::chart_install_service::{
     ChartInstallError, ChartInstallService,
 };
-use backbone_accounting::domain::chart_dataset::{
-    validate_dataset, ChartAccountDef, ChartDataset,
-};
+use backbone_accounting::domain::chart_dataset::{validate_dataset, ChartAccountDef, ChartDataset};
 use backbone_accounting::domain::entity::{AccountSubtype, AccountType, NormalBalance};
 use backbone_accounting::infrastructure::persistence::chart_install_repository::SqlxChartInstallRepository;
 use sqlx::{PgPool, Row};
@@ -52,13 +50,76 @@ fn chart() -> ChartDataset {
         version: "1.0".into(),
         name: "Test chart".into(),
         accounts: vec![
-            def("1000", "Aset", AccountType::Asset, AccountSubtype::CurrentAsset, NormalBalance::Debit, None, false, 1),
-            def("1100", "Kas", AccountType::Asset, AccountSubtype::Cash, NormalBalance::Debit, Some("1000"), true, 2),
-            def("1110", "Bank", AccountType::Asset, AccountSubtype::Bank, NormalBalance::Debit, Some("1000"), true, 3),
-            def("1200", "Piutang Usaha", AccountType::Asset, AccountSubtype::AccountsReceivable, NormalBalance::Debit, Some("1000"), true, 4),
-            def("2000", "Liabilitas", AccountType::Liability, AccountSubtype::CurrentLiability, NormalBalance::Credit, None, false, 5),
-            def("2100", "Utang Usaha", AccountType::Liability, AccountSubtype::AccountsPayable, NormalBalance::Credit, Some("2000"), true, 6),
-            def("2110", "PPN Keluaran", AccountType::Liability, AccountSubtype::Tax, NormalBalance::Credit, Some("2000"), false, 7),
+            def(
+                "1000",
+                "Aset",
+                AccountType::Asset,
+                AccountSubtype::CurrentAsset,
+                NormalBalance::Debit,
+                None,
+                false,
+                1,
+            ),
+            def(
+                "1100",
+                "Kas",
+                AccountType::Asset,
+                AccountSubtype::Cash,
+                NormalBalance::Debit,
+                Some("1000"),
+                true,
+                2,
+            ),
+            def(
+                "1110",
+                "Bank",
+                AccountType::Asset,
+                AccountSubtype::Bank,
+                NormalBalance::Debit,
+                Some("1000"),
+                true,
+                3,
+            ),
+            def(
+                "1200",
+                "Piutang Usaha",
+                AccountType::Asset,
+                AccountSubtype::AccountsReceivable,
+                NormalBalance::Debit,
+                Some("1000"),
+                true,
+                4,
+            ),
+            def(
+                "2000",
+                "Liabilitas",
+                AccountType::Liability,
+                AccountSubtype::CurrentLiability,
+                NormalBalance::Credit,
+                None,
+                false,
+                5,
+            ),
+            def(
+                "2100",
+                "Utang Usaha",
+                AccountType::Liability,
+                AccountSubtype::AccountsPayable,
+                NormalBalance::Credit,
+                Some("2000"),
+                true,
+                6,
+            ),
+            def(
+                "2110",
+                "PPN Keluaran",
+                AccountType::Liability,
+                AccountSubtype::Tax,
+                NormalBalance::Credit,
+                Some("2000"),
+                false,
+                7,
+            ),
         ],
     }
 }
@@ -108,7 +169,10 @@ async fn install_on_fresh_company_creates_full_tree() {
     assert_eq!(root.get::<Option<&str>, _>("path"), Some("1000"));
     assert!(root.get::<bool, _>("is_header"));
     assert!(!root.get::<bool, _>("is_detail"));
-    assert_eq!(root.get::<Option<&str>, _>("chart_code"), Some("TEST_CHART"));
+    assert_eq!(
+        root.get::<Option<&str>, _>("chart_code"),
+        Some("TEST_CHART")
+    );
     assert_eq!(root.get::<Option<&str>, _>("chart_version"), Some("1.0"));
 
     let leaf = one(&pool, company, "1100").await;
@@ -164,7 +228,10 @@ async fn manager_rename_survives_reinstall_and_reparent_reverts() {
     // rename kept
     assert_eq!(row.get::<&str, _>("name"), "Kas Kecil");
     // structure reverted to the dataset's truth
-    assert_eq!(row.get::<Option<Uuid>, _>("parent_id"), Some(first.account_ids["1000"]));
+    assert_eq!(
+        row.get::<Option<Uuid>, _>("parent_id"),
+        Some(first.account_ids["1000"])
+    );
     assert_eq!(row.get::<Option<&str>, _>("path"), Some("1000/1100"));
 }
 
@@ -247,7 +314,10 @@ async fn refuses_overlap_with_manual_account() {
     .await
     .unwrap();
 
-    let err = service(&pool).install(company, "TEST_CHART").await.unwrap_err();
+    let err = service(&pool)
+        .install(company, "TEST_CHART")
+        .await
+        .unwrap_err();
     match err {
         ChartInstallError::AccountNumberConflict(chart, refs) => {
             assert_eq!(chart, "TEST_CHART");
@@ -365,7 +435,10 @@ async fn renumber_installs_new_identity_and_dropped_codes_linger() {
     // active, chart-stamped, and posting targets. This is the pinned posture.
     let old_kas = one(&pool, company, "1100").await;
     assert_eq!(old_kas.get::<Option<&str>, _>("deleted_at"), None::<&str>);
-    assert_eq!(old_kas.get::<Option<&str>, _>("chart_code"), Some("TEST_CHART"));
+    assert_eq!(
+        old_kas.get::<Option<&str>, _>("chart_code"),
+        Some("TEST_CHART")
+    );
     assert_eq!(old_kas.get::<Uuid, _>("id"), first.account_ids["1100"]);
     let dropped = one(&pool, company, "2110").await;
     assert_eq!(dropped.get::<Option<&str>, _>("deleted_at"), None::<&str>);

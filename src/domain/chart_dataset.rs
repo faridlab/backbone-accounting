@@ -229,7 +229,8 @@ mod tests {
     #[test]
     fn requires_ar_ap_bank_cash() {
         let mut ds = minimal_dataset();
-        ds.accounts.retain(|a| a.account_subtype != AccountSubtype::Cash);
+        ds.accounts
+            .retain(|a| a.account_subtype != AccountSubtype::Cash);
         assert!(matches!(
             validate_dataset(&ds),
             Err(DatasetError::MissingRequired("cash"))
