@@ -23,6 +23,7 @@ user_owned:
   - "src/domain/services/posting_rules.rs"
 
   # Hand-authored repository ports (domain layer).
+  - "src/domain/repositories/budget_control.rs"
   - "src/domain/repositories/deferred_tax.rs"
   - "src/domain/repositories/posting_repository.rs"
   - "src/domain/repositories/journal_workflow_repository.rs"
@@ -72,6 +73,7 @@ user_owned:
 
   # Behavior tests + BDD oracle (the golden cases).
   - "tests/posting_golden_cases.rs"
+  - "tests/posting_budget_control_cases.rs"
   - "tests/reporting_golden_cases.rs"
   - "tests/reconciliation_graph_golden_cases.rs"
   - "tests/caba_flip_cases.rs"

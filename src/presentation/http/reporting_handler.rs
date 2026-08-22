@@ -62,10 +62,41 @@ fn err(e: anyhow::Error) -> (StatusCode, Json<serde_json::Value>) {
     )
 }
 
+// ── Tenant consistency ────────────────────────────────────────────────────────
+//
+// The reads take `company_id` from the query string so standalone callers can
+// name their scope. When a host has mounted an ambient company scope
+// (backbone-auth's `company_auth` wraps every request in `with_company_scope`),
+// the query's company must agree with it — otherwise an authenticated tenant
+// could name any company and receive a misleading empty-but-balanced report
+// branded with the foreign id (the database fence returns no rows either way;
+// this is the contract layer that says so explicitly, mirroring the reconcile
+// verbs' guard). With no ambient scope (unit tests, trusted internal hosts) the
+// check is skipped — the module keeps its standalone shape.
+
+const COMPANY_MISMATCH: &str = "company_mismatch";
+
+fn company_forbidden(q_company: Uuid) -> Option<(StatusCode, Json<serde_json::Value>)> {
+    match backbone_orm::current_company() {
+        Some(authenticated) if authenticated != q_company => Some((
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "success": false,
+                "error": COMPANY_MISMATCH,
+                "message": "the request's company_id does not match the authenticated company",
+            })),
+        )),
+        _ => None,
+    }
+}
+
 async fn trial_balance(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc.trial_balance(q.company_id, q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
@@ -76,6 +107,9 @@ async fn balance_sheet(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc.balance_sheet(q.company_id, q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
@@ -86,6 +120,9 @@ async fn income_statement(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<PeriodQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc
         .income_statement(q.company_id, q.period_start, q.period_end)
         .await
@@ -99,6 +136,9 @@ async fn general_ledger(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<GeneralLedgerQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc
         .general_ledger(
             q.company_id,
@@ -119,6 +159,9 @@ async fn partner_ledger(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<PartnerLedgerQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     // Validate up front: an unknown party_type would otherwise surface as a 500
     // carrying the raw database cast error (the swallowed-enum-detail failure class).
     if !matches!(q.party_type.as_str(), "customer" | "supplier") {
@@ -146,6 +189,9 @@ async fn aged_receivables(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc.aged_receivables(q.company_id, q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
@@ -156,6 +202,9 @@ async fn aged_payables(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
+    if let Some(forbidden) = company_forbidden(q.company_id) {
+        return forbidden;
+    }
     match svc.aged_payables(q.company_id, q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),

@@ -57,6 +57,9 @@ impl PostingEventSink for LoggingSink {
 pub struct PostingService {
     repo: Arc<dyn PostingRepository>,
     sink: Arc<dyn PostingEventSink>,
+    /// Host-implemented budget control, consulted after the pure rules pass.
+    /// `None` (default) = no budget module composed: no check, fail-open.
+    budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
 }
 
 impl PostingService {
@@ -64,12 +67,28 @@ impl PostingService {
         Self {
             repo,
             sink: Arc::new(LoggingSink),
+            budget_control: None,
         }
     }
 
     /// Construct with a custom event sink (real bus adapter or a test recorder).
     pub fn with_sink(repo: Arc<dyn PostingRepository>, sink: Arc<dyn PostingEventSink>) -> Self {
-        Self { repo, sink }
+        Self {
+            repo,
+            sink,
+            budget_control: None,
+        }
+    }
+
+    /// Arm the budget-control consult on an already-built service (consuming
+    /// builder; `None` leaves it unarmed — the fail-open default for hosts
+    /// without a budget module).
+    pub fn with_budget_control_if_set(
+        mut self,
+        port: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
+    ) -> Self {
+        self.budget_control = port;
+        self
     }
 
     /// Record a balanced posting. Idempotent on (company, source_type, source_id, posting_type)
@@ -287,7 +306,43 @@ impl PostingService {
             .is_period_closed(req.company_id, req.posting_date)
             .await
             .map_err(internal)?;
-        posting_rules::validate(&req.lines, &accounts, period_closed)
+        posting_rules::validate(&req.lines, &accounts, period_closed)?;
+
+        // Budget control — AFTER the pure rules, so both entry points (post()
+        // and post_journal()) get it and the idempotent-reuse early return
+        // above correctly skips it (an already-posted entry is not re-judged).
+        // Unwired port = no budget module composed: no check (fail-open). A
+        // wired port that errors refuses the posting (fail-closed): a broken
+        // budget module must not silently disable block enforcement.
+        if let Some(port) = self.budget_control.as_ref() {
+            let breaches = port
+                .evaluate_posting(req.company_id, req.posting_date, &req.lines)
+                .await
+                .map_err(internal)?;
+            match posting_rules::budget_outcome(&breaches) {
+                posting_rules::BudgetOutcome::WithinBudget => {}
+                posting_rules::BudgetOutcome::Warned(breaches) => {
+                    for b in &breaches {
+                        tracing::warn!(
+                            target: "accounting.events",
+                            budget_id = %b.budget_id,
+                            budget_line_id = %b.budget_line_id,
+                            account_id = %b.account_id,
+                            cost_center_id = ?b.cost_center_id,
+                            fiscal_period_id = %b.fiscal_period_id,
+                            planned = %b.planned_amount,
+                            achieved = %b.achieved_amount,
+                            pending = %b.pending_amount,
+                            "budget_exceeded_warn"
+                        );
+                    }
+                }
+                posting_rules::BudgetOutcome::Blocked(breaches) => {
+                    return Err(PostingError::BudgetExceeded(breaches));
+                }
+            }
+        }
+        Ok(())
     }
 
     // ---- helpers ------------------------------------------------------------

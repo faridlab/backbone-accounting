@@ -84,6 +84,10 @@ pub struct AccountingModule {
     /// Host-implemented cash-basis tax deferral lookup, kept so post-build
     /// service variants (e.g. the exchange-account one) keep the flip wired.
     pub(crate) deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
+    /// Host-implemented budget control, kept so every posting path the host
+    /// builds from this module (the HTTP posting verb, the journal workflow,
+    /// the period close) can arm the consult from one registration.
+    pub(crate) budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
     /// Chart install engine over the datasets registered via `with_chart_dataset`.
     pub(crate) chart_install_service:
         Arc<crate::application::service::chart_install_service::ChartInstallService>,
@@ -205,6 +209,17 @@ impl AccountingModule {
     }
 
     // <<< CUSTOM METHODS
+    /// The registered budget-control port, if any — the single registration a
+    /// host threads into every `PostingService` it builds from this module
+    /// (`.with_budget_control_if_set(m.budget_control())`), so the HTTP
+    /// posting verb, the journal workflow, and the period close all consult
+    /// the same control.
+    pub fn budget_control(
+        &self,
+    ) -> Option<Arc<dyn crate::domain::repositories::BudgetControlPort>> {
+        self.budget_control.clone()
+    }
+
     /// The on-the-fly financial reports (Trial Balance tree, Balance Sheet, Income
     /// Statement, General Ledger, Partner Ledger, Aged AR/AP). Read-only; scoped reads.
     pub fn reporting_service(
@@ -267,6 +282,7 @@ pub struct AccountingModuleBuilder {
     db_pool: Option<PgPool>,
     // <<< CUSTOM FIELDS
     deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
+    budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
     chart_datasets: Vec<Arc<crate::domain::chart_dataset::ChartDataset>>,
     // END CUSTOM
 }
@@ -278,6 +294,7 @@ impl AccountingModuleBuilder {
             db_pool: None,
             // <<< CUSTOM INIT
             deferred_tax: None,
+            budget_control: None,
             chart_datasets: Vec::new(),
             // END CUSTOM
         }
@@ -311,6 +328,20 @@ impl AccountingModuleBuilder {
         port: Arc<dyn crate::domain::repositories::DeferredTaxLookup>,
     ) -> Self {
         self.deferred_tax = Some(port);
+        self
+    }
+
+    /// Wire the host's budget control: postings through the GL-posting
+    /// chokepoint are checked against confirmed budget positions (account x
+    /// cost center x fiscal period) after the pure double-entry rules pass.
+    /// Warn-enforcement breaches log and proceed; block-enforcement breaches
+    /// refuse the posting. Hosts without a budget module leave it unset — no
+    /// check, everything else works (fail-open).
+    pub fn with_budget_control(
+        mut self,
+        port: Arc<dyn crate::domain::repositories::BudgetControlPort>,
+    ) -> Self {
+        self.budget_control = Some(port);
         self
     }
     // END CUSTOM
@@ -450,6 +481,7 @@ impl AccountingModuleBuilder {
             db_pool,
             reconcile_write_service,
             deferred_tax: self.deferred_tax,
+            budget_control: self.budget_control,
             chart_install_service,
             reporting_service,
             // END CUSTOM

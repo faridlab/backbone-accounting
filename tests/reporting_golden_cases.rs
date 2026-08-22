@@ -689,3 +689,84 @@ async fn rgc7_backdated_posting_gl_consistency() {
         .expect("bank on TB");
     assert_eq!(tb_bank.debit - tb_bank.credit, s.closing_balance);
 }
+
+// The reporting reads take `company_id` from the query string; when a host has
+// mounted an ambient company scope (company_auth's `with_company_scope`
+// task-local), the query's company must agree with it — a mismatched request
+// answers 403 company_mismatch instead of a misleading empty-but-balanced
+// report branded with the foreign id (the database fence returns no rows either
+// way; this pins the explicit contract on every route). Without an ambient
+// scope the reads keep their standalone (trusted-host) shape.
+#[tokio::test]
+async fn reporting_reads_refuse_company_mismatch_under_ambient_scope() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    let pool = pool().await;
+    let (company, _a) = seed_coa(&pool).await;
+    let other = Uuid::new_v4();
+    let app =
+        backbone_accounting::presentation::http::reporting_handler::create_reporting_routes(
+            std::sync::Arc::new(ReportingService::new(std::sync::Arc::new(
+                backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(
+                    pool.clone(),
+                ),
+            ))),
+        );
+
+    let as_of = "2026-06-30";
+    let paths = [
+        format!("/accounting/reports/trial-balance?company_id={company}&as_of={as_of}"),
+        format!("/accounting/reports/balance-sheet?company_id={company}&as_of={as_of}"),
+        format!(
+            "/accounting/reports/income-statement?company_id={company}&period_start=2026-06-01&period_end={as_of}"
+        ),
+        format!("/accounting/reports/general-ledger?company_id={company}&to_date={as_of}"),
+        format!(
+            "/accounting/reports/partner-ledger?company_id={company}&party_type=customer&party_id={}&as_of={as_of}",
+            Uuid::new_v4()
+        ),
+        format!("/accounting/reports/aged-receivables?company_id={company}&as_of={as_of}"),
+        format!("/accounting/reports/aged-payables?company_id={company}&as_of={as_of}"),
+    ];
+    for path in paths {
+        let resp = backbone_orm::with_company_scope(Some(other), async {
+            app.clone()
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri(&path)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+        })
+        .await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "path: {path}");
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let text = String::from_utf8_lossy(&bytes).to_string();
+        assert!(text.contains("company_mismatch"), "path: {path}, got: {text}");
+    }
+
+    // Matching ambient scope passes the tenant gate and answers 200 (the fresh
+    // company has no postings, so an empty balanced report is the real answer).
+    let resp = backbone_orm::with_company_scope(Some(company), async {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!(
+                        "/accounting/reports/trial-balance?company_id={company}&as_of={as_of}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    })
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+}

@@ -99,6 +99,17 @@ impl JournalWorkflowService {
         }
     }
 
+    /// Arm the budget-control consult on the inner posting service (consuming
+    /// builder; `None` leaves it unarmed). Hosts that compose a budget module
+    /// thread the port here so journal-approval posts are controlled too.
+    pub fn with_budget_control_if_set(
+        mut self,
+        port: Option<std::sync::Arc<dyn crate::domain::repositories::BudgetControlPort>>,
+    ) -> Self {
+        self.posting = self.posting.with_budget_control_if_set(port);
+        self
+    }
+
     /// `draft → pending_approval`. Rejects if the journal is not `draft`.
     pub async fn submit(
         &self,

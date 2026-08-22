@@ -12,6 +12,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::domain::repositories::budget_control::BudgetBreach;
+
 /// One debit/credit line of a posting request. Exactly one of `debit`/`credit` is > 0.
 #[derive(Debug, Clone)]
 pub struct PostingLine {
@@ -102,6 +104,9 @@ pub enum PostingError {
     PartyRequired(String),
     PartyNotAllowed(String),
     PeriodClosed,
+    /// A block-enforcement budget position would be exceeded: the posting is
+    /// refused with the breaching positions attached (see `budget_control`).
+    BudgetExceeded(Vec<BudgetBreach>),
     Conflict(String),
     Internal(String),
 }
@@ -117,6 +122,7 @@ impl PostingError {
             PostingError::PartyRequired(_) => "party_required",
             PostingError::PartyNotAllowed(_) => "party_not_allowed",
             PostingError::PeriodClosed => "period_closed",
+            PostingError::BudgetExceeded(_) => "budget_exceeded",
             PostingError::Conflict(_) => "conflict",
             PostingError::Internal(_) => "internal_error",
         }

@@ -10,6 +10,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::domain::gl_posting::{PostingError, PostingLine};
+use crate::domain::repositories::budget_control::BudgetBreach;
 use crate::domain::repositories::posting_repository::PostableAccount;
 
 /// Validate a set of posting lines against loaded accounts + the period-open flag.
@@ -68,6 +69,42 @@ pub fn validate(
     }
 
     Ok(())
+}
+
+/// Outcome of the budget control consult, derived purely from the port's
+/// breach list (the service loads the breaches; the mapping stays here, no
+/// I/O — the same split as `period_closed` above).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BudgetOutcome {
+    /// No breach: within every budget or no budget coverage at all.
+    WithinBudget,
+    /// Only warn-enforcement positions were exceeded: the posting proceeds.
+    Warned(Vec<BudgetBreach>),
+    /// At least one block-enforcement position was exceeded: refuse.
+    Blocked(Vec<BudgetBreach>),
+}
+
+/// Fold the budget breaches into the posting decision. Any block breach
+/// blocks; otherwise any breach warns; none is within budget.
+pub fn budget_outcome(breaches: &[BudgetBreach]) -> BudgetOutcome {
+    let blocked: Vec<BudgetBreach> = breaches
+        .iter()
+        .filter(|b| {
+            matches!(
+                b.enforcement,
+                crate::domain::repositories::budget_control::BudgetEnforcement::Block
+            )
+        })
+        .cloned()
+        .collect();
+    if !blocked.is_empty() {
+        return BudgetOutcome::Blocked(blocked);
+    }
+    if breaches.is_empty() {
+        BudgetOutcome::WithinBudget
+    } else {
+        BudgetOutcome::Warned(breaches.to_vec())
+    }
 }
 
 #[cfg(test)]
@@ -143,5 +180,53 @@ mod tests {
     fn accepts_clean_balanced_lines() {
         let id = Uuid::new_v4();
         assert!(validate(&[line(id, "100", "0"), line(id, "0", "100")]).is_ok());
+    }
+
+    // ── budget_outcome (pure fold over the port's breach list) ─────────────
+
+    use crate::domain::repositories::budget_control::{
+        BudgetBreach, BudgetEnforcement,
+    };
+
+    fn breach(enforcement: BudgetEnforcement) -> BudgetBreach {
+        BudgetBreach {
+            budget_id: Uuid::new_v4(),
+            budget_line_id: Uuid::new_v4(),
+            account_id: Uuid::new_v4(),
+            cost_center_id: None,
+            fiscal_period_id: Uuid::new_v4(),
+            planned_amount: dec("100"),
+            achieved_amount: dec("40"),
+            pending_amount: dec("70"),
+            enforcement,
+        }
+    }
+
+    #[test]
+    fn budget_outcome_empty_is_within_budget() {
+        assert_eq!(super::budget_outcome(&[]), super::BudgetOutcome::WithinBudget);
+    }
+
+    #[test]
+    fn budget_outcome_warn_only_warns() {
+        let out = super::budget_outcome(&[breach(BudgetEnforcement::Warn)]);
+        assert!(matches!(out, super::BudgetOutcome::Warned(b) if b.len() == 1));
+    }
+
+    #[test]
+    fn budget_outcome_block_blocks() {
+        let out = super::budget_outcome(&[breach(BudgetEnforcement::Block)]);
+        assert!(matches!(out, super::BudgetOutcome::Blocked(b) if b.len() == 1));
+    }
+
+    #[test]
+    fn budget_outcome_block_wins_over_warn() {
+        let out = super::budget_outcome(&[
+            breach(BudgetEnforcement::Warn),
+            breach(BudgetEnforcement::Block),
+            breach(BudgetEnforcement::Warn),
+        ]);
+        // Block dominates: only the blocking breaches need to ride the refusal.
+        assert!(matches!(out, super::BudgetOutcome::Blocked(b) if b.len() == 1));
     }
 }

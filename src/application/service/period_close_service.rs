@@ -69,6 +69,18 @@ impl PeriodCloseService {
         }
     }
 
+    /// Arm the budget-control consult on the inner posting service (consuming
+    /// builder; `None` leaves it unarmed). The closing entry zeroes P&L
+    /// accounts against their normal balance, so control is usually left
+    /// unarmed here; the builder exists so hosts can choose otherwise.
+    pub fn with_budget_control_if_set(
+        mut self,
+        port: Option<std::sync::Arc<dyn crate::domain::repositories::BudgetControlPort>>,
+    ) -> Self {
+        self.posting = self.posting.with_budget_control_if_set(port);
+        self
+    }
+
     /// Close `period_id`: post a closing entry that zeroes revenue/expense into
     /// `retained_earnings_account_id`, then mark the period closed.
     pub async fn close_period(
