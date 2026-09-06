@@ -71,6 +71,16 @@ user_owned:
   # Message-bus adapter (publishes posting events to backbone-messaging).
   - "src/infrastructure/messaging/**"
 
+  # Finance tail surfaces — EMV(QRCPS)/QRIS display, check printing sequences +
+  # registry, tax-tag legal-change repair (all verb-backed, no CRUD mount).
+  - "src/domain/emv_qr.rs"
+  - "src/application/service/emv_qr_service.rs"
+  - "src/presentation/http/emv_qr_handler.rs"
+  - "src/application/service/check_printing_service.rs"
+  - "src/presentation/http/check_printing_handler.rs"
+  - "src/application/service/tax_tag_repair_service.rs"
+  - "src/presentation/http/tax_tag_repair_handler.rs"
+
   # Behavior tests + BDD oracle (the golden cases).
   - "tests/posting_golden_cases.rs"
   - "tests/posting_budget_control_cases.rs"
@@ -84,6 +94,9 @@ user_owned:
   - "tests/journal_workflow_golden_cases.rs"
   - "tests/chart_install_cases.rs"
   - "tests/rls_probe.rs"
+  - "tests/emv_qr_cases.rs"
+  - "tests/check_printing_cases.rs"
+  - "tests/tax_tag_repair_cases.rs"
   - "tests/features/**"
 
   # Hand-authored module documentation (PRD/BRD/FSD, business flows, ADRs).

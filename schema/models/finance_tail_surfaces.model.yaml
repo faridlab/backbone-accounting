@@ -1,0 +1,335 @@
+# =============================================================================
+# Domain: Accounting
+# Entities: EmvQrConfig, BankCheckSequence, PrintedCheck, TaxTagRepairRun
+# Description: The finance tail surfaces — verb-backed tables with deliberately
+#              NO CRUD surface of their own. All writes flow through their
+#              hand-authored services (EmvQrService, CheckPrintingService,
+#              TaxTagRepairService); `create_guarded_accounting_routes` mounts
+#              only those verb routes. This file is the schema source of truth
+#              for the table shapes; the DDL landed as hand-written migrations
+#              (20260906100000 / 20260906110000 / 20260906120000) and must stay
+#              in sync with it.
+#
+#   - EmvQrConfig       merchant-presented QR (QRIS) display configuration;
+#                       payloads are REBUILT from the row at display time,
+#                       never stored.
+#   - BankCheckSequence per-bank-journal check-number sequence (auto/manual
+#                       numbering; MAX_INT32 cap enforced by the verb).
+#   - PrintedCheck      the check registry — which payment got which number;
+#                       unique (company, bank journal, number) in SQL.
+#   - TaxTagRepairRun   audit ledger for tax-tag legal-change repairs (the
+#                       officer verb is the only writer; reason mandatory).
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # EmvQrConfig - merchant-presented QR display configuration
+  # ---------------------------------------------------------------------------
+  - name: EmvQrConfig
+    collection: emv_qr_configs
+    description: "Merchant data the EMV(QRCPS)/QRIS payload builder renders on invoices"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique configuration identifier"
+
+      # =======================================================================
+      # Company (books owner) — partitions the BOOKS; fence strict (ADR-0014).
+      # =======================================================================
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this configuration # logical FK to organization.Company.id"
+
+      merchant_name:
+        type: string
+        attributes: ["@required", "@max(25)"]
+        description: "Merchant name (EMV tag 59; max 25 after accent folding)"
+
+      merchant_city:
+        type: string
+        attributes: ["@required", "@max(15)"]
+        description: "Merchant city (EMV tag 60; max 15 after accent folding)"
+
+      country_code:
+        type: string
+        attributes: ["@required", "@max(2)", "@default('ID')"]
+        description: "Country code (EMV tag 58, ISO-3166 alpha-2, uppercased)"
+
+      mcc:
+        type: string
+        attributes: ["@required", "@length(4)"]
+        description: "Merchant category code (EMV tag 52, 4 digits)"
+
+      gui:
+        type: string
+        attributes: ["@required", "@max(32)", "@default('ID.CO.QRIS.WWW')"]
+        description: "QRIS global unique identifier inside the tag-26 template (tag 26-00)"
+
+      merchant_identifier:
+        type: string
+        attributes: ["@required", "@max(32)"]
+        description: "QRIS merchant identifier (merchant PAN, national ID, or 'UME') inside tag 26-01"
+
+      currency:
+        type: string
+        attributes: ["@required", "@length(3)", "@default('IDR')"]
+        description: "Default settlement currency (ISO-4217 alpha; translated to the EMV numeric code at build time)"
+
+      initiation_method:
+        type: string
+        attributes: ["@required", "@default('11')"]
+        description: "EMV tag 01: '11' static (reusable) or '12' dynamic (single use)"
+
+      bank_account_id:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Optional bank-account slot anchor (NULL = company-wide default) # logical FK to banking.BankAccount.id"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Audit bag"
+
+    indexes:
+      - type: unique
+        fields: [company_id, bank_account_id]
+        description: "One config per (company, bank-account) slot; NULL bank_account_id is the company default (enforced with a COALESCE expression index in the landed DDL)"
+      - type: index
+        fields: [company_id]
+
+  # ---------------------------------------------------------------------------
+  # BankCheckSequence - per-bank-journal check-number sequence
+  # ---------------------------------------------------------------------------
+  - name: BankCheckSequence
+    collection: bank_check_sequences
+    description: "Check numbering cursor for one company bank account"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique sequence identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this sequence # logical FK to organization.Company.id"
+
+      bank_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The bank journal this sequence numbers checks for # logical FK to banking.BankAccount.id"
+
+      numbering_mode:
+        type: string
+        attributes: ["@required", "@default(auto)"]
+        description: "'auto' allocates from next_number inside the verb transaction; 'manual' validates officer-supplied numbers"
+
+      next_number:
+        type: bigint
+        attributes: ["@required", "@default(1)", "@positive"]
+        description: "The NEXT number to allocate; capped at 2147483647 by the verb (typed refusal, transaction rolls back)"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Audit bag"
+
+    indexes:
+      - type: unique
+        fields: [company_id, bank_account_id]
+
+  # ---------------------------------------------------------------------------
+  # PrintedCheck - the printed-check registry
+  # ---------------------------------------------------------------------------
+  - name: PrintedCheck
+    collection: printed_checks
+    description: "One printed check: the payment it settles, its number, its state"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique registry row identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity that owns this check # logical FK to organization.Company.id"
+
+      bank_account_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The bank journal the check draws on # logical FK to banking.BankAccount.id"
+
+      payment_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "The payment this check settles # logical FK to payment.PaymentEntry.id"
+
+      payment_number:
+        type: string?
+        attributes: ["@max(50)"]
+        description: "Display copy of the payment's number"
+
+      check_number:
+        type: string
+        attributes: ["@required", "@max(20)"]
+        description: "The check number (auto-allocated or officer-supplied)"
+
+      amount:
+        type: decimal
+        attributes: ["@required", "@precision(18,2)", "@positive"]
+        description: "Check amount, company currency"
+
+      payee_name:
+        type: string?
+        attributes: ["@max(100)"]
+        description: "Payee as printed"
+
+      status:
+        type: string
+        attributes: ["@required", "@default(printed)"]
+        description: "'printed' → 'voided' (a voided number stays consumed; reversing the payment does not free it)"
+
+      printed_at:
+        type: datetime
+        attributes: ["@required", "@default(now)"]
+        description: "When the check was recorded printed"
+
+      printed_by:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Officer who recorded the print # logical FK to sapiens.User.id"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Audit bag"
+
+    indexes:
+      - type: unique
+        fields: [company_id, bank_account_id, check_number]
+        description: "The cross-payment uniqueness guard, enforced in SQL"
+      - type: index
+        fields: [company_id, payment_id]
+
+  # ---------------------------------------------------------------------------
+  # TaxTagRepairRun - tax-tag legal-change repair audit ledger
+  # ---------------------------------------------------------------------------
+  - name: TaxTagRepairRun
+    collection: tax_tag_repair_runs
+    description: "Audit row for one tax-tag recompute run (dry run or apply)"
+
+    fields:
+      id:
+        type: uuid
+        attributes: ["@id", "@default(uuid)"]
+        description: "Unique run identifier"
+
+      company_id:
+        type: uuid
+        attributes: ["@required", "@exclude_from_foreign_key_check"]
+        description: "Legal entity whose books were repaired # logical FK to organization.Company.id"
+
+      date_from:
+        type: date
+        attributes: ["@required"]
+        description: "Window start (journal transaction_date, inclusive)"
+
+      date_to:
+        type: date
+        attributes: ["@required"]
+        description: "Window end (journal transaction_date, inclusive)"
+
+      rules:
+        type: json
+        attributes: ["@required"]
+        description: "The assignment rules exactly as applied (selectors + tag sets), stored for later diffing"
+
+      lines_examined:
+        type: bigint
+        attributes: ["@required", "@non_negative"]
+        description: "Posted lines the selectors matched"
+
+      lines_retagged:
+        type: bigint
+        attributes: ["@required", "@non_negative"]
+        description: "Lines whose tag set actually changed"
+
+      dry_run:
+        type: bool
+        attributes: ["@default(false)"]
+        description: "True when the run counted and reported without writing"
+
+      closed_periods_overridden:
+        type: json
+        attributes: ["@default('[]')"]
+        description: "The closed periods the run crossed with the override armed (audit copy; column name overridden_closed_periods)"
+
+      actor:
+        type: uuid?
+        attributes: ["@exclude_from_foreign_key_check"]
+        description: "Officer who ran the repair # logical FK to sapiens.User.id"
+
+      reason:
+        type: string
+        attributes: ["@required"]
+        description: "Mandatory legal-change justification; the verb refuses empty reasons"
+
+      ran_at:
+        type: datetime
+        attributes: ["@required", "@default(now)"]
+        description: "When the run executed"
+
+      created_at:
+        type: datetime
+        attributes: ["@default(now)"]
+        description: "Record creation timestamp"
+
+      updated_at:
+        type: datetime
+        attributes: ["@updated_at"]
+        description: "Last update timestamp"
+
+      metadata:
+        type: json
+        attributes: ["@default('{}')"]
+        description: "Audit bag"
+
+    indexes:
+      - type: index
+        fields: [company_id, ran_at]

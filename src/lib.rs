@@ -81,6 +81,17 @@ pub struct AccountingModule {
     pub(crate) db_pool: PgPool,
     pub(crate) reconcile_write_service:
         Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>,
+    /// The check printing surface: per-bank-journal check-number sequences and
+    /// the printed-check registry.
+    pub(crate) check_printing_service:
+        Arc<crate::application::service::check_printing_service::CheckPrintingService>,
+    /// The EMV(QRCPS)/QRIS display surface: merchant QR configuration and the
+    /// invoice payload render.
+    pub(crate) emv_qr_service:
+        Arc<crate::application::service::emv_qr_service::EmvQrService>,
+    /// The tax-tag legal-change repair verb and its audit ledger read.
+    pub(crate) tax_tag_repair_service:
+        Arc<crate::application::service::tax_tag_repair_service::TaxTagRepairService>,
     /// Host-implemented cash-basis tax deferral lookup, kept so post-build
     /// service variants (e.g. the exchange-account one) keep the flip wired.
     pub(crate) deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
@@ -274,6 +285,34 @@ impl AccountingModule {
     {
         self.chart_install_service.clone()
     }
+
+    /// The check printing surface — sequence registration, atomic number
+    /// allocation, the printed-check registry, and voids. `guarded_routes`
+    /// mounts its verb routes; there is no CRUD path to these tables.
+    pub fn check_printing_service(
+        &self,
+    ) -> std::sync::Arc<crate::application::service::check_printing_service::CheckPrintingService>
+    {
+        self.check_printing_service.clone()
+    }
+
+    /// The EMV(QRCPS)/QRIS display surface — merchant QR configuration and the
+    /// invoice payload render (payloads are built on demand, never stored).
+    pub fn emv_qr_service(
+        &self,
+    ) -> std::sync::Arc<crate::application::service::emv_qr_service::EmvQrService> {
+        self.emv_qr_service.clone()
+    }
+
+    /// The tax-tag legal-change repair verb (reason mandatory, locked periods
+    /// refused, closed periods overridden explicitly, every run audit-stamped)
+    /// plus its audit-ledger read.
+    pub fn tax_tag_repair_service(
+        &self,
+    ) -> std::sync::Arc<crate::application::service::tax_tag_repair_service::TaxTagRepairService>
+    {
+        self.tax_tag_repair_service.clone()
+    }
     // END CUSTOM
 }
 
@@ -462,6 +501,23 @@ impl AccountingModuleBuilder {
                 ),
             ),
         );
+        // Check printing: per-bank-journal number sequences + the printed-check
+        // registry, all writes through the guarded verb set.
+        let check_printing_service = std::sync::Arc::new(
+            crate::application::service::check_printing_service::CheckPrintingService::new(
+                db_pool.clone(),
+            ),
+        );
+        // EMV(QRCPS)/QRIS display: merchant QR config + invoice payload render.
+        let emv_qr_service = std::sync::Arc::new(
+            crate::application::service::emv_qr_service::EmvQrService::new(db_pool.clone()),
+        );
+        // Tax-tag legal-change repair verb + its audit ledger read.
+        let tax_tag_repair_service = std::sync::Arc::new(
+            crate::application::service::tax_tag_repair_service::TaxTagRepairService::new(
+                db_pool.clone(),
+            ),
+        );
         // END CUSTOM
 
         Ok(AccountingModule {
@@ -484,6 +540,9 @@ impl AccountingModuleBuilder {
             budget_control: self.budget_control,
             chart_install_service,
             reporting_service,
+            check_printing_service,
+            emv_qr_service,
+            tax_tag_repair_service,
             // END CUSTOM
         })
     }

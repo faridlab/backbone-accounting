@@ -65,4 +65,25 @@ pub fn create_guarded_accounting_routes(m: &AccountingModule) -> Router {
         .merge(
             crate::presentation::http::chart_routes::create_chart_routes(m.chart_install_service()),
         )
+        // Check printing verbs — the ONLY write surface onto the check sequence
+        // and printed-check registry tables (no CRUD mount for those models).
+        // The registry verbs belong behind the host's accounting-officer gate.
+        .merge(
+            crate::presentation::http::check_printing_handler::create_check_printing_routes(
+                m.check_printing_service(),
+            ),
+        )
+        // EMV(QRCPS)/QRIS display — merchant config verb + on-demand payload
+        // render. Payloads are rebuilt per request, never stored.
+        .merge(
+            crate::presentation::http::emv_qr_handler::create_emv_qr_routes(m.emv_qr_service()),
+        )
+        // Tax-tag legal-change repair — the officer verb + audit read. Never
+        // scheduler-invoked: reason mandatory, locked periods refused, closed
+        // periods overridden explicitly, every run audit-stamped.
+        .merge(
+            crate::presentation::http::tax_tag_repair_handler::create_tax_tag_repair_routes(
+                m.tax_tag_repair_service(),
+            ),
+        )
 }

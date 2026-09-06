@@ -21,12 +21,15 @@ pub mod reconciliation_item_handler;
 // <<< CUSTOM
 pub mod accounting_ops_handler;
 pub mod chart_routes;
+pub mod check_printing_handler;
+pub mod emv_qr_handler;
 pub mod guarded_routes;
 pub mod hierarchy_handler;
 pub mod journal_workflow_handler;
 pub mod posting_handler;
 pub mod reconcile_handler;
 pub mod reporting_handler;
+pub mod tax_tag_repair_handler;
 // END CUSTOM
 
 // Re-exports

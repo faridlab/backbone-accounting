@@ -23,11 +23,14 @@ pub mod reconciliation_service;
 // <<< CUSTOM
 pub mod bank_reconciliation_service;
 pub mod chart_install_service;
+pub mod check_printing_service;
+pub mod emv_qr_service;
 pub mod journal_workflow_service;
 pub mod period_close_service;
 pub mod posting_service;
 pub mod reconcile_write_service;
 pub mod reporting_service;
+pub mod tax_tag_repair_service;
 // END CUSTOM
 
 pub use account_service::AccountService;
