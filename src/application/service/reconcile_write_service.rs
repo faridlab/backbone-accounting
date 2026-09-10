@@ -21,6 +21,11 @@
 //! allocation order).
 //!
 //! This file is user-owned (see `metaphor.codegen.yaml`) and survives regeneration.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic. The `company_id` threaded through the
+//! verbs is the documented legacy twin — kept so unstripped callers compile and run
+//! unchanged; the adapters key no statement on it (the ambient org scope scopes everything,
+//! relayed onto the pool wrappers' transactions below).
 
 use std::sync::Arc;
 
@@ -29,7 +34,7 @@ use rust_decimal::{Decimal, RoundingStrategy};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 
 use crate::domain::gl_posting::PostingLine;
 use crate::domain::reconcile_graph::{
@@ -1081,18 +1086,24 @@ impl ReconcileWriteService {
     // `_on` verbs directly)
     // =========================================================================
 
-    /// Pool wrapper over [`Self::reconcile_pair_on`].
+    /// Pool wrapper over [`Self::reconcile_pair_on`]. Relays the AMBIENT org scope onto the
+    /// transaction when the caller bound one, so the tenancy decorator's org-unit fill and its
+    /// row-level fence see this transaction's statements (ADR-0029). An undecorated deployment
+    /// has no ambient scope and skips the relay entirely.
     pub async fn reconcile_pair(&self, req: &PairRequest) -> Result<EdgeOutcome, ReconcileError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut tx, req.company_id)
-            .await
-            .map_err(|e| internal(e.into()))?;
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+        }
         let out = self.reconcile_pair_on(&mut tx, req).await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
         Ok(out)
     }
 
-    /// Pool wrapper over [`Self::unreconcile_on`].
+    /// Pool wrapper over [`Self::unreconcile_on`] — same ambient-scope relay discipline as
+    /// [`Self::reconcile_pair`].
     pub async fn unreconcile(
         &self,
         company_id: Uuid,
@@ -1100,9 +1111,11 @@ impl ReconcileWriteService {
         actor: Option<Uuid>,
     ) -> Result<(), ReconcileError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e.into()))?;
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+        }
         self.unreconcile_on(&mut tx, company_id, partial_id, actor)
             .await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
@@ -1111,10 +1124,10 @@ impl ReconcileWriteService {
 
     /// Pool wrapper over [`Self::matching_group_on`].
     ///
-    /// The bind runs inside a transaction on purpose: `bind_company_on` uses
+    /// The relay runs inside a transaction on purpose: the scope bind uses
     /// `set_config(..., is_local)`, whose setting only lives for the current
     /// transaction. On a bare pooled connection it evaporates before the next
-    /// statement, the ADR-0014 fence then sees no company, and the read
+    /// statement, the decorator's fence then sees no org scope, and the read
     /// silently returns an empty group — invisible on owner/superuser DSNs
     /// (they bypass RLS), fatal on any fenced app-role deployment.
     pub async fn matching_group(
@@ -1123,16 +1136,18 @@ impl ReconcileWriteService {
         line_id: Uuid,
     ) -> Result<MatchingGroup, ReconcileError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e.into()))?;
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+        }
         let group = self.matching_group_on(&mut tx, company_id, line_id).await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
         Ok(group)
     }
 
     /// Pool wrapper over [`Self::residuals_for_party_on`] — same
-    /// transaction-scoped bind discipline as [`Self::matching_group`].
+    /// transaction-scoped relay discipline as [`Self::matching_group`].
     pub async fn residuals_for_party(
         &self,
         company_id: Uuid,
@@ -1141,9 +1156,11 @@ impl ReconcileWriteService {
         party_id: Uuid,
     ) -> Result<Vec<PartyResidual>, ReconcileError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
-        company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e.into()))?;
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+        }
         let rows = self
             .residuals_for_party_on(&mut tx, company_id, account_id, party_type, party_id)
             .await?;

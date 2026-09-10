@@ -2,15 +2,30 @@
 //! The adapter unit tests (`publish_async`) are deterministic; the end-to-end test drives a real
 //! post through `PostingService::with_sink` (fire-and-forget) and polls the bus history.
 //! Requires DATABASE_URL (defaults to local dev Postgres on :5433) for the end-to-end test.
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence.
+//! The end-to-end test seeds fresh UUID accounts and derives its posting date from the
+//! run's company UUID (the fiscal-period guard reads periods by date overlap globally).
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use backbone_messaging::IntegrationEventBus;
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+/// The 15th of a month chosen by the run's company UUID — see the header note on the
+/// globally-read fiscal-period guard.
+fn posting_date(company: Uuid) -> NaiveDate {
+    let offset = (company.as_u128() % 240) as u32;
+    NaiveDate::from_ymd_opt(2026, 1, 15)
+        .unwrap()
+        .checked_add_months(chrono::Months::new(offset))
+        .unwrap()
+}
 
 use backbone_accounting::application::service::posting_service::{
     AccountingPostFailed, AccountingPostPosted, PostingEvent, PostingLine, PostingRequest,
@@ -94,11 +109,11 @@ async fn posting_service_publishes_to_bus() {
         ),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
+        .bind(id).bind(code).bind(name).bind(at).bind(st).bind(nb)
         .execute(&pool).await.unwrap();
     }
 
@@ -116,7 +131,7 @@ async fn posting_service_publishes_to_bus() {
         company,
         "order",
         Uuid::new_v4(),
-        chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+        posting_date(company),
     );
     req.lines = vec![
         PostingLine {

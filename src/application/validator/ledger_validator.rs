@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<Ledger>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::Ledger;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{NonNegative, OptionalNotBlank, RequiredString};
+use crate::domain::entity::Ledger;
 
 /// Validator type alias for Ledger entities.
 pub type LedgerValidator = EntityValidator<Ledger>;
@@ -15,34 +15,16 @@ pub type LedgerValidator = EntityValidator<Ledger>;
 /// Build a validator for Ledger with all schema-defined field rules.
 pub fn ledger_validator() -> LedgerValidator {
     EntityValidator::new()
-        .rule(RequiredString::new("account_number", |e: &Ledger| {
-            &e.account_number
-        }))
-        .rule(RequiredString::new("account_name", |e: &Ledger| {
-            &e.account_name
-        }))
-        .rule(RequiredString::new("journal_number", |e: &Ledger| {
-            &e.journal_number
-        }))
-        .rule(NonNegative::new("fiscal_year", |e: &Ledger| {
-            e.fiscal_year as i64
-        }))
-        .rule(NonNegative::new("fiscal_month", |e: &Ledger| {
-            e.fiscal_month as i64
-        }))
-        .rule(RequiredString::new("description", |e: &Ledger| {
-            &e.description
-        }))
-        .rule(OptionalNotBlank::new("reference", |e: &Ledger| {
-            e.reference.as_deref()
-        }))
+        .rule(RequiredString::new("account_number", |e: &Ledger| &e.account_number))
+        .rule(RequiredString::new("account_name", |e: &Ledger| &e.account_name))
+        .rule(RequiredString::new("journal_number", |e: &Ledger| &e.journal_number))
+        .rule(NonNegative::new("fiscal_year", |e: &Ledger| e.fiscal_year as i64))
+        .rule(NonNegative::new("fiscal_month", |e: &Ledger| e.fiscal_month as i64))
+        .rule(RequiredString::new("description", |e: &Ledger| &e.description))
+        .rule(OptionalNotBlank::new("reference", |e: &Ledger| e.reference.as_deref()))
         .rule(RequiredString::new("currency", |e: &Ledger| &e.currency))
-        .rule(OptionalNotBlank::new("source_type", |e: &Ledger| {
-            e.source_type.as_deref()
-        }))
-        .rule(OptionalNotBlank::new("source_reference", |e: &Ledger| {
-            e.source_reference.as_deref()
-        }))
+        .rule(OptionalNotBlank::new("source_type", |e: &Ledger| e.source_type.as_deref()))
+        .rule(OptionalNotBlank::new("source_reference", |e: &Ledger| e.source_reference.as_deref()))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

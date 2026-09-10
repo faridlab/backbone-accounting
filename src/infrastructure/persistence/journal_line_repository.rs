@@ -23,9 +23,7 @@ pub struct JournalLineRepository(
 
 impl std::ops::Deref for JournalLineRepository {
     type Target = backbone_orm::GenericCrudRepository<JournalLine, backbone_orm::HardDelete>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl JournalLineRepository {

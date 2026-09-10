@@ -8,6 +8,9 @@ models:
   # ---------------------------------------------------------------------------
   # Journal - Journal entry header
   # ---------------------------------------------------------------------------
+  # Tenancy: none, by design (ADR-0029). Tenant-agnostic and reusable; a composing
+  # service's tenancy decorator owns org scoping for both tables in this file,
+  # including the org-scoped per-unit journal-number unique.
   - name: Journal
     collection: journals
     description: "Journal entry header for financial transactions"
@@ -17,14 +20,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique journal identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this journal # logical FK to organization.Company.id"
 
       # =======================================================================
       # Reference
@@ -53,7 +48,7 @@ models:
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch for this journal (null = company-level) # logical FK to organization.Branch.id"
+        description: "Branch for the journal's org dimension (optional) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Transaction Date
@@ -323,23 +318,13 @@ models:
         description: "Voided by user"
 
     indexes:
-      - type: unique
-        fields: [company_id, journal_number]
-        where: "deleted_at IS NULL"
-      - type: index
-        fields: [company_id, transaction_date]
-      - type: index
-        fields: [company_id, journal_type, status]
-      - type: index
-        fields: [company_id, fiscal_year, fiscal_month]
-      - type: index
-        fields: [company_id, status, transaction_date]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit
+      # journal-number unique — one live number per org unit among live rows — is
+      # installed by the composing service's tenancy decorator (org_unit_id-leading),
+      # not declared here. The source traceability and branch-listing indexes are
+      # domain, tenant-free, and stay.
       - type: index
         fields: [source, source_id]
-      - type: index
-        fields: [company_id, is_reversed]
-      - type: index
-        fields: [company_id, branch_id, transaction_date]
       - type: index
         fields: [branch_id, status]
         where: "branch_id IS NOT NULL"
@@ -365,15 +350,10 @@ models:
         attributes: ["@required", "@foreign_key(Journal.id)"]
         description: "Parent journal entry"
 
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner (denormalized from journal) # logical FK to organization.Company.id"
-
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch (denormalized, null = company-level) # logical FK to organization.Branch.id"
+        description: "Branch for the line's org dimension (denormalized from the journal, optional) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
@@ -638,17 +618,12 @@ models:
       - type: unique
         fields: [journal_id, line_number]
       - type: index
-        fields: [company_id, account_id]
-      - type: index
         fields: [journal_id, account_id]
       - type: index
         fields: [account_id, is_posted]
-      - type: index
-        fields: [company_id, is_reconciled]
-      # Reconciliation-graph group lookup (fully-reconciled lines)
-      - type: index
-        fields: [company_id, full_reconcile_id]
-        where: "full_reconcile_id IS NOT NULL"
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+      # leading group lookup and AR/AP aging indexes are installed by the composing
+      # service's tenancy decorator, not declared here.
       - type: index
         fields: [source_type, source_id]
       - type: index
@@ -657,10 +632,6 @@ models:
       - type: index
         fields: [project_id]
         where: "project_id IS NOT NULL"
-      # AR/AP subledger aging
-      - type: index
-        fields: [company_id, party_type, party_id, account_id]
-        where: "party_id IS NOT NULL"
       - type: index
         fields: [branch_id, account_id]
         where: "branch_id IS NOT NULL"

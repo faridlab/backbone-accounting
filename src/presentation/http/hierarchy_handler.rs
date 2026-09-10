@@ -7,6 +7,10 @@
 //!
 //! Each returns the ancestor chain (root → self) so a client can show where the entity sits in its
 //! tree without walking parent links itself.
+//!
+//! Tenancy (ADR-0029): the `company_id` query parameter is the legacy twin — the wire shape
+//! keeps it so unstripped callers compile and run unchanged; the module keys no statement on
+//! it and the composing service's tenancy decorator scopes the read.
 
 use std::sync::Arc;
 

@@ -11,6 +11,12 @@
 //! the partial amounts applied on either side), never stored; the matching number is a READ
 //! (stored `full_reconcile_id` for complete groups, a label derived from the component's
 //! minimum partial id otherwise). Unlinking is side-effecting — see the write service.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic. The `company_id` fields on these
+//! shapes are the documented legacy twin — kept so unstripped producers and consumers compile
+//! and run unchanged. The adapter echoes the ambient org scope's legacy company id into them
+//! (nil when no scope is bound); no statement keys on them, and cross-tenant isolation is the
+//! composing service's tenancy decorator.
 
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
@@ -57,6 +63,8 @@ pub const ORIGIN_MANUAL: &str = "manual";
 pub struct ReconcileLineSnapshot {
     pub id: Uuid,
     pub journal_id: Uuid,
+    /// The legacy tenancy twin echo (ADR-0029) — see the module-level note. Not read by any
+    /// guard or statement.
     pub company_id: Uuid,
     pub account_id: Uuid,
     /// `accounts.account_subtype` (joined) — drives the settlement-dimension guard.
@@ -85,6 +93,8 @@ pub struct ReconcileLineSnapshot {
 /// A partial edge to insert.
 #[derive(Debug, Clone)]
 pub struct NewPartial {
+    /// The legacy tenancy twin echo (ADR-0029) — carried for unstripped constructors; the
+    /// adapter writes no such column.
     pub company_id: Uuid,
     pub debit_move_id: Uuid,
     pub credit_move_id: Uuid,
@@ -102,6 +112,7 @@ pub struct NewPartial {
 #[derive(Debug, Clone)]
 pub struct PartialRow {
     pub id: Uuid,
+    /// The legacy tenancy twin echo (ADR-0029) — see `NewPartial::company_id`.
     pub company_id: Uuid,
     pub debit_move_id: Uuid,
     pub credit_move_id: Uuid,
@@ -233,6 +244,8 @@ pub struct EdgeOutcome {
 /// Request shape for the pair verbs (application layer).
 #[derive(Debug, Clone)]
 pub struct PairRequest {
+    /// The legacy tenancy twin (ADR-0029) — kept so unstripped producers compile and run
+    /// unchanged; nothing keys a statement on it.
     pub company_id: Uuid,
     pub debit: LineLocator,
     pub credit: LineLocator,

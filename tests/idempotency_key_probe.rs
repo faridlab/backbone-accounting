@@ -3,8 +3,12 @@
 //!   IKP-1  key-based dedup: two posts with the SAME idempotency_key collapse to one (even different source_ids).
 //!   IKP-2  the WIN: a producer emitting TWO distinct originals for ONE source_id, disambiguated by DISTINCT
 //!          idempotency_keys, gets TWO journals — no more hand-namespacing source_id via Uuid::new_v5.
-//!   IKP-3  backward compatible: keyless posts still dedup on the tuple (company, source_type, source_id,
+//!   IKP-3  backward compatible: keyless posts still dedup on the tuple (source_type, source_id,
 //!          posting_type) — every existing producer (whose adapter drops the key) is unaffected.
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company twin
+//! but no table carries a tenant column. Each test seeds its own accounts (fresh UUID rows) and
+//! posts with fresh source ids/keys, so tests stay isolated on the undecorated database.
 
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -37,17 +41,15 @@ async fn account(
     normal: &str,
 ) -> Uuid {
     let id = Uuid::new_v4();
+    let _ = company; // legacy twin lane: kept on the request, never on the row
     sqlx::query(
         r#"INSERT INTO accounting.accounts
-             (id, company_id, account_number, account_code, name, account_type, account_subtype,
+             (id, account_number, account_code, name, account_type, account_subtype,
               normal_balance, is_header, is_detail, status)
-           VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
+           VALUES ($1,$2,$2,$2,$3::account_type,$4::account_subtype,$5::normal_balance,
                    false,true,'active'::account_status)"#,
     )
     .bind(id)
-    .bind(company)
-    .bind(code)
-    .bind(code)
     .bind(code)
     .bind(atype)
     .bind(subtype)

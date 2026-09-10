@@ -14,6 +14,10 @@
 //! Reports are computed on the fly and never persisted — the `financial_statement` entity is
 //! not the compute target (the Odoo community report engine is absent; these reads stand on
 //! our own spec).
+//!
+//! Tenancy (ADR-0029): the `company_id` parameter on every report is the legacy twin — kept so
+//! unstripped callers compile and run unchanged, and echoed into the report headers. Nothing
+//! keys a statement on it; the repository scopes by the ambient org scope.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

@@ -14,14 +14,20 @@
 //! `domain/services/posting_rules.rs`. The real budget-side implementation is
 //! proved in the backbone-budget module's own suite.
 //!
-//! Requires DATABASE_URL (defaults to local dev Postgres on :5433). Each test
-//! seeds its own company_id + chart, so tests are isolated and parallel-safe.
+//! Requires DATABASE_URL (defaults to local dev Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence.
+//! Each test seeds its own chart (fresh UUID rows) and posts with fresh source ids, the
+//! posting date is derived per test (the fiscal-period guard reads periods by date overlap
+//! globally undecorated), the failed-post audit is judged by count delta (a shared table),
+//! and the probes run under one lock because of that global period surface.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -38,6 +44,10 @@ use backbone_accounting::infrastructure::persistence::{
 };
 
 // ── fixtures ──────────────────────────────────────────────────────────────────
+
+/// Serializes the database-touching probes in this file (see the header note): the
+/// fiscal-period table is a global singleton surface on an undecorated database.
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn dec(s: &str) -> Decimal {
     Decimal::from_str_exact(s).unwrap()
@@ -64,13 +74,12 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,
                        TRUE, FALSE, 'active'::account_status)"#,
         )
         .bind(id)
-        .bind(company)
         .bind(code)
         .bind(name)
         .bind(at)
@@ -97,13 +106,18 @@ fn line(account_id: Uuid, debit: &str, credit: &str) -> PostingLine {
     }
 }
 
+/// The 15th of a month chosen by the company UUID — see the header note on the
+/// globally-read fiscal-period guard.
+fn posting_date(company: Uuid) -> NaiveDate {
+    let offset = (company.as_u128() % 240) as u32;
+    NaiveDate::from_ymd_opt(2026, 1, 15)
+        .unwrap()
+        .checked_add_months(chrono::Months::new(offset))
+        .unwrap()
+}
+
 fn req(company: Uuid, source_id: Uuid, lines: Vec<PostingLine>) -> PostingRequest {
-    let mut r = PostingRequest::original(
-        company,
-        "order",
-        source_id,
-        NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
-    );
+    let mut r = PostingRequest::original(company, "order", source_id, posting_date(company));
     r.lines = lines;
     r
 }
@@ -184,20 +198,26 @@ fn breach(account_id: Uuid, enforcement: BudgetEnforcement) -> BudgetBreach {
     }
 }
 
-async fn journal_rows(pool: &PgPool, company: Uuid) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM accounting.journals WHERE company_id=$1")
-        .bind(company)
-        .fetch_one(pool)
-        .await
-        .unwrap()
+/// Journals with at least one line on the seeded chart — every journal this test
+/// creates posts on one of its own accounts, so this is the per-test equivalent of
+/// the old per-company count.
+async fn journal_rows(pool: &PgPool, accounts: &[Uuid]) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(DISTINCT journal_id) FROM accounting.journal_lines WHERE account_id = ANY($1)",
+    )
+    .bind(accounts)
+    .fetch_one(pool)
+    .await
+    .unwrap()
 }
 
-async fn failed_posts_with_code(pool: &PgPool, company: Uuid, code: &str) -> i64 {
+/// The failed-post audit is a SHARED table on this undecorated database (the old
+/// company predicate was its scoping) — judge it by count delta around the call.
+async fn failed_posts_with_code(pool: &PgPool, code: &str) -> i64 {
     sqlx::query_scalar(
         "SELECT COUNT(*) FROM accounting.accounting_posts \
-         WHERE company_id=$1 AND posting_status='failed' AND error_code=$2",
+         WHERE posting_status='failed' AND error_code=$1",
     )
-    .bind(company)
     .bind(code)
     .fetch_one(pool)
     .await
@@ -214,6 +234,7 @@ fn posting_repo(
 
 #[tokio::test]
 async fn unwired_port_posts_over_budget_amounts() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, revenue, _expense) = seed_coa(&pool).await;
     let sink = RecordingSink::default();
@@ -235,7 +256,7 @@ async fn unwired_port_posts_over_budget_amounts() {
         .await;
 
     assert!(r.is_ok(), "unwired port must not restrict any posting");
-    assert_eq!(journal_rows(&pool, company).await, 1);
+    assert_eq!(journal_rows(&pool, &[bank, revenue, _expense]).await, 1);
     assert_eq!(failed_events(&sink), 0);
 }
 
@@ -243,8 +264,10 @@ async fn unwired_port_posts_over_budget_amounts() {
 
 #[tokio::test]
 async fn block_breach_refuses_post_and_records_failure() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, revenue, expense) = seed_coa(&pool).await;
+    let failed_before = failed_posts_with_code(&pool, "budget_exceeded").await;
     let sink = RecordingSink::default();
     let stub = StubBudgetControl::new(StubAnswer::Breaches(vec![breach(
         expense,
@@ -281,8 +304,11 @@ async fn block_breach_refuses_post_and_records_failure() {
     assert_eq!(err.http_status(), 422);
 
     // The refusal rides the existing audit path: failed post row + event, no journal.
-    assert_eq!(journal_rows(&pool, company).await, 0);
-    assert_eq!(failed_posts_with_code(&pool, company, "budget_exceeded").await, 1);
+    assert_eq!(journal_rows(&pool, &[bank, revenue, expense]).await, 0);
+    assert_eq!(
+        failed_posts_with_code(&pool, "budget_exceeded").await,
+        failed_before + 1
+    );
     assert_eq!(failed_events(&sink), 1);
     assert_eq!(stub.calls(), 1);
 }
@@ -298,18 +324,20 @@ async fn insert_draft_journal(
 ) -> Uuid {
     let j = Uuid::new_v4();
     let total = dec(debit);
+    let date = posting_date(company);
     sqlx::query(
         r#"INSERT INTO accounting.journals
-            (id, company_id, journal_number, journal_type, transaction_date, posting_date,
+            (id, journal_number, journal_type, transaction_date, posting_date,
              fiscal_year, fiscal_month, description, currency, total_debit, total_credit,
              line_count, source, source_type, status)
-           VALUES ($1,$2,$3,'general'::journal_type,$4,$4,2026,6,'manual draft','IDR',$5,$5,2,
+           VALUES ($1,$2,'general'::journal_type,$3,$3,$4,$5,'manual draft','IDR',$6,$6,2,
                    'manual'::journal_source,'manual','draft'::journal_status)"#,
     )
     .bind(j)
-    .bind(company)
     .bind(format!("MJD-{j}"))
-    .bind(NaiveDate::from_ymd_opt(2026, 6, 15).unwrap())
+    .bind(date)
+    .bind(date.year() as i32)
+    .bind(date.month() as i32)
     .bind(total)
     .execute(pool)
     .await
@@ -321,13 +349,12 @@ async fn insert_draft_journal(
     {
         sqlx::query(
             r#"INSERT INTO accounting.journal_lines
-                (id, journal_id, company_id, line_number, account_id, account_number, account_name,
+                (id, journal_id, line_number, account_id, account_number, account_name,
                  debit_amount, credit_amount, currency, is_posted)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'IDR',FALSE)"#,
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'IDR',FALSE)"#,
         )
         .bind(Uuid::new_v4())
         .bind(j)
-        .bind(company)
         .bind((i + 1) as i32)
         .bind(id)
         .bind(code)
@@ -343,8 +370,10 @@ async fn insert_draft_journal(
 
 #[tokio::test]
 async fn block_breach_refuses_manual_journal_post() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, _revenue, expense) = seed_coa(&pool).await;
+    let failed_before = failed_posts_with_code(&pool, "budget_exceeded").await;
     let j = insert_draft_journal(&pool, company, bank, expense, "110").await;
     let stub = StubBudgetControl::new(StubAnswer::Breaches(vec![breach(
         expense,
@@ -364,8 +393,8 @@ async fn block_breach_refuses_manual_journal_post() {
 
     assert_eq!(err.code(), "posting_error");
     assert_eq!(
-        failed_posts_with_code(&pool, company, "budget_exceeded").await,
-        1,
+        failed_posts_with_code(&pool, "budget_exceeded").await,
+        failed_before + 1,
         "the journal refusal rides the same failed-post audit path"
     );
     let ledgers: i64 =
@@ -381,8 +410,10 @@ async fn block_breach_refuses_manual_journal_post() {
 
 #[tokio::test]
 async fn warn_breach_posts_and_commits() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, _revenue, expense) = seed_coa(&pool).await;
+    let failed_before = failed_posts_with_code(&pool, "budget_exceeded").await;
     let sink = RecordingSink::default();
     let stub = StubBudgetControl::new(StubAnswer::Breaches(vec![breach(
         expense,
@@ -404,10 +435,10 @@ async fn warn_breach_posts_and_commits() {
         .expect("warn breach must not block the commit");
 
     assert!(!r.idempotent_reuse);
-    assert_eq!(journal_rows(&pool, company).await, 1);
+    assert_eq!(journal_rows(&pool, &[bank, _revenue, expense]).await, 1);
     assert_eq!(
-        failed_posts_with_code(&pool, company, "budget_exceeded").await,
-        0
+        failed_posts_with_code(&pool, "budget_exceeded").await,
+        failed_before
     );
     assert_eq!(failed_events(&sink), 0, "a warned post is not a failure");
 }
@@ -416,6 +447,7 @@ async fn warn_breach_posts_and_commits() {
 
 #[tokio::test]
 async fn mixed_breach_blocks_and_carries_only_blocking_positions() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, revenue, expense) = seed_coa(&pool).await;
     let stub = StubBudgetControl::new(StubAnswer::Breaches(vec![
@@ -451,6 +483,7 @@ async fn mixed_breach_blocks_and_carries_only_blocking_positions() {
 
 #[tokio::test]
 async fn broken_port_fails_closed_with_internal_error() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, _revenue, expense) = seed_coa(&pool).await;
     let stub = StubBudgetControl::new(StubAnswer::Fail);
@@ -471,13 +504,18 @@ async fn broken_port_fails_closed_with_internal_error() {
 
     assert_eq!(err.code(), "internal_error");
     assert_eq!(err.http_status(), 500);
-    assert_eq!(journal_rows(&pool, company).await, 0, "nothing commits");
+    assert_eq!(
+        journal_rows(&pool, &[bank, _revenue, expense]).await,
+        0,
+        "nothing commits"
+    );
 }
 
 // ── A7: idempotent reuse skips the consult ───────────────────────────────────
 
 #[tokio::test]
 async fn idempotent_reuse_skips_the_budget_consult() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, revenue, _expense) = seed_coa(&pool).await;
     let stub = StubBudgetControl::new(StubAnswer::NoBreach);

@@ -3,6 +3,10 @@
 //! Read-only ancestor-chain lookup for the three hierarchical entities. No business rules — the
 //! service exists so the presentation layer depends on an application service, not a domain port
 //! directly (per the 4-layer convention).
+//!
+//! Tenancy (ADR-0029): the `company_id` param is the legacy twin — kept so unstripped callers
+//! compile and run unchanged; the adapter keys no statement on it and the composing service's
+//! tenancy decorator scopes the read.
 
 use std::sync::Arc;
 

@@ -16,7 +16,8 @@
 #   - BankCheckSequence per-bank-journal check-number sequence (auto/manual
 #                       numbering; MAX_INT32 cap enforced by the verb).
 #   - PrintedCheck      the check registry — which payment got which number;
-#                       unique (company, bank journal, number) in SQL.
+#                       unique (bank journal, number) in SQL, tenant-free
+#                       (bank_account_id is globally unique; ADR-0029 strip).
 #   - TaxTagRepairRun   audit ledger for tax-tag legal-change repairs (the
 #                       officer verb is the only writer; reason mandatory).
 # =============================================================================
@@ -25,6 +26,13 @@ models:
   # ---------------------------------------------------------------------------
   # EmvQrConfig - merchant-presented QR display configuration
   # ---------------------------------------------------------------------------
+  # Tenancy: none, by design (ADR-0029) — all four entities in this file. A
+  # composing service's tenancy decorator owns org scoping for these tables.
+  # Their one-per-slot uniques are tenant-free domain constraints (every key
+  # element beyond the slot is a globally unique UUID), re-based in the strip
+  # migration: the QR-config bank-account slot, the per-bank check sequence,
+  # the cross-payment check-number guard — the module's own upserts conflict
+  # against them, so they exist with or without a decorator.
   - name: EmvQrConfig
     collection: emv_qr_configs
     description: "Merchant data the EMV(QRCPS)/QRIS payload builder renders on invoices"
@@ -34,14 +42,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique configuration identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS; fence strict (ADR-0014).
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this configuration # logical FK to organization.Company.id"
 
       merchant_name:
         type: string
@@ -86,7 +86,7 @@ models:
       bank_account_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Optional bank-account slot anchor (NULL = company-wide default) # logical FK to banking.BankAccount.id"
+        description: "Optional bank-account slot anchor (NULL = the unit-wide default config) # logical FK to banking.BankAccount.id"
 
       created_at:
         type: datetime
@@ -104,29 +104,23 @@ models:
         description: "Audit bag"
 
     indexes:
-      - type: unique
-        fields: [company_id, bank_account_id]
-        description: "One config per (company, bank-account) slot; NULL bank_account_id is the company default (enforced with a COALESCE expression index in the landed DDL)"
-      - type: index
-        fields: [company_id]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The one-config-
+      # per-slot unique (NULL bank_account_id = the unit-wide default; a COALESCE
+      # expression index) is tenant-free — bank_account_id is globally unique — and
+      # lands in the strip migration, which the module's own upsert conflicts against.
 
   # ---------------------------------------------------------------------------
   # BankCheckSequence - per-bank-journal check-number sequence
   # ---------------------------------------------------------------------------
   - name: BankCheckSequence
     collection: bank_check_sequences
-    description: "Check numbering cursor for one company bank account"
+    description: "Check numbering cursor for one org unit's bank account"
 
     fields:
       id:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique sequence identifier"
-
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this sequence # logical FK to organization.Company.id"
 
       bank_account_id:
         type: uuid
@@ -159,8 +153,9 @@ models:
         description: "Audit bag"
 
     indexes:
-      - type: unique
-        fields: [company_id, bank_account_id]
+      # No tenancy indexes (ADR-0029): the per-bank-account sequence unique is
+      # tenant-free (bank_account_id is globally unique) and lands in the strip
+      # migration, which the module's own upsert conflicts against.
 
   # ---------------------------------------------------------------------------
   # PrintedCheck - the printed-check registry
@@ -174,11 +169,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique registry row identifier"
-
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this check # logical FK to organization.Company.id"
 
       bank_account_id:
         type: uuid
@@ -203,7 +193,7 @@ models:
       amount:
         type: decimal
         attributes: ["@required", "@precision(18,2)", "@positive"]
-        description: "Check amount, company currency"
+        description: "Check amount"
 
       payee_name:
         type: string?
@@ -241,11 +231,9 @@ models:
         description: "Audit bag"
 
     indexes:
-      - type: unique
-        fields: [company_id, bank_account_id, check_number]
-        description: "The cross-payment uniqueness guard, enforced in SQL"
-      - type: index
-        fields: [company_id, payment_id]
+      # No tenancy indexes (ADR-0029): the cross-payment number uniqueness guard —
+      # one number per bank-account slot — is tenant-free (bank_account_id is
+      # globally unique) and lands in the strip migration.
 
   # ---------------------------------------------------------------------------
   # TaxTagRepairRun - tax-tag legal-change repair audit ledger
@@ -259,11 +247,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique run identifier"
-
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity whose books were repaired # logical FK to organization.Company.id"
 
       date_from:
         type: date
@@ -331,5 +314,6 @@ models:
         description: "Audit bag"
 
     indexes:
-      - type: index
-        fields: [company_id, ran_at]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic; the composing
+      # service's tenancy decorator owns org scoping for this table. The ran_at read
+      # index is re-based tenant-free in the strip migration.

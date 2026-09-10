@@ -1,7 +1,13 @@
 //! Golden cases for the cash-basis (on_payment) tax exigibility flip.
 //!
 //! Runs against a real Postgres (DATABASE_URL, defaults to :5433/backbone_accounting).
-//! Each test seeds its own company + chart of accounts — isolated and parallel-safe.
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence, so
+//! the machinery's count queries (the `caba:`-stamped flip journals) read globally. Each
+//! test therefore emulates the undecorated deployment the way a real one looks: a fresh
+//! single-tenant database — one lock, and the accounting tables WIPED before seeding, so
+//! the exact totals hold against the test's own rows alone.
 //!
 //! The deferral lookup is host-implemented in production; these tests pin the
 //! accounting-side machinery with an in-test port that answers for `order`
@@ -32,6 +38,37 @@ async fn pool() -> PgPool {
         "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
     });
     PgPool::connect(&url).await.expect("connect DB")
+}
+
+/// Serializes the database-touching probes in this file (see the header note).
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Reset the accounting tables to an empty single-tenant database. Circular FK pairs
+/// (journal_lines.ledger_id <-> ledgers.journal_line_id, and every self-referential
+/// link) are severed first; the deletes then run children-first.
+async fn wipe(pool: &PgPool) {
+    for sql in [
+        "UPDATE accounting.journal_lines SET ledger_id=NULL, reconciliation_id=NULL, full_reconcile_id=NULL, related_line_id=NULL",
+        "UPDATE accounting.ledgers SET reverses_id=NULL, reversed_by_id=NULL, reconciliation_id=NULL",
+        "UPDATE accounting.journals SET reverses_id=NULL, reversed_by_id=NULL",
+        "UPDATE accounting.accounting_posts SET reverses_post_id=NULL, reversed_by_post_id=NULL",
+        "UPDATE accounting.accounts SET parent_id=NULL, source_id=NULL",
+        "UPDATE accounting.fiscal_periods SET parent_id=NULL",
+        "UPDATE accounting.reconciliations SET previous_reconciliation_id=NULL",
+        "UPDATE accounting.reconciliation_items SET matched_with_id=NULL",
+        "DELETE FROM accounting.reconciliation_items",
+        "DELETE FROM accounting.partial_reconciles",
+        "DELETE FROM accounting.reconciliations",
+        "DELETE FROM accounting.ledgers",
+        "DELETE FROM accounting.journal_lines",
+        "DELETE FROM accounting.full_reconciles",
+        "DELETE FROM accounting.accounting_posts",
+        "DELETE FROM accounting.journals",
+        "DELETE FROM accounting.accounts",
+        "DELETE FROM accounting.fiscal_periods",
+    ] {
+        sqlx::query(sql).execute(pool).await.expect("wipe");
+    }
 }
 
 /// Seed a fresh company with a cash-basis chart: AR/Bank settlement accounts,
@@ -77,14 +114,12 @@ async fn seed(pool: &PgPool) -> (Uuid, std::collections::HashMap<&'static str, U
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_header, is_detail, status, is_reconcilable)
-               VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
-                       FALSE,TRUE,'active'::account_status,$9)"#,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,
+                       FALSE,TRUE,'active'::account_status,$7)"#,
         )
         .bind(id)
-        .bind(company_id)
-        .bind(code)
         .bind(code)
         .bind(name)
         .bind(at)
@@ -168,20 +203,13 @@ async fn post(
     svc.post(req, None).await.expect("post").journal_id
 }
 
-async fn line_id(
-    pool: &PgPool,
-    company: Uuid,
-    source_type: &str,
-    source_id: Uuid,
-    account_id: Uuid,
-) -> Uuid {
+async fn line_id(pool: &PgPool, source_type: &str, source_id: Uuid, account_id: Uuid) -> Uuid {
     sqlx::query_scalar(
         "SELECT l.id FROM accounting.journal_lines l \
          JOIN accounting.journals j ON j.id = l.journal_id \
-         WHERE l.company_id=$1 AND l.source_type=$2 AND l.source_id=$3 AND l.account_id=$4 \
+         WHERE l.source_type=$1 AND l.source_id=$2 AND l.account_id=$3 \
          ORDER BY l.id LIMIT 1",
     )
-    .bind(company)
     .bind(source_type)
     .bind(source_id)
     .bind(account_id)
@@ -190,27 +218,26 @@ async fn line_id(
     .unwrap()
 }
 
-/// Signed ledger balance of one account (debits positive).
-async fn net(pool: &PgPool, company: Uuid, account: Uuid) -> Decimal {
+/// Signed ledger balance of one account (debits positive). Accounts are per-test
+/// UUID rows, so this keys on the account alone.
+async fn net(pool: &PgPool, account: Uuid) -> Decimal {
     sqlx::query_scalar(
         "SELECT COALESCE(SUM(l.base_debit_amount - l.base_credit_amount), 0) \
-         FROM accounting.journal_lines l WHERE l.company_id=$1 AND l.account_id=$2",
+         FROM accounting.journal_lines l WHERE l.account_id=$1",
     )
-    .bind(company)
     .bind(account)
     .fetch_one(pool)
     .await
     .unwrap()
 }
 
-/// Count the flip journals generated for a company (stamped `caba:`).
-async fn flip_journal_count(pool: &PgPool, company: Uuid) -> i64 {
+/// Count the flip journals this probe generated (stamped `caba:`). Valid as a
+/// whole-table count only because every probe wipes the database first.
+async fn flip_journal_count(pool: &PgPool) -> i64 {
     sqlx::query_scalar(
         "SELECT COUNT(*) FROM accounting.journals \
-         WHERE company_id=$1 AND source_type='reconciliation' \
-           AND source_reference LIKE 'caba:%'",
+         WHERE source_type='reconciliation' AND source_reference LIKE 'caba:%'",
     )
-    .bind(company)
     .fetch_one(pool)
     .await
     .unwrap()
@@ -256,7 +283,7 @@ async fn post_deferred_invoice(
         ],
     )
     .await;
-    let tr_line = line_id(pool, company, "order", invoice, coa[&"2300"]).await;
+    let tr_line = line_id(pool, "order", invoice, coa[&"2300"]).await;
     (invoice, tr_line)
 }
 
@@ -304,7 +331,9 @@ fn deferred_line(
 // NOT complete (the transition line is still open).
 #[tokio::test]
 async fn caba1_partial_flips_pro_rata() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -325,21 +354,23 @@ async fn caba1_partial_flips_pro_rata() {
     assert_eq!(out.applied, dec("400"));
 
     // 40% of 115 = 46 on the real account; the transition keeps 69.
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-46.00"));
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, dec("-69.00"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-46.00"));
+    assert_eq!(net(&pool, coa[&"2300"]).await, dec("-69.00"));
     // Partial settlement: no full-reconcile group yet.
     assert!(
         out.full_reconcile_id.is_none(),
         "transition still open — component must not complete"
     );
-    assert_eq!(flip_journal_count(&pool, company).await, 1);
+    assert_eq!(flip_journal_count(&pool).await, 1);
 }
 
 // CABA-2: a full payment flips the whole deferral; the transition account nets
 // zero and the component completes into a full-reconcile group.
 #[tokio::test]
 async fn caba2_full_flips_full() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -358,8 +389,8 @@ async fn caba2_full_flips_full() {
         .await
         .unwrap();
     assert_eq!(out.applied, dec("1000"));
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, Decimal::ZERO);
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-115"));
+    assert_eq!(net(&pool, coa[&"2300"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-115"));
     assert!(out.full_reconcile_id.is_some(), "everything reached zero");
 }
 
@@ -368,7 +399,9 @@ async fn caba2_full_flips_full() {
 // full deferral and the derived caba_pair edge is gone with its parent.
 #[tokio::test]
 async fn caba3_unreconcile_reverses_and_restores_transition() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -390,13 +423,12 @@ async fn caba3_unreconcile_reverses_and_restores_transition() {
 
     // The flip journal is stamped with the partial — the unlink walk reverses
     // every journal carrying that stamp.
-    let ar_line = line_id(&pool, company, "order", invoice, coa[&"1200"]).await;
+    let ar_line = line_id(&pool, "order", invoice, coa[&"1200"]).await;
     let flip_journal: Uuid = sqlx::query_scalar(
         "SELECT j.id FROM accounting.journals j \
          JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
-         WHERE j.company_id=$1 AND ap.idempotency_key=$2",
+         WHERE ap.idempotency_key=$1",
     )
-    .bind(company)
     .bind(format!("caba:{partial}:{ar_line}"))
     .fetch_one(&pool)
     .await
@@ -408,20 +440,18 @@ async fn caba3_unreconcile_reverses_and_restores_transition() {
     let _rev: Uuid = sqlx::query_scalar(
         "SELECT j.id FROM accounting.journals j \
          JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
-         WHERE j.company_id=$1 AND ap.idempotency_key=$2",
+         WHERE ap.idempotency_key=$1",
     )
-    .bind(company)
     .bind(format!("unlink:{flip_journal}"))
     .fetch_one(&pool)
     .await
     .expect("flip reversal journal");
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, dec("-115"));
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"2300"]).await, dec("-115"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, Decimal::ZERO);
     let caba_pairs: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM accounting.partial_reconciles \
-         WHERE company_id=$1 AND metadata->>'rule'='caba_pair'",
+         WHERE metadata->>'rule'='caba_pair'",
     )
-    .bind(company)
     .fetch_one(&pool)
     .await
     .unwrap();
@@ -435,7 +465,9 @@ async fn caba3_unreconcile_reverses_and_restores_transition() {
 // second flip journal, no double-posting.
 #[tokio::test]
 async fn caba4_flip_idempotent() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -457,15 +489,17 @@ async fn caba4_flip_idempotent() {
     let again = svc.reconcile_pair(&req).await.unwrap();
     assert_eq!(again.applied, Decimal::ZERO);
     assert!(again.partial_id.is_none());
-    assert_eq!(flip_journal_count(&pool, company).await, 1);
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-115"));
+    assert_eq!(flip_journal_count(&pool).await, 1);
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-115"));
 }
 
 // CABA-5: a partial on lines whose subtype is NOT receivable/payable never
 // consults the deferral port — bank-to-bank settlement has no document tax.
 #[tokio::test]
 async fn caba5_non_rp_partial_no_flip() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let posting = posting_svc(&pool);
     // Two `order` documents (the producer the fake port answers for) whose
@@ -506,15 +540,17 @@ async fn caba5_non_rp_partial_no_flip() {
         .await
         .unwrap();
     assert_eq!(out.applied, dec("100"));
-    assert_eq!(flip_journal_count(&pool, company).await, 0);
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, Decimal::ZERO);
+    assert_eq!(flip_journal_count(&pool).await, 0);
+    assert_eq!(net(&pool, coa[&"2310"]).await, Decimal::ZERO);
 }
 
 // CABA-6: an unwired port (host without a tax module) degrades to no flips —
 // the reconciliation itself succeeds untouched.
 #[tokio::test]
 async fn caba6_unwired_port_no_flip() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -538,8 +574,8 @@ async fn caba6_unwired_port_no_flip() {
         .await
         .unwrap();
     assert_eq!(out.applied, dec("400"));
-    assert_eq!(flip_journal_count(&pool, company).await, 0);
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, dec("-115"));
+    assert_eq!(flip_journal_count(&pool).await, 0);
+    assert_eq!(net(&pool, coa[&"2300"]).await, dec("-115"));
 }
 
 // CABA-7: the flip rides the SAME partial as an exchange-difference move; both
@@ -547,7 +583,9 @@ async fn caba6_unwired_port_no_flip() {
 // reversal) — the two generated-journal mechanisms do not interfere.
 #[tokio::test]
 async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -565,10 +603,9 @@ async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
             "UPDATE accounting.journal_lines SET exchange_rate=1.1, {base_col}={base} \
              WHERE id = (SELECT l.id FROM accounting.journal_lines l \
                          JOIN accounting.journals j ON j.id=l.journal_id \
-                         WHERE l.company_id=$1 AND j.source_id=$2 AND l.account_id=$3 \
+                         WHERE j.source_id=$1 AND l.account_id=$2 \
                          ORDER BY l.id LIMIT 1)"
         ))
-        .bind(company)
         .bind(invoice)
         .bind(account)
         .execute(&pool)
@@ -598,7 +635,7 @@ async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
     let partial = out.partial_id.unwrap();
 
     // Flip: round2(11.5 × 100/110) = 10.45 on the real account.
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-10.45"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-10.45"));
     // Exchange move: +10 AR credit against FX debit.
     let exch_journal: Uuid = sqlx::query_scalar(
         "SELECT exchange_move_id FROM accounting.partial_reconciles WHERE id=$1",
@@ -608,17 +645,16 @@ async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
     .await
     .unwrap();
     assert_ne!(exch_journal, Uuid::nil());
-    assert_eq!(flip_journal_count(&pool, company).await, 1);
+    assert_eq!(flip_journal_count(&pool).await, 1);
 
     // Unlink: both generated journals get their reversal.
     svc.unreconcile(company, partial, None).await.unwrap();
     let flip_journal: Uuid = sqlx::query_scalar(
         "SELECT j.id FROM accounting.journals j \
          JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
-         WHERE j.company_id=$1 AND ap.source_reference LIKE 'caba:%' \
+         WHERE ap.source_reference LIKE 'caba:%' \
          ORDER BY j.id LIMIT 1",
     )
-    .bind(company)
     .fetch_one(&pool)
     .await
     .unwrap();
@@ -626,25 +662,26 @@ async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
         let _rev: Uuid = sqlx::query_scalar(
             "SELECT j.id FROM accounting.journals j \
              JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
-             WHERE j.company_id=$1 AND ap.idempotency_key=$2",
+             WHERE ap.idempotency_key=$1",
         )
-        .bind(company)
         .bind(format!("unlink:{journal}"))
         .fetch_one(&pool)
         .await
         .unwrap_or_else(|_| panic!("reversal for {journal}"));
     }
     // Everything restored: transition full, real zero, FX zero.
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, dec("-11.5"));
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, Decimal::ZERO);
-    assert_eq!(net(&pool, company, coa[&"4900"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"2300"]).await, dec("-11.5"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"4900"]).await, Decimal::ZERO);
 }
 
 // CABA-8: a deferral whose pro-rata share rounds below a cent posts NOTHING —
 // no zero-amount journal, no panic; the remainder flips with a later payment.
 #[tokio::test]
 async fn caba8_zero_value_flip_skipped() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -664,12 +701,12 @@ async fn caba8_zero_value_flip_skipped() {
         .unwrap();
     assert_eq!(out.applied, dec("400"));
     assert_eq!(
-        flip_journal_count(&pool, company).await,
+        flip_journal_count(&pool).await,
         0,
         "0.004 rounds to zero"
     );
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, Decimal::ZERO);
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, dec("-0.01"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"2300"]).await, dec("-0.01"));
 }
 
 // CABA-9: multi-payment cent drift, under-sum shape. Three receipts whose
@@ -680,7 +717,9 @@ async fn caba8_zero_value_flip_skipped() {
 // the face and the component completes.
 #[tokio::test]
 async fn caba9_multi_payment_under_sum_converges() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -706,12 +745,12 @@ async fn caba9_multi_payment_under_sum_converges() {
     let out = last.unwrap();
     assert_eq!(out.applied, dec("33.33"));
     assert_eq!(
-        net(&pool, company, coa[&"2300"]).await,
+        net(&pool, coa[&"2300"]).await,
         Decimal::ZERO,
         "transition fully retired — no stranded cent"
     );
     assert_eq!(
-        net(&pool, company, coa[&"2310"]).await,
+        net(&pool, coa[&"2310"]).await,
         dec("-10.00"),
         "the whole deferral flipped — independent rounding would stop at 9.99"
     );
@@ -729,7 +768,9 @@ async fn caba9_multi_payment_under_sum_converges() {
 // the face and the line stays clean.
 #[tokio::test]
 async fn caba10_multi_payment_over_sum_never_over_applies() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -757,12 +798,12 @@ async fn caba10_multi_payment_over_sum_never_over_applies() {
     let out = last.unwrap();
     assert_eq!(out.applied, dec("66.66"));
     assert_eq!(
-        net(&pool, company, coa[&"2300"]).await,
+        net(&pool, coa[&"2300"]).await,
         Decimal::ZERO,
         "never driven negative — the residual hit zero, not −0.01"
     );
     assert_eq!(
-        net(&pool, company, coa[&"2310"]).await,
+        net(&pool, coa[&"2310"]).await,
         dec("-10.00"),
         "exactly the face — independent rounding would post 10.01"
     );
@@ -789,7 +830,9 @@ async fn caba10_multi_payment_over_sum_never_over_applies() {
 // distinction.
 #[tokio::test]
 async fn caba11_unlink_replace_converges() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -814,7 +857,7 @@ async fn caba11_unlink_replace_converges() {
             middle_partial = out.partial_id;
         }
     }
-    assert_eq!(net(&pool, company, coa[&"2300"]).await, Decimal::ZERO);
+    assert_eq!(net(&pool, coa[&"2300"]).await, Decimal::ZERO);
 
     // The middle payment bounces and is replaced by an identical receipt.
     svc.unreconcile(company, middle_partial.unwrap(), None)
@@ -840,11 +883,11 @@ async fn caba11_unlink_replace_converges() {
         .unwrap();
     assert_eq!(out.applied, dec("33.33"));
     assert_eq!(
-        net(&pool, company, coa[&"2300"]).await,
+        net(&pool, coa[&"2300"]).await,
         Decimal::ZERO,
         "the live flip set re-trues to the face — a sequence-derived ratio would strand a cent here"
     );
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-10.00"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-10.00"));
 }
 
 // CABA-12: multi-payment against a document booked at a non-1 rate. The flip
@@ -853,7 +896,9 @@ async fn caba11_unlink_replace_converges() {
 // deferral exactly.
 #[tokio::test]
 async fn caba12_fx_multi_payment_converges() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -869,10 +914,9 @@ async fn caba12_fx_multi_payment_converges() {
             "UPDATE accounting.journal_lines SET exchange_rate=1.1, {base_col}={base} \
              WHERE id = (SELECT l.id FROM accounting.journal_lines l \
                          JOIN accounting.journals j ON j.id=l.journal_id \
-                         WHERE l.company_id=$1 AND j.source_id=$2 AND l.account_id=$3 \
+                         WHERE j.source_id=$1 AND l.account_id=$2 \
                          ORDER BY l.id LIMIT 1)"
         ))
-        .bind(company)
         .bind(invoice)
         .bind(account)
         .execute(&pool)
@@ -899,10 +943,10 @@ async fn caba12_fx_multi_payment_converges() {
     let out = last.unwrap();
     assert_eq!(out.applied, dec("36.63"));
     assert_eq!(
-        net(&pool, company, coa[&"2300"]).await,
+        net(&pool, coa[&"2300"]).await,
         Decimal::ZERO,
         "base-currency telescoping: 3.84 + 3.83 + 3.83 retires the 11.5 face"
     );
-    assert_eq!(net(&pool, company, coa[&"2310"]).await, dec("-11.50"));
+    assert_eq!(net(&pool, coa[&"2310"]).await, dec("-11.50"));
     assert!(out.full_reconcile_id.is_some());
 }

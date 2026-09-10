@@ -3,7 +3,7 @@
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). The Odoo
 //! `account_check_printing` shape ported onto this estate: a "bank journal" is
-//! a company's bank account (`banking.bank_accounts` owns the row; carried
+//! a bank account (`banking.bank_accounts` owns the row; carried
 //! here as a logical reference — no cross-schema foreign key by contract).
 //!
 //! Numbering modes:
@@ -13,13 +13,21 @@
 //!   the serialization point, so two concurrent allocations block each other
 //!   and always receive distinct numbers — there is no read-then-write gap.
 //! - `manual`  — the officer supplies the number (prenumbered stock); the
-//!   registry's unique `(company, bank journal, number)` constraint refuses a
+//!   registry's unique `(bank journal, number)` constraint refuses a
 //!   reuse with a typed error.
 //!
 //! Numbers are capped at 2147483647 (MAX_INT32): sequence columns upstream are
 //! 32-bit and printed numbers must stay portable. An allocation that would
 //! cross the cap refuses with `check_number_overflow` and the whole
 //! transaction rolls back — no number is consumed.
+//!
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing
+//! service's tenancy decorator owns org scoping. The `company_id` lanes here are
+//! the documented legacy twin: request shapes, acks, and verb signatures keep
+//! them so unstripped callers compile and run unchanged, but no statement keys
+//! on a tenant column. Every verb relays the ambient org scope onto its
+//! transaction; an undecorated deployment has no ambient scope and skips the
+//! relay entirely (unfenced by design).
 
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -31,6 +39,8 @@ pub const MAX_CHECK_NUMBER: i64 = 2_147_483_647;
 
 #[derive(Debug, Clone)]
 pub struct RegisterSequence {
+    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
+    /// run unchanged; no statement keys on it.
     pub company_id: Uuid,
     pub bank_account_id: Uuid,
     /// "auto" or "manual".
@@ -41,6 +51,8 @@ pub struct RegisterSequence {
 
 #[derive(Debug, Clone)]
 pub struct RecordCheck {
+    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
+    /// run unchanged; no statement keys on it.
     pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub payment_id: Uuid,
@@ -56,6 +68,7 @@ pub struct RecordCheck {
 #[derive(Debug, Clone, Serialize)]
 pub struct SequenceAck {
     pub sequence_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
     pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub numbering_mode: String,
@@ -72,6 +85,7 @@ pub struct AllocationAck {
 #[derive(Debug, Clone, Serialize)]
 pub struct PrintedCheckAck {
     pub printed_check_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
     pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub payment_id: Uuid,
@@ -81,7 +95,7 @@ pub struct PrintedCheckAck {
 
 #[derive(Debug)]
 pub enum CheckPrintingError {
-    /// No sequence registered for (company, bank journal).
+    /// No sequence registered for the bank journal.
     SequenceNotRegistered(Uuid),
     /// A number was supplied to an auto sequence, or missing under manual.
     NumberingModeConflict { mode: String, detail: String },
@@ -91,7 +105,7 @@ pub enum CheckPrintingError {
     DuplicateCheckNumber(String),
     /// The next allocation would cross MAX_INT32.
     CheckNumberOverflow,
-    /// Registry row not found for the company.
+    /// Registry row not found.
     CheckNotFound(Uuid),
     /// Voiding a check that is already voided.
     AlreadyVoided(Uuid),
@@ -219,21 +233,25 @@ impl CheckPrintingService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, req.company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
+        // transaction when the caller bound one. An undecorated deployment has no
+        // ambient scope and skips this entirely (unfenced by design).
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
         let row = sqlx::query_as::<_, SequenceRow>(
             r#"INSERT INTO accounting.bank_check_sequences
-                 (company_id, bank_account_id, numbering_mode, next_number, updated_at)
-               VALUES ($1,$2,$3,$4,NOW())
-               ON CONFLICT (company_id, bank_account_id) DO UPDATE SET
+                 (bank_account_id, numbering_mode, next_number, updated_at)
+               VALUES ($1,$2,$3,NOW())
+               ON CONFLICT (bank_account_id) DO UPDATE SET
                  numbering_mode = EXCLUDED.numbering_mode,
                  next_number   = EXCLUDED.next_number,
                  updated_at    = NOW()
                RETURNING id, numbering_mode, next_number"#,
         )
-        .bind(req.company_id)
         .bind(req.bank_account_id)
         .bind(&req.numbering_mode)
         .bind(req.next_number)
@@ -278,26 +296,23 @@ impl CheckPrintingService {
     }
 
     /// In-transaction allocation core, shared with the record verb so a check
-    /// number is allocated and its registry row written atomically.
+    /// number is allocated and its registry row written atomically. The caller's
+    /// transaction already carries the ambient org scope relay; `company_id` is
+    /// the legacy twin parameter, accepted for call-shape stability and unused.
     async fn allocate_check_numbers_on(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-        company_id: Uuid,
+        _company_id: Uuid,
         bank_account_id: Uuid,
         count: i64,
     ) -> Result<AllocationAck, CheckPrintingError> {
-        backbone_orm::company_scope::bind_company_on(tx, company_id)
-            .await
-            .map_err(|e| internal(e))?;
-
         let bumped: Option<i64> = sqlx::query_scalar(
             r#"UPDATE accounting.bank_check_sequences
-                  SET next_number = next_number + $3, updated_at = NOW()
-                WHERE company_id = $1 AND bank_account_id = $2
+                  SET next_number = next_number + $2, updated_at = NOW()
+                WHERE bank_account_id = $1
                   AND numbering_mode = 'auto'
                 RETURNING next_number"#,
         )
-        .bind(company_id)
         .bind(bank_account_id)
         .bind(count)
         .fetch_optional(&mut **tx)
@@ -308,9 +323,8 @@ impl CheckPrintingService {
             // Distinguish "no row" from "wrong mode" for the refusal message.
             let mode: Option<String> = sqlx::query_scalar(
                 r#"SELECT numbering_mode FROM accounting.bank_check_sequences
-                    WHERE company_id=$1 AND bank_account_id=$2"#,
+                    WHERE bank_account_id=$1"#,
             )
-            .bind(company_id)
             .bind(bank_account_id)
             .fetch_optional(&mut **tx)
             .await
@@ -339,7 +353,7 @@ impl CheckPrintingService {
 
     /// Record one printed check: allocate (auto) or validate (manual) the
     /// number and write the registry row in the SAME transaction. The unique
-    /// `(company, bank journal, number)` constraint is the cross-payment
+    /// `(bank journal, number)` constraint is the cross-payment
     /// uniqueness guard — a violation maps to `duplicate_check_number`.
     pub async fn record_printed_check(
         &self,
@@ -350,17 +364,21 @@ impl CheckPrintingService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, req.company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
+        // transaction when the caller bound one. An undecorated deployment has no
+        // ambient scope and skips this entirely (unfenced by design).
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
         let seq = sqlx::query_as::<_, SequenceRow>(
             r#"SELECT id, numbering_mode, next_number
                  FROM accounting.bank_check_sequences
-                WHERE company_id=$1 AND bank_account_id=$2
+                WHERE bank_account_id=$1
                 FOR UPDATE"#,
         )
-        .bind(req.company_id)
         .bind(req.bank_account_id)
         .fetch_optional(&mut *tx)
         .await
@@ -413,12 +431,11 @@ impl CheckPrintingService {
 
         let id: Uuid = match sqlx::query_scalar(
             r#"INSERT INTO accounting.printed_checks
-                 (company_id, bank_account_id, payment_id, payment_number,
+                 (bank_account_id, payment_id, payment_number,
                   check_number, amount, payee_name, printed_by, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+               VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
                RETURNING id"#,
         )
-        .bind(req.company_id)
         .bind(req.bank_account_id)
         .bind(req.payment_id)
         .bind(&req.payment_number)
@@ -449,7 +466,9 @@ impl CheckPrintingService {
 
     /// Void a printed check. The number stays consumed (the registry row and
     /// its uniqueness survive) — reversing the payment is the GL-side action
-    /// and never frees a check number for reuse.
+    /// and never frees a check number for reuse. `company_id` is the legacy
+    /// tenancy twin (ADR-0029): kept in the signature for unstripped callers and
+    /// echoed into the ack; no statement keys on it.
     pub async fn void_printed_check(
         &self,
         company_id: Uuid,
@@ -457,22 +476,26 @@ impl CheckPrintingService {
         actor: Option<Uuid>,
     ) -> Result<PrintedCheckAck, CheckPrintingError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
+        // transaction when the caller bound one. An undecorated deployment has no
+        // ambient scope and skips this entirely (unfenced by design).
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
         let voided = sqlx::query_as::<_, VoidRow>(
             r#"UPDATE accounting.printed_checks
                   SET status='voided', updated_at=NOW(),
                       metadata = metadata
                           || jsonb_build_object(
-                               'voided_by', $3,
+                               'voided_by', $2,
                                'voided_at', to_jsonb(NOW()))
-                WHERE id=$2 AND company_id=$1 AND status='printed'
-                RETURNING id, company_id, bank_account_id, payment_id,
+                WHERE id=$1 AND status='printed'
+                RETURNING id, bank_account_id, payment_id,
                           check_number, status"#,
         )
-        .bind(company_id)
         .bind(printed_check_id)
         .bind(actor.map(|a| a.to_string()))
         .fetch_optional(&mut *tx)
@@ -483,9 +506,8 @@ impl CheckPrintingService {
             Some(r) => r,
             None => {
                 let exists: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM accounting.printed_checks WHERE id=$2 AND company_id=$1",
+                    "SELECT status FROM accounting.printed_checks WHERE id=$1",
                 )
-                .bind(company_id)
                 .bind(printed_check_id)
                 .fetch_optional(&mut *tx)
                 .await
@@ -500,7 +522,7 @@ impl CheckPrintingService {
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(PrintedCheckAck {
             printed_check_id: row.id,
-            company_id: row.company_id,
+            company_id,
             bank_account_id: row.bank_account_id,
             payment_id: row.payment_id,
             check_number: row.check_number,
@@ -512,7 +534,6 @@ impl CheckPrintingService {
 #[derive(sqlx::FromRow)]
 struct VoidRow {
     id: Uuid,
-    company_id: Uuid,
     bank_account_id: Uuid,
     payment_id: Uuid,
     check_number: String,

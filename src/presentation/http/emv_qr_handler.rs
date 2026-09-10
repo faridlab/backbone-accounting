@@ -2,7 +2,7 @@
 //! `metaphor.codegen.yaml`).
 //!
 //! Two routes over the `EmvQrService`:
-//! - `PUT  /accounting/emv-qr/config`   — write/replace the company's QR
+//! - `PUT  /accounting/emv-qr/config`   — write/replace the QR
 //!   display configuration (validated through the domain builder first)
 //! - `GET  /accounting/emv-qr/payload`  — render the merchant-presented payload
 //!   for one invoice display (amount / currency / reference as query params —
@@ -10,7 +10,12 @@
 //!
 //! The module default-deny posture applies: hosts mount these behind their own
 //! auth + role layers; the tenant-consistency check below refuses a body/query
-//! company that disagrees with an ambient company scope.
+//! company that disagrees with the ambient scope.
+//!
+//! Tenancy (ADR-0029): the `company_id` wire fields are the legacy twin — kept
+//! so unstripped callers compile and run unchanged; the module keys no statement
+//! on them and the composing service's tenancy decorator scopes the underlying
+//! reads/writes.
 
 use std::sync::Arc;
 
@@ -94,10 +99,16 @@ fn error_response(e: &EmvQrServiceError) -> axum::response::Response {
 
 // ── Tenant consistency ────────────────────────────────────────────────────────
 // Same contract as the reconciliation verbs: when a host has mounted an ambient
-// company scope, the request's company must agree with it.
+// scope, the request's company must agree with it. Scope-aware (ADR-0029):
+// prefer the ambient org scope's legacy company id; fall back to the legacy
+// company lane for unstripped hosts. Neither bound — e.g. an undecorated
+// deployment — means nothing to compare against, so no refusal.
 
 fn tenant_mismatch(req_company: Uuid) -> bool {
-    match backbone_orm::current_company() {
+    let authenticated = backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .or_else(|| backbone_orm::current_company());
+    match authenticated {
         Some(authenticated) => authenticated != req_company,
         None => false,
     }

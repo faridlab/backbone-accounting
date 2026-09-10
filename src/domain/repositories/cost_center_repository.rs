@@ -5,8 +5,8 @@
 //! This trait defines the repository contract for the CostCenter aggregate.
 //! Implementation is in the infrastructure layer.
 
-use anyhow::Result;
 use async_trait::async_trait;
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::domain::entity::{CostCenter, CostCenterStatus};
@@ -44,7 +44,6 @@ pub struct CostCenterPaginatedResult {
 /// Filter parameters for list queries
 #[derive(Debug, Clone, Default)]
 pub struct CostCenterFilter {
-    pub company_id: Option<Uuid>,
     pub code: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
@@ -57,14 +56,7 @@ pub struct CostCenterFilter {
 impl CostCenterFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.company_id.is_some()
-            || self.code.is_some()
-            || self.name.is_some()
-            || self.description.is_some()
-            || self.parent_id.is_some()
-            || self.is_group.is_some()
-            || self.branch_id.is_some()
-            || self.status.is_some()
+        self.code.is_some() || self.name.is_some() || self.description.is_some() || self.parent_id.is_some() || self.is_group.is_some() || self.branch_id.is_some() || self.status.is_some()
     }
 }
 
@@ -74,6 +66,7 @@ impl CostCenterFilter {
 /// Implementations should be in the infrastructure layer.
 #[async_trait]
 pub trait CostCenterRepository: Send + Sync {
+
     // =========================================================================
     // Core CRUD Operations
     // =========================================================================
@@ -101,11 +94,7 @@ pub trait CostCenterRepository: Send + Sync {
     async fn list(&self, params: CostCenterPaginationParams) -> Result<CostCenterPaginatedResult>;
 
     /// List cost_center with pagination and filters
-    async fn list_with_filters(
-        &self,
-        params: CostCenterPaginationParams,
-        filters: CostCenterFilter,
-    ) -> Result<CostCenterPaginatedResult>;
+    async fn list_with_filters(&self, params: CostCenterPaginationParams, filters: CostCenterFilter) -> Result<CostCenterPaginatedResult>;
 
     /// Count all cost_center entities
     async fn count(&self) -> Result<u64>;
@@ -127,10 +116,7 @@ pub trait CostCenterRepository: Send + Sync {
     async fn restore(&self, id: &str) -> Result<Option<CostCenter>>;
 
     /// List soft-deleted cost_center entities
-    async fn list_deleted(
-        &self,
-        params: CostCenterPaginationParams,
-    ) -> Result<CostCenterPaginatedResult>;
+    async fn list_deleted(&self, params: CostCenterPaginationParams) -> Result<CostCenterPaginatedResult>;
 
     /// Empty trash (permanently delete all soft-deleted entities)
     async fn empty_trash(&self) -> Result<u64>;

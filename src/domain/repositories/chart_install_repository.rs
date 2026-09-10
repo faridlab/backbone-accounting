@@ -1,8 +1,10 @@
 //! Port for the chart install engine's persistence needs.
 //!
-//! All methods ride a caller-held transaction on which the caller has already bound
-//! `app.company_id` (strict-fence posture: inserts need it for the RLS WITH CHECK,
-//! reads need it to see rows at all). Hand-authored; see `metaphor.codegen.yaml`.
+//! All methods ride a caller-held transaction on which the caller has already relayed the
+//! ambient org scope (`org_scope::bind_org_scope_on`) — the composing service's tenancy
+//! decorator scopes every statement through it (ADR-0029). The `company_id` lanes are the
+//! documented legacy twin: they keep their shapes so unstripped callers compile and run
+//! unchanged; no statement keys on them. Hand-authored; see `metaphor.codegen.yaml`.
 
 use crate::domain::chart_dataset::{ChartAccountDef, ChartDataset};
 use uuid::Uuid;
@@ -11,6 +13,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct ChartAccountRow {
     pub id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — kept so the deterministic-id derivation and
+    /// unstripped constructors stay stable; the adapter writes no such column.
     pub company_id: Uuid,
     pub def: ChartAccountDef,
     pub parent_id: Option<Uuid>,

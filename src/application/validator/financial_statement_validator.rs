@@ -5,9 +5,9 @@
 //! Returns an `EntityValidator<FinancialStatement>` pre-loaded with schema-derived
 //! field rules. Extend in the `// <<< CUSTOM` zone.
 
-use crate::domain::entity::FinancialStatement;
-use backbone_core::{EntityValidator, ValidationError, ValidationErrors};
+use backbone_core::{EntityValidator, ValidationErrors, ValidationError};
 use backbone_core::{OptionalNotBlank, RequiredString};
+use crate::domain::entity::FinancialStatement;
 
 /// Validator type alias for FinancialStatement entities.
 pub type FinancialStatementValidator = EntityValidator<FinancialStatement>;
@@ -15,28 +15,12 @@ pub type FinancialStatementValidator = EntityValidator<FinancialStatement>;
 /// Build a validator for FinancialStatement with all schema-defined field rules.
 pub fn financial_statement_validator() -> FinancialStatementValidator {
     EntityValidator::new()
-        .rule(RequiredString::new(
-            "statement_number",
-            |e: &FinancialStatement| &e.statement_number,
-        ))
-        .rule(RequiredString::new("name", |e: &FinancialStatement| {
-            &e.name
-        }))
-        .rule(OptionalNotBlank::new(
-            "management_notes",
-            |e: &FinancialStatement| e.management_notes.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "pdf_url",
-            |e: &FinancialStatement| e.pdf_url.as_deref(),
-        ))
-        .rule(OptionalNotBlank::new(
-            "excel_url",
-            |e: &FinancialStatement| e.excel_url.as_deref(),
-        ))
-        .rule(RequiredString::new("currency", |e: &FinancialStatement| {
-            &e.currency
-        }))
+        .rule(RequiredString::new("statement_number", |e: &FinancialStatement| &e.statement_number))
+        .rule(RequiredString::new("name", |e: &FinancialStatement| &e.name))
+        .rule(OptionalNotBlank::new("management_notes", |e: &FinancialStatement| e.management_notes.as_deref()))
+        .rule(OptionalNotBlank::new("pdf_url", |e: &FinancialStatement| e.pdf_url.as_deref()))
+        .rule(OptionalNotBlank::new("excel_url", |e: &FinancialStatement| e.excel_url.as_deref()))
+        .rule(RequiredString::new("currency", |e: &FinancialStatement| &e.currency))
     // <<< CUSTOM RULES
     // END CUSTOM RULES
 }

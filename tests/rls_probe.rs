@@ -1,26 +1,33 @@
-//! RLS host-contract probe (ADR-0011).
+//! Tenancy posture probe (ADR-0029).
 //!
-//! Proves the tenant fence works WHEN the host honors its contract: connect as a non-superuser,
-//! non-BYPASSRLS role and set `app.company_id` per request. Under those conditions a write whose
-//! `company_id` does NOT match the session tenant is rejected (WITH CHECK violation), and a
-//! matching write succeeds. If this test ever fails, either RLS was disabled or the role can
-//! bypass it — i.e. the contract documented in ADR-0011 is broken.
+//! The module ships NO tenancy: no tenant column, no tenant predicate in any statement,
+//! and no RLS policy of its own. What it ships instead is the half-fence the composing
+//! service's tenancy decorator completes: every table carries ENABLE + FORCE ROW LEVEL
+//! SECURITY with zero policies. This probe pins that posture from below, exactly the
+//! family pattern:
 //!
-//! Requires DATABASE_URL (defaults to local dev Postgres on :5433) backed by a superuser-capable
-//! role so it can mint/teardown the restricted role.
-
-use std::sync::Arc;
+//! - the flags are armed and the policy set is empty (schema pin);
+//! - a plain non-superuser, NOBYPASSRLS role is default-DENIED — zero rows, writes
+//!   refused — no matter what legacy variable is set (no policy reads `app.company_id`
+//!   anymore; the decorator's org-scoped policies will, once composed);
+//! - the owner/superuser pool sees its own seeded rows plainly, proving the denial is
+//!   the missing policy and not an empty database;
+//! - the module-side half of the contract still works: the AMBIENT org scope — what a
+//!   composing service binds per request — drives reads as the owner, and the same
+//!   ambient binding rides a RESTRICTED pool per transaction (the relay shape), where
+//!   the read completes and returns exactly what the (absent) policies admit: nothing,
+//!   until the decorator composes.
+//!
+//! Requires DATABASE_URL (defaults to local dev Postgres on :5433) backed by a
+//! superuser-capable role so it can mint/teardown the probe role.
 
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_accounting::application::service::reconcile_write_service::ReconcileWriteService;
 use backbone_accounting::domain::repositories::reporting_repository::ReportingRepository;
-use backbone_accounting::infrastructure::persistence::{
-    SqlxPostingRepository, SqlxReconcileGraphRepository,
-};
+use backbone_accounting::infrastructure::persistence::SqlxReportingRepository;
 
-const ROLE: &str = "bbacc_rls_probe";
+const ROLE: &str = "bbacc_tenancy_probe";
 const PWD: &str = "probe";
 
 /// Role/catalog DDL serializes — two tests minting roles concurrently hit
@@ -46,329 +53,199 @@ async fn drop_role(admin: &PgPool) {
         .await;
 }
 
-async fn bootstrap_role(admin: &PgPool) {
-    // Restricted role: NOSUPERUSER, NOBYPASSRLS — the posture ADR-0011 demands of the host.
+async fn bootstrap_role(admin: &PgPool, grants: &[&str]) {
     drop_role(admin).await;
     for stmt in [
         format!("CREATE ROLE {ROLE} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
         format!("GRANT USAGE ON SCHEMA accounting TO {ROLE}"),
-        format!("GRANT USAGE ON SCHEMA public TO {ROLE}"),
-        format!("GRANT INSERT ON accounting.accounts TO {ROLE}"),
-    ] {
+    ]
+    .into_iter()
+    .chain(grants.iter().map(|t| format!("GRANT SELECT ON accounting.{t} TO {ROLE}")))
+    {
         sqlx::query(&stmt).execute(admin).await.unwrap();
     }
-}
-
-async fn restricted() -> PgPool {
-    let url = format!("postgresql://{ROLE}:{PWD}@localhost:5433/backbone_accounting");
-    PgPool::connect(&url)
-        .await
-        .expect("connect restricted role")
 }
 
 async fn teardown_role(admin: &PgPool) {
     drop_role(admin).await;
 }
 
-/// Insert a minimal accounts row for `company`. Returns the account id (or errors under RLS).
-async fn try_insert(
-    pool: &PgPool,
-    app_company: Uuid,
-    row_company: Uuid,
-) -> Result<Uuid, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-    sqlx::query("SELECT set_config('app.company_id', $1, true)")
-        .bind(app_company.to_string())
-        .execute(&mut *tx)
-        .await?;
-    let id = Uuid::new_v4();
-    let res = sqlx::query(
-        r#"INSERT INTO accounting.accounts
-            (id, company_id, account_number, account_code, name, account_type, account_subtype,
-             normal_balance, is_detail, is_header, status)
-           VALUES ($1,$2,$3,$3,$4,'asset'::account_type,'cash'::account_subtype,
-                   'debit'::normal_balance, TRUE, FALSE, 'active'::account_status)"#,
-    )
-    .bind(id)
-    .bind(row_company)
-    .bind("RLS")
-    .bind("RLS probe")
-    .execute(&mut *tx)
-    .await;
-    match res {
-        Ok(_) => {
-            tx.commit().await?;
-            Ok(id)
-        }
-        Err(e) => {
-            let _ = tx.rollback().await;
-            Err(e)
-        }
-    }
-}
+// ── The schema pin: armed flags, empty policy set ─────────────────────────────
 
-async fn count_for(admin: &PgPool, company: Uuid) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounts WHERE company_id=$1")
-        .bind(company)
-        .fetch_one(admin)
-        .await
-        .unwrap()
-}
-
+/// Every accounting base table carries ENABLE + FORCE ROW LEVEL SECURITY and the
+/// module ships ZERO policies — the decorator's half-fence. If a strip or regen ever
+/// drops the flags, an undecorated deployment would silently become readable by any
+/// role the host grants; if a policy ever reappears module-side, the decorator's
+/// org-scoped policies would fight it.
 #[tokio::test]
-async fn rls_rejects_mismatched_tenant_write() {
+async fn tables_carry_rls_flags_and_the_module_ships_no_policy() {
+    let admin = admin().await;
+    let armed: Vec<String> = sqlx::query(
+        "SELECT c.relname FROM pg_class c \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE n.nspname = 'accounting' AND c.relkind = 'r' \
+           AND c.relrowsecurity AND c.relforcerowsecurity \
+         ORDER BY c.relname",
+    )
+    .fetch_all(&admin)
+    .await
+    .unwrap()
+    .iter()
+    .map(|r| r.get::<String, _>("relname"))
+    .collect();
+    for table in [
+        "accounting_posts",
+        "accounts",
+        "bank_check_sequences",
+        "cost_centers",
+        "emv_qr_configs",
+        "financial_statements",
+        "fiscal_periods",
+        "full_reconciles",
+        "journal_lines",
+        "journals",
+        "ledgers",
+        "partial_reconciles",
+        "printed_checks",
+        "reconciliation_items",
+        "reconciliations",
+        "tax_tag_repair_runs",
+    ] {
+        assert!(
+            armed.iter().any(|t| t == table),
+            "{table} must carry ENABLE + FORCE ROW LEVEL SECURITY"
+        );
+    }
+
+    let policies: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pg_policy WHERE polrelid::regnamespace::text = 'accounting'",
+    )
+    .fetch_one(&admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        policies, 0,
+        "the module ships no RLS policy — isolation belongs to the composing service's decorator"
+    );
+}
+
+// ── Default-deny until composed: the plain probe role ─────────────────────────
+
+/// A plain non-superuser, NOBYPASSRLS role with a bare SELECT grant sees NOTHING and
+/// cannot write — with or without the legacy company variable set. No policy admits it
+/// (there are none), and none reads `app.company_id` anymore. The owner pool still sees
+/// its seeded row: the denial is the missing policy, not an empty database.
+#[tokio::test]
+async fn plain_role_is_default_denied_until_the_decorator_composes() {
     let _ddl = ROLE_DDL_LOCK.lock().await;
     let admin = admin().await;
-    bootstrap_role(&admin).await;
-    let restricted = restricted().await;
+    bootstrap_role(&admin, &["accounts"]).await;
 
-    let tenant_a = Uuid::new_v4();
-    let tenant_b = Uuid::new_v4();
+    // The owner seeds a row as the superuser (whom RLS can never bind).
+    let account = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.accounts
+             (id, account_number, account_code, name, account_type, account_subtype,
+              normal_balance, is_detail, is_header, status)
+           VALUES ($1,$2,$2,'tenancy probe','asset'::account_type,'bank'::account_subtype,
+                   'debit'::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+    )
+    .bind(account)
+    .bind(format!("TEN-{account}"))
+    .execute(&admin)
+    .await
+    .unwrap();
 
-    // Mismatched: session = A, row = B → must be rejected by the RLS WITH CHECK predicate.
-    let err = try_insert(&restricted, tenant_a, tenant_b).await;
-    assert!(
-        err.is_err(),
-        "RLS must reject a write to a non-session tenant"
-    );
-    assert_eq!(
-        count_for(&admin, tenant_b).await,
-        0,
-        "no row should have landed for tenant B"
-    );
+    let restricted = PgPool::connect(&format!(
+        "postgresql://{ROLE}:{PWD}@localhost:5433/backbone_accounting"
+    ))
+    .await
+    .expect("connect probe role");
 
-    // Matching: session = A, row = A → succeeds.
-    let id = try_insert(&restricted, tenant_a, tenant_a)
+    // Bare read: zero rows — default-deny with no policy admitting the role.
+    let n: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounts WHERE id=$1")
+            .bind(account)
+            .fetch_one(&restricted)
+            .await
+            .unwrap();
+    assert_eq!(n, 0, "a role no policy admits sees zero rows");
+
+    // The legacy company variable resurrects nothing: no policy reads it anymore
+    // (the decorator's org-scoped policies will, once composed).
+    let mut tx = restricted.begin().await.unwrap();
+    sqlx::query("SELECT set_config('app.company_id', $1, true)")
+        .bind(Uuid::new_v4().to_string())
+        .execute(&mut *tx)
         .await
-        .expect("matching write succeeds");
-    let got: Uuid = sqlx::query("SELECT company_id FROM accounting.accounts WHERE id=$1")
-        .bind(id)
+        .unwrap();
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounts WHERE id=$1")
+        .bind(account)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    assert_eq!(n, 0, "the legacy variable must not bypass the absent policy set");
+    tx.rollback().await.unwrap();
+
+    // A write is refused outright (no WITH CHECK policy admits the new row).
+    let err = sqlx::query(
+        r#"INSERT INTO accounting.accounts
+             (id, account_number, account_code, name, account_type, account_subtype,
+              normal_balance, is_detail, is_header, status)
+           VALUES ($1,$2,$2,'tenancy probe','asset'::account_type,'bank'::account_subtype,
+                   'debit'::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(format!("TEN-{ROLE}"))
+    .execute(&restricted)
+    .await;
+    assert!(err.is_err(), "a write with no admitting policy must be refused");
+
+    // The owner pool still sees its row.
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounts WHERE id=$1")
+        .bind(account)
         .fetch_one(&admin)
         .await
-        .unwrap()
-        .get::<Uuid, _>("company_id");
-    assert_eq!(got, tenant_a);
-
-    // Sanity: a non-superuser role with RLS honors the contract — A's write landed, B's did not.
-    assert_eq!(count_for(&admin, tenant_a).await, 1);
+        .unwrap();
+    assert_eq!(n, 1, "the owner pool must still see the seeded row");
 
     teardown_role(&admin).await;
 }
 
-/// The reconciliation-graph tables carry the same fence: a partial edge written under a
-/// session tenant other than the row's company must bounce, a matching one lands. The
-/// journal lines the edge references are seeded by the admin (the probe exercises the
-/// graph tables' fence, not the lines').
+/// The reconciliation-graph tables carry the same posture: a plain probe role granted
+/// SELECT on the edge table sees none of the owner's edges, and the legacy variable
+/// resurrects nothing there either.
 #[tokio::test]
-async fn rls_fences_reconciliation_graph_tables() {
+async fn graph_tables_are_default_denied_for_a_plain_role_too() {
     let _ddl = ROLE_DDL_LOCK.lock().await;
-    let graph_role = "bbacc_rls_graph_probe";
     let admin = admin().await;
-    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}"))
-        .execute(&admin)
-        .await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}"))
-        .execute(&admin)
-        .await;
-    for stmt in [
-        format!("CREATE ROLE {graph_role} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
-        format!("GRANT USAGE ON SCHEMA accounting TO {graph_role}"),
-        format!("GRANT INSERT ON accounting.partial_reconciles TO {graph_role}"),
-        format!("GRANT INSERT ON accounting.full_reconciles TO {graph_role}"),
-    ] {
-        sqlx::query(&stmt).execute(&admin).await.unwrap();
-    }
-    let restricted = PgPool::connect(&format!(
-        "postgresql://{graph_role}:{PWD}@localhost:5433/backbone_accounting"
-    ))
-    .await
-    .expect("connect graph probe role");
+    bootstrap_role(&admin, &["partial_reconciles", "full_reconciles"]).await;
 
-    // Two tenant-scoped line pairs, seeded as the owner.
-    let seed_lines = |company: Uuid| {
-        let admin = admin.clone();
-        async move {
-            let account = Uuid::new_v4();
-            sqlx::query(
-                r#"INSERT INTO accounting.accounts
-                     (id, company_id, account_number, account_code, name, account_type,
-                      account_subtype, normal_balance, status)
-                   VALUES ($1,$2,$3,$3,'rls probe','asset'::account_type,
-                           'accounts_receivable'::account_subtype,'debit'::normal_balance,
-                           'active'::account_status)"#,
-            )
-            .bind(account)
-            .bind(company)
-            .bind(format!("RLS-{account}"))
-            .execute(&admin)
-            .await
-            .unwrap();
-            let journal = Uuid::new_v4();
-            sqlx::query(
-                r#"INSERT INTO accounting.journals
-                     (id, company_id, journal_number, journal_type, source, transaction_date,
-                      description, currency, status)
-                   VALUES ($1,$2,$3,'general'::journal_type,'manual'::journal_source,'2026-06-15',
-                           'rls probe','IDR','posted'::journal_status)"#,
-            )
-            .bind(journal)
-            .bind(company)
-            .bind(format!("RLS-{journal}"))
-            .execute(&admin)
-            .await
-            .unwrap();
-            let mut ids = Vec::new();
-            for n in 1..=2 {
-                let id = Uuid::new_v4();
-                sqlx::query(
-                    r#"INSERT INTO accounting.journal_lines
-                         (id, journal_id, company_id, line_number, account_id, account_number,
-                          account_name, debit_amount, credit_amount, base_debit_amount,
-                          base_credit_amount, is_posted)
-                       VALUES ($1,$2,$3,$4,$5,'RLS','rls probe',100,0,100,0,TRUE)"#,
-                )
-                .bind(id)
-                .bind(journal)
-                .bind(company)
-                .bind(n)
-                .bind(account)
-                .execute(&admin)
-                .await
-                .unwrap();
-                ids.push(id);
-            }
-            ids
-        }
-    };
-    let tenant_a = Uuid::new_v4();
-    let tenant_b = Uuid::new_v4();
-    let lines_a = seed_lines(tenant_a).await;
-
-    let try_edge = |pool: PgPool, app_company: Uuid, row_company: Uuid, lines: Vec<Uuid>| async move {
-        let mut tx = pool.begin().await.unwrap();
-        sqlx::query("SELECT set_config('app.company_id', $1, true)")
-            .bind(app_company.to_string())
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-        let res = sqlx::query(
-            r#"INSERT INTO accounting.partial_reconciles
-                 (company_id, debit_move_id, credit_move_id, amount, currency, max_date,
-                  origin, updated_at)
-               VALUES ($1,$2,$3,10,'IDR','2026-06-15','manual'::reconcile_origin,NOW())"#,
-        )
-        .bind(row_company)
-        .bind(lines[0])
-        .bind(lines[1])
-        .execute(&mut *tx)
-        .await;
-        match res {
-            Ok(_) => {
-                tx.commit().await.unwrap();
-                Ok(())
-            }
-            Err(e) => {
-                let _ = tx.rollback().await;
-                Err(e)
-            }
-        }
-    };
-
-    // Session = B, row = A → the fence must reject the cross-tenant edge.
-    let err = try_edge(restricted.clone(), tenant_b, tenant_a, lines_a.clone()).await;
-    assert!(
-        err.is_err(),
-        "RLS must reject a graph edge into another tenant"
-    );
-
-    // Session = A, row = A → lands.
-    try_edge(restricted.clone(), tenant_a, tenant_a, lines_a.clone())
-        .await
-        .expect("matching graph edge succeeds");
-
-    let n: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE company_id=$1 \
-         AND debit_move_id=$2 AND credit_move_id=$3",
-    )
-    .bind(tenant_a)
-    .bind(lines_a[0])
-    .bind(lines_a[1])
-    .fetch_one(&admin)
-    .await
-    .unwrap();
-    assert_eq!(n, 1, "exactly the matching edge landed");
-
-    let _ = tenant_b; // seeded only if a future probe needs B-side lines
-    let _ = sqlx::query(&format!("DROP OWNED BY {graph_role}"))
-        .execute(&admin)
-        .await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {graph_role}"))
-        .execute(&admin)
-        .await;
-}
-
-/// The pool-verb matching-group read must survive the fence on a RESTRICTED pool. The bind is
-/// `set_config(..., is_local=true)` — transaction-scoped — so a read wrapper that binds on a bare
-/// pooled connection (no transaction) loses the setting before its first statement and the fence
-/// silently empties the result. That shape returns 200 with an empty group on any fenced
-/// app-role deployment while looking perfectly green on owner/superuser DSNs. This probe builds
-/// the service over a restricted pool with real graph rows and asserts the read finds them.
-#[tokio::test]
-async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
-    let _ddl = ROLE_DDL_LOCK.lock().await;
-    let role = "bbacc_rls_read_probe";
-    let admin = admin().await;
-    let _ = sqlx::query(&format!("DROP OWNED BY {role}"))
-        .execute(&admin)
-        .await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}"))
-        .execute(&admin)
-        .await;
-    for stmt in [
-        format!("CREATE ROLE {role} LOGIN PASSWORD '{PWD}' NOSUPERUSER NOBYPASSRLS"),
-        format!("GRANT USAGE ON SCHEMA accounting TO {role}"),
-        format!(
-            "GRANT SELECT ON accounting.journals, accounting.journal_lines, \
-             accounting.partial_reconciles, accounting.full_reconciles, accounting.accounts TO {role}"
-        ),
-    ] {
-        sqlx::query(&stmt).execute(&admin).await.unwrap();
-    }
-    let restricted = PgPool::connect(&format!(
-        "postgresql://{role}:{PWD}@localhost:5433/backbone_accounting"
-    ))
-    .await
-    .expect("connect read-probe role");
-
-    // Seed one tenant's graph as the owner: an account, a journal, a debit and a credit
-    // line, and a partial edge between them.
-    let company = Uuid::new_v4();
+    // Owner-seeded graph: two posted lines and one edge between them.
     let account = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.accounts
-             (id, company_id, account_number, account_code, name, account_type,
-              account_subtype, normal_balance, status)
-           VALUES ($1,$2,$3,$3,'read probe','asset'::account_type,
+             (id, account_number, account_code, name, account_type, account_subtype,
+              normal_balance, status)
+           VALUES ($1,$2,$2,'tenancy probe','asset'::account_type,
                    'accounts_receivable'::account_subtype,'debit'::normal_balance,
                    'active'::account_status)"#,
     )
     .bind(account)
-    .bind(company)
-    .bind(format!("RLR-{account}"))
+    .bind(format!("TEN-{account}"))
     .execute(&admin)
     .await
     .unwrap();
     let journal = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.journals
-             (id, company_id, journal_number, journal_type, source, transaction_date,
+             (id, journal_number, journal_type, source, transaction_date,
               description, currency, status)
-           VALUES ($1,$2,$3,'general'::journal_type,'manual'::journal_source,'2026-06-15',
-                   'read probe','IDR','posted'::journal_status)"#,
+           VALUES ($1,$2,'general'::journal_type,'manual'::journal_source,'2026-06-15',
+                   'tenancy probe','IDR','posted'::journal_status)"#,
     )
     .bind(journal)
-    .bind(company)
-    .bind(format!("RLR-{journal}"))
+    .bind(format!("TEN-{journal}"))
     .execute(&admin)
     .await
     .unwrap();
@@ -377,14 +254,12 @@ async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounting.journal_lines
-                 (id, journal_id, company_id, line_number, account_id, account_number,
-                  account_name, debit_amount, credit_amount, base_debit_amount,
-                  base_credit_amount, is_posted)
-               VALUES ($1,$2,$3,$4,$5,'RLR','read probe',100,0,100,0,TRUE)"#,
+                 (id, journal_id, line_number, account_id, account_number, account_name,
+                  debit_amount, credit_amount, base_debit_amount, base_credit_amount, is_posted)
+               VALUES ($1,$2,$3,$4,'TEN','tenancy probe',100,0,100,0,TRUE)"#,
         )
         .bind(id)
         .bind(journal)
-        .bind(company)
         .bind(n)
         .bind(account)
         .execute(&admin)
@@ -392,259 +267,168 @@ async fn matching_group_read_survives_the_fence_on_a_restricted_pool() {
         .unwrap();
         lines.push(id);
     }
-    let partial = Uuid::new_v4();
+    let edge = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.partial_reconciles
-             (id, company_id, debit_move_id, credit_move_id, amount, currency, max_date,
-              origin, updated_at)
-           VALUES ($1,$2,$3,$4,40,'IDR','2026-06-15','manual'::reconcile_origin,NOW())"#,
+             (id, debit_move_id, credit_move_id, amount, currency, max_date, origin, updated_at)
+           VALUES ($1,$2,$3,40,'IDR','2026-06-15','manual'::reconcile_origin,NOW())"#,
     )
-    .bind(partial)
-    .bind(company)
+    .bind(edge)
     .bind(lines[0])
     .bind(lines[1])
     .execute(&admin)
     .await
     .unwrap();
 
-    // The service over the RESTRICTED pool — the pool verbs bind the company themselves,
-    // exactly like an HTTP read on a fenced deployment.
-    let svc = ReconcileWriteService::new(
-        Arc::new(SqlxReconcileGraphRepository::new()),
-        Arc::new(SqlxPostingRepository::new(restricted.clone())),
-        restricted.clone(),
-        None,
-    );
-    let group = svc
-        .matching_group(company, lines[0])
-        .await
-        .expect("matching-group read succeeds");
-    assert!(
-        group.label.starts_with("P-"),
-        "partial-only component must carry a P- label, got {:?}",
-        group.label
-    );
-    assert_eq!(
-        group.line_ids.len(),
-        2,
-        "the component must span both lines, got {:?}",
-        group.line_ids
-    );
-    assert_eq!(group.partial_ids, vec![partial], "the edge must be found");
-    assert!(
-        group.residuals.iter().all(|(_, r)| *r > 0.into()),
-        "residuals must be readable through the fence"
-    );
+    let restricted = PgPool::connect(&format!(
+        "postgresql://{ROLE}:{PWD}@localhost:5433/backbone_accounting"
+    ))
+    .await
+    .expect("connect probe role");
 
-    let _ = sqlx::query(&format!("DROP OWNED BY {role}"))
-        .execute(&admin)
-        .await;
-    let _ = sqlx::query(&format!("DROP ROLE IF EXISTS {role}"))
-        .execute(&admin)
-        .await;
+    let n: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE id=$1",
+    )
+    .bind(edge)
+    .fetch_one(&restricted)
+    .await
+    .unwrap();
+    assert_eq!(n, 0, "the probe role sees no edges — no policy admits it");
+
+    // The legacy variable resurrects nothing on the graph tables either.
+    let mut tx = restricted.begin().await.unwrap();
+    sqlx::query("SELECT set_config('app.company_id', $1, true)")
+        .bind(Uuid::new_v4().to_string())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    let n: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE id=$1",
+    )
+    .bind(edge)
+    .fetch_one(&mut *tx)
+    .await
+    .unwrap();
+    assert_eq!(n, 0, "the legacy variable must not bypass the absent policy set");
+    tx.rollback().await.unwrap();
+
+    // The owner still sees its edge.
+    let n: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE id=$1",
+    )
+    .bind(edge)
+    .fetch_one(&admin)
+    .await
+    .unwrap();
+    assert_eq!(n, 1, "the owner pool must still see the seeded edge");
 }
 
-// Reporting reads under the restricted role — the bare-pool regression probe.
-//
-// The reporting repository's reads must ride the company-scoped helpers: a bare pooled
-// fetch under the app role loses `set_config(is_local)` and the RLS fence silently
-// empties the result (HTTP 200, zero rows — green on superuser DSNs, empty under the
-// app role). This probe pins the scoped shape: the caller's company reads fine, another
-// tenant's explicit company_id parameter still returns nothing, and an unscoped bare
-// read under the restricted role returns nothing (which is exactly why the scope is
-// load-bearing).
+// ── The module-side half: the ambient org scope drives the reads ──────────────
+
+/// Run `f` with an ambient org scope bound — the single-company emulation of what a
+/// composing service resolves and binds per request.
+async fn scoped<F, R>(pool: &PgPool, company: Uuid, f: F) -> R
+where
+    F: std::future::Future<Output = R>,
+{
+    backbone_orm::org_scope::with_org_request_scope(
+        pool,
+        backbone_orm::org_scope::OrgScope::for_company_unit(company),
+        f,
+    )
+    .await
+    .unwrap()
+}
+
+/// The ambient org scope is what the module's reads ride: with a scope bound (the
+/// composed shape), the statement reads complete and the scope is visible to
+/// module code; without one, nothing is bound. Row isolation itself is the
+/// decorator's — this pins the module-side binding contract only.
 #[tokio::test]
-async fn reporting_reads_scoped_under_restricted_role() {
-    let _guard = ROLE_DDL_LOCK.lock().await;
+async fn ambient_org_scope_drives_module_reads() {
     let admin = admin().await;
-    bootstrap_role(&admin).await;
-    for table in [
-        "accounts",
-        "ledgers",
-        "journals",
-        "journal_lines",
-        "partial_reconciles",
-    ] {
-        sqlx::query(&format!("GRANT SELECT ON accounting.{table} TO {ROLE}"))
-            .execute(&admin)
-            .await
-            .unwrap();
-    }
-
-    let company_a = Uuid::new_v4();
-    let company_b = Uuid::new_v4();
-    for (company, number) in [(company_a, "1100"), (company_b, "2200")] {
-        sqlx::query(
-            r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
-                 normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,'probe','asset'::account_type,'bank'::account_subtype,
-                       'debit'::normal_balance, TRUE, FALSE, 'active'::account_status)"#,
-        )
-        .bind(Uuid::new_v4())
-        .bind(company)
-        .bind(number)
-        .execute(&admin)
-        .await
-        .unwrap();
-    }
-
-    // Company A also gets a posted AR line + ledger row so the GL, partner-ledger, and aged
-    // reads — the residual-subquery legs — are exercised under the fence, not just the
-    // account directory.
-    let ar = Uuid::new_v4();
+    let company = Uuid::new_v4();
+    let account = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.accounts
-            (id, company_id, account_number, account_code, name, account_type, account_subtype,
-             normal_balance, is_detail, is_header, status)
-           VALUES ($1,$2,'1200','1200','probe AR','asset'::account_type,
-                   'accounts_receivable'::account_subtype,'debit'::normal_balance,
-                   TRUE, FALSE, 'active'::account_status)"#,
+             (id, account_number, account_code, name, account_type, account_subtype,
+              normal_balance, is_detail, is_header, status)
+           VALUES ($1,$2,$2,'ambient probe','asset'::account_type,'bank'::account_subtype,
+                   'debit'::normal_balance,TRUE,FALSE,'active'::account_status)"#,
     )
-    .bind(ar)
-    .bind(company_a)
-    .execute(&admin)
-    .await
-    .unwrap();
-    let party = Uuid::new_v4();
-    let journal = Uuid::new_v4();
-    sqlx::query(
-        r#"INSERT INTO accounting.journals
-             (id, company_id, journal_number, journal_type, source, transaction_date,
-              description, currency, status)
-           VALUES ($1,$2,'RLP-1','general'::journal_type,'manual'::journal_source,'2026-06-15',
-                   'reporting probe','IDR','posted'::journal_status)"#,
-    )
-    .bind(journal)
-    .bind(company_a)
-    .execute(&admin)
-    .await
-    .unwrap();
-    let jline = Uuid::new_v4();
-    sqlx::query(
-        r#"INSERT INTO accounting.journal_lines
-             (id, journal_id, company_id, line_number, account_id, account_number,
-              account_name, debit_amount, credit_amount, base_debit_amount,
-              base_credit_amount, is_posted, party_type, party_id)
-           VALUES ($1,$2,$3,1,$4,'1200','probe AR',100,0,100,0,TRUE,
-                   'customer'::party_type,$5)"#,
-    )
-    .bind(jline)
-    .bind(journal)
-    .bind(company_a)
-    .bind(ar)
-    .bind(party)
-    .execute(&admin)
-    .await
-    .unwrap();
-    sqlx::query(
-        r#"INSERT INTO accounting.ledgers
-             (id, company_id, account_id, account_number, account_name, account_type,
-              normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
-              posting_date, description, currency, debit_amount, credit_amount,
-              balance_before, balance_after, balance_change, sequence_number, party_type, party_id,
-              fiscal_year, fiscal_month)
-           VALUES ($1,$2,$3,'1200','probe AR','asset'::account_type,'debit'::normal_balance,
-                   $4,'RLP-1',$5,'2026-06-15','2026-06-15','reporting probe','IDR',
-                   100,0,0,100,100,1,'customer'::party_type,$6,2026,6)"#,
-    )
-    .bind(Uuid::new_v4())
-    .bind(company_a)
-    .bind(ar)
-    .bind(journal)
-    .bind(jline)
-    .bind(party)
+    .bind(account)
+    .bind(format!("AMB-{account}"))
     .execute(&admin)
     .await
     .unwrap();
 
-    let restricted = restricted().await;
-    let repo =
-        backbone_accounting::infrastructure::persistence::reporting_repository::SqlxReportingRepository::new(
-            restricted.clone(),
-        );
+    let repo = SqlxReportingRepository::new(admin.clone());
 
-    // Scoped to A: A's account is visible — the scoped read does not silently empty.
-    let (scoped_a, scoped_b, gl, pl, aged) =
-        backbone_orm::company_scope::with_company_scope(Some(company_a), async {
-            let a = repo.account_directory(company_a).await.unwrap();
-            let b = repo.account_directory(company_b).await.unwrap();
-            let gl = repo
-                .gl_lines(
-                    company_a,
-                    None,
-                    None,
-                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
-                    10,
-                    0,
-                )
-                .await
-                .unwrap();
-            let pl = repo
-                .party_ledger_lines(
-                    company_a,
-                    "customer",
-                    party,
-                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
-                )
-                .await
-                .unwrap();
-            let aged = repo
-                .aged_open_items(
-                    company_a,
-                    "accounts_receivable",
-                    chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
-                )
-                .await
-                .unwrap();
-            (a, b, gl, pl, aged)
-        })
-        .await;
-    assert_eq!(
-        scoped_a.len(),
-        2,
-        "scoped read must see the caller's company"
-    );
-    let numbers: Vec<&str> = scoped_a.iter().map(|n| n.account_number.as_str()).collect();
-    assert!(numbers.contains(&"1100") && numbers.contains(&"1200"));
+    // Inside the scope: bound, visible to module code, reads complete.
+    let (scope_inside, rows) = scoped(&admin, company, async {
+        let scope = backbone_orm::org_scope::current_org_scope()
+            .expect("the ambient scope must be bound inside");
+        let rows = repo
+            .account_directory(company)
+            .await
+            .expect("account directory read completes under the ambient scope");
+        (scope.legacy_company_id(), rows)
+    })
+    .await;
+    assert_eq!(scope_inside, Some(company));
     assert!(
-        scoped_b.is_empty(),
-        "cross-tenant parameter must not leak rows"
+        rows.iter().any(|a| a.id == account),
+        "the owner's read must see its own seeded row"
     );
-    assert_eq!(gl.len(), 1, "scoped GL read must see the ledger row");
-    assert_eq!(
-        pl.len(),
-        1,
-        "scoped partner-ledger read must see the AR line"
-    );
-    assert_eq!(
-        pl[0].residual,
-        100.into(),
-        "residual subquery rides the fence"
-    );
-    assert_eq!(aged.len(), 1, "scoped aged read must see the open item");
 
-    // Unscoped bare read under the restricted role: the fence empties it (no app.company_id
-    // on the pooled connection) — the failure mode this probe guards against regressing into.
-    let unscoped = repo.account_directory(company_a).await.unwrap();
+    // Outside: nothing is bound.
     assert!(
-        unscoped.is_empty(),
-        "unscoped read under the app role must not bypass the fence"
+        backbone_orm::org_scope::current_org_scope().is_none(),
+        "no ambient scope may leak past the wrapped future"
     );
-    let unscoped_gl = repo
-        .gl_lines(
-            company_a,
-            None,
-            None,
-            chrono::NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
-            10,
-            0,
-        )
+}
+
+/// The relay shape a decorated host runs: the app role (restricted, NOBYPASSRLS) with
+/// the ambient scope bound per request. The binding is per-transaction — a plain pooled
+/// connection cannot lose it — and the read completes, returning exactly what the
+/// (still absent) policies admit: nothing, until the decorator composes.
+#[tokio::test]
+async fn restricted_pool_with_ambient_scope_completes_default_denied() {
+    let _ddl = ROLE_DDL_LOCK.lock().await;
+    let admin = admin().await;
+    bootstrap_role(&admin, &["accounts"]).await;
+    let restricted = PgPool::connect(&format!(
+        "postgresql://{ROLE}:{PWD}@localhost:5433/backbone_accounting"
+    ))
+    .await
+    .expect("connect probe role");
+
+    let company = Uuid::new_v4();
+    let account = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO accounting.accounts
+             (id, account_number, account_code, name, account_type, account_subtype,
+              normal_balance, is_detail, is_header, status)
+           VALUES ($1,$2,$2,'relay probe','asset'::account_type,'bank'::account_subtype,
+                   'debit'::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+    )
+    .bind(account)
+    .bind(format!("RLY-{account}"))
+    .execute(&admin)
+    .await
+    .unwrap();
+
+    let repo = SqlxReportingRepository::new(restricted.clone());
+    let rows = scoped(&restricted, company, repo.account_directory(company))
         .await
-        .unwrap();
+        .expect("read completes under the ambient scope");
     assert!(
-        unscoped_gl.is_empty(),
-        "unscoped GL read under the app role must not bypass the fence"
+        rows.is_empty(),
+        "the restricted role stays default-denied until the decorator installs policies"
+    );
+    assert!(
+        !backbone_orm::org_scope::current_org_scope().is_some(),
+        "no ambient scope may leak past the wrapped future"
     );
 
     teardown_role(&admin).await;

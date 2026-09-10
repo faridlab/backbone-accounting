@@ -1,7 +1,9 @@
 //! Check printing cases — sequence registration, atomic allocation, the
 //! registry verbs, and the refusals — against a real Postgres. Requires
-//! DATABASE_URL (defaults to the local scratch Postgres on :5433). Each test
-//! seeds its own company_id, so tests are isolated and parallel-safe.
+//! DATABASE_URL (defaults to the local scratch Postgres on :5433). Tenancy: the
+//! module ships NONE (ADR-0029) — the request shapes keep the legacy company twin
+//! but every row keys on the bank journal, and each test mints its own bank
+//! account UUID, so tests stay isolated and parallel-safe.
 
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -101,9 +103,8 @@ async fn concurrent_allocations_get_distinct_numbers() {
 
     // The cursor advanced exactly by the total allocated.
     let cursor: i64 = sqlx::query_scalar(
-        "SELECT next_number FROM accounting.bank_check_sequences WHERE company_id=$1 AND bank_account_id=$2",
+        "SELECT next_number FROM accounting.bank_check_sequences WHERE bank_account_id=$1",
     )
-    .bind(company)
     .bind(bank)
     .fetch_one(&pool)
     .await
@@ -186,9 +187,8 @@ async fn overflow_refuses_without_consuming_a_number() {
 
     // The refused allocation left the cursor untouched — nothing consumed.
     let cursor: i64 = sqlx::query_scalar(
-        "SELECT next_number FROM accounting.bank_check_sequences WHERE company_id=$1 AND bank_account_id=$2",
+        "SELECT next_number FROM accounting.bank_check_sequences WHERE bank_account_id=$1",
     )
-    .bind(company)
     .bind(bank)
     .fetch_one(&pool)
     .await
@@ -287,9 +287,8 @@ async fn non_positive_amount_refuses() {
 
     // The refused call allocated nothing.
     let cursor: i64 = sqlx::query_scalar(
-        "SELECT next_number FROM accounting.bank_check_sequences WHERE company_id=$1 AND bank_account_id=$2",
+        "SELECT next_number FROM accounting.bank_check_sequences WHERE bank_account_id=$1",
     )
-    .bind(company)
     .bind(bank)
     .fetch_one(&pool)
     .await

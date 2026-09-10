@@ -4,6 +4,8 @@
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Implements the `PostingEventSink`
 //! seam defined in `application::service::posting_service`, mapping the module's domain events
 //! to **integration events** (string ids, dot-notation topics) for cross-module consumption.
+//! Payloads keep their `company_id` field as the legacy tenancy twin (ADR-0029) — unstripped
+//! consumers still read it.
 
 use std::sync::Arc;
 

@@ -158,8 +158,9 @@ pub fn create_posting_routes(service: Arc<PostingService>) -> Router {
 //
 // Use this in hosts that mount an auth middleware: `posted_by` is taken from the `AuthContext`
 // (non-repudiable audit trail) rather than trusted from the request body. `company_id` still comes
-// from the body (AuthContext carries no tenant); cross-tenant isolation is RLS-enforced — see
-// ADR-0011 for the host role/`app.company_id` contract.
+// from the body (AuthContext carries no tenant); it is the legacy tenancy twin (ADR-0029) — the
+// module itself keys no statement on it. Cross-tenant isolation is owned by the composing
+// service's tenancy decorator, which scopes every statement through the ambient org scope.
 
 #[cfg(feature = "auth")]
 use axum::Extension;

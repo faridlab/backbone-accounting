@@ -5,6 +5,10 @@
 //! `PostingRepository`) for the actual ledger write. No `sqlx` / `PgPool` here.
 //!
 //! See `docs/business-flows/gl-posting.md` (manual-journal flow) and BRD §3.
+//!
+//! Tenancy (ADR-0029): the `company_id` threaded through every call here is the legacy
+//! twin — the module keys no statement on it. The persistence adapter scopes by the ambient
+//! org scope; the parameter rides along so unstripped callers compile and run unchanged.
 
 use std::sync::Arc;
 

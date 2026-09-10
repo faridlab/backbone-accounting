@@ -12,13 +12,13 @@ pub mod accounting_post_service;
 pub mod cost_center_service;
 pub mod financial_statement_service;
 pub mod fiscal_period_service;
-pub mod full_reconcile_service;
-pub mod journal_line_service;
 pub mod journal_service;
+pub mod journal_line_service;
 pub mod ledger_service;
-pub mod partial_reconcile_service;
-pub mod reconciliation_item_service;
 pub mod reconciliation_service;
+pub mod reconciliation_item_service;
+pub mod full_reconcile_service;
+pub mod partial_reconcile_service;
 
 // <<< CUSTOM
 pub mod bank_reconciliation_service;
@@ -38,10 +38,13 @@ pub use accounting_post_service::AccountingPostService;
 pub use cost_center_service::CostCenterService;
 pub use financial_statement_service::FinancialStatementService;
 pub use fiscal_period_service::FiscalPeriodService;
-pub use journal_line_service::JournalLineService;
 pub use journal_service::JournalService;
+pub use journal_line_service::JournalLineService;
 pub use ledger_service::LedgerService;
 pub use reconciliation_service::ReconciliationService;
+pub use reconciliation_item_service::ReconciliationItemService;
+pub use full_reconcile_service::FullReconcileService;
+pub use partial_reconcile_service::PartialReconcileService;
 // <<< CUSTOM
 pub use bank_reconciliation_service::{
     BankReconciliationService, ReconcileError, ReconcileRequest, ReconcileResult, StatementLine,
@@ -58,9 +61,4 @@ pub use reporting_service::{
 pub mod hierarchy_service;
 pub use hierarchy_service::HierarchyService;
 pub use reconcile_write_service::ReconcileWriteService;
-// END CUSTOM
-pub use full_reconcile_service::FullReconcileService;
-pub use partial_reconcile_service::PartialReconcileService;
-pub use reconciliation_item_service::ReconciliationItemService;
-// <<< CUSTOM
 // END CUSTOM

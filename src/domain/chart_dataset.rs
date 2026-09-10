@@ -3,8 +3,8 @@
 //! A [`ChartDataset`] is a versioned, parents-first description of a national chart of
 //! accounts (e.g. the Indonesian SAK chart): numbers, names, classification, and tree
 //! shape. It is DATA, not database state — no template tables exist anywhere. The
-//! install engine (`chart_install_service`) turns a dataset into real `accounts` rows
-//! for one company; rows carry `chart_code`/`chart_version` provenance so re-installs
+//! install engine (`chart_install_service`) turns a dataset into real `accounts` rows;
+//! rows carry `chart_code`/`chart_version` provenance so re-installs
 //! recognize their own rows and leave manual ones alone.
 //!
 //! Header/detail flags, level, and path are NOT part of a dataset — they are derived
@@ -29,7 +29,7 @@
 //! stable. The engine's deterministic ids hash the code, so a renumbered account
 //! is a NEW identity: the old row is neither updated nor removed — it lingers as
 //! a fully live, chart-stamped posting target after the newer version installs
-//! (and once the company posts, the postings gate freezes any later cleanup).
+//! (and once postings exist, the postings gate freezes any later cleanup).
 //! The same applies to codes dropped from a later version. Until a deprecation
 //! sweep exists, removing or renumbering an account is a manual, operator-driven
 //! archival step, deliberately outside the engine.
@@ -38,7 +38,7 @@ use crate::domain::entity::{AccountSubtype, AccountType, NormalBalance};
 use serde::Deserialize;
 use std::collections::HashSet;
 
-/// A registered chart of accounts, ready to install into a company.
+/// A registered chart of accounts, ready to install.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChartDataset {
     /// Stable dataset identifier (e.g. `ID_SAK`). Part of the deterministic account id.

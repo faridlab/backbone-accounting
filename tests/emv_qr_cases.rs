@@ -1,7 +1,13 @@
 //! EMV(QRCPS)/QRIS display cases — config upsert, payload render, and the
 //! fail-closed refusals — against a real Postgres. Requires DATABASE_URL
-//! (defaults to the local scratch Postgres on :5433). Each test seeds its own
-//! company_id, so tests are isolated and parallel-safe.
+//! (defaults to the local scratch Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the
+//! legacy company twin but no table carries a tenant column. The NULL
+//! bank-account slot is the unit-wide default: a SINGLE row under the
+//! tenant-free slot unique, so on this undecorated database the probes that use
+//! it run under one lock and shed their row afterwards, keeping every probe
+//! order-independent.
 
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -11,11 +17,24 @@ use backbone_accounting::application::service::emv_qr_service::{
     EmvQrConfigInput, EmvQrServiceError, EmvQrService,
 };
 
+/// Serializes the database-touching probes in this file (see the header note).
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 async fn pool() -> PgPool {
     let url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
         "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
     });
     PgPool::connect(&url).await.expect("connect DB")
+}
+
+async fn shed_config(pool: &PgPool, config_id: Uuid) {
+    // The NULL slot is a single shared row on an undecorated database — probes
+    // that create it must remove it again so later probes stay order-independent.
+    sqlx::query("DELETE FROM accounting.emv_qr_configs WHERE id = $1")
+        .bind(config_id)
+        .execute(pool)
+        .await
+        .unwrap();
 }
 
 fn input(company: Uuid) -> EmvQrConfigInput {
@@ -37,6 +56,7 @@ fn input(company: Uuid) -> EmvQrConfigInput {
 /// IDR numeric currency tag, a 4-hex CRC tail, and the reference inside tag 62.
 #[tokio::test]
 async fn payload_renders_from_saved_config() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
@@ -81,6 +101,8 @@ async fn payload_renders_from_saved_config() {
     assert!(payload.payload.ends_with(&format!("6304{tail}")));
     assert_eq!(payload.currency, "IDR");
     assert_eq!(payload.initiation_method, "11");
+
+    shed_config(&pool, ack.config_id).await;
 }
 
 /// Walk the top-level TLV structure and return the tag ids in order. Panics on
@@ -106,10 +128,11 @@ fn top_level_tags(payload: &str) -> Vec<String> {
 /// Omitting the amount renders a static QR with NO tag 54 and NO tag 62.
 #[tokio::test]
 async fn payload_without_amount_omits_tags_54_and_62() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
-    svc.upsert_config(input(company)).await.unwrap();
+    let ack = svc.upsert_config(input(company)).await.unwrap();
 
     let payload = svc.invoice_payload(company, None, None, None, None).await.unwrap();
     assert!(payload.payload.starts_with("000201010211"));
@@ -121,11 +144,14 @@ async fn payload_without_amount_omits_tags_54_and_62() {
     assert!(!tags.iter().any(|t| t == "54"), "no amount tag: {tags:?}");
     assert!(!tags.iter().any(|t| t == "62"), "no reference tag: {tags:?}");
     assert_eq!(tags.last().map(String::as_str), Some("63"), "CRC template present: {tags:?}");
+
+    shed_config(&pool, ack.config_id).await;
 }
 
 /// Re-upserting the same slot converges on ONE row (update path, same id).
 #[tokio::test]
 async fn upsert_is_idempotent_per_slot() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
@@ -138,24 +164,27 @@ async fn upsert_is_idempotent_per_slot() {
     assert_eq!(first.config_id, second.config_id, "slot must converge on one row");
 
     let count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.emv_qr_configs WHERE company_id=$1")
-            .bind(company)
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.emv_qr_configs WHERE id=$1")
+            .bind(first.config_id)
             .fetch_one(&pool)
             .await
             .unwrap();
     assert_eq!(count, 1);
+
+    shed_config(&pool, first.config_id).await;
 }
 
-/// A bank-account-specific config wins over the company default; an unknown
-/// slot falls back to the company default.
+/// A bank-account-specific config wins over the unit-wide default; an unknown
+/// slot falls back to the default.
 #[tokio::test]
 async fn slot_resolution_prefers_bank_specific_config() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let bank = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
-    svc.upsert_config(input(company)).await.unwrap();
+    let default_cfg = svc.upsert_config(input(company)).await.unwrap();
     let mut bank_cfg = input(company);
     bank_cfg.bank_account_id = Some(bank);
     bank_cfg.merchant_name = "BANK SLOT SHOP".into();
@@ -168,11 +197,14 @@ async fn slot_resolution_prefers_bank_specific_config() {
         .await
         .unwrap();
     assert!(fallback.payload.contains("LAOPAY STORE"));
+
+    shed_config(&pool, default_cfg.config_id).await;
 }
 
 /// No config → typed refusal `qr_config_missing` (404). No fallback payload.
 #[tokio::test]
 async fn missing_config_refuses_fail_closed() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let svc = EmvQrService::new(pool.clone());
 
@@ -189,9 +221,16 @@ async fn missing_config_refuses_fail_closed() {
 /// refuses at upsert with the domain builder's typed code, and nothing lands.
 #[tokio::test]
 async fn invalid_config_refuses_before_write() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
+
+    let rows_before: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.emv_qr_configs")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
     let mut bad_currency = input(company);
     bad_currency.currency = "XYZ".into();
@@ -205,23 +244,23 @@ async fn invalid_config_refuses_before_write() {
     assert_eq!(err.code(), "merchant_name_too_long");
     assert_eq!(err.http_status(), 422);
 
-    let count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.emv_qr_configs WHERE company_id=$1")
-            .bind(company)
+    let rows_after: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.emv_qr_configs")
             .fetch_one(&pool)
             .await
             .unwrap();
-    assert_eq!(count, 0, "refused configs must not land");
+    assert_eq!(rows_after, rows_before, "refused configs must not land");
 }
 
 /// Requesting an unsupported currency at render time refuses too (the config
 /// default was valid, the override is not).
 #[tokio::test]
 async fn render_time_currency_override_is_validated() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
-    svc.upsert_config(input(company)).await.unwrap();
+    let ack = svc.upsert_config(input(company)).await.unwrap();
 
     let err = svc
         .invoice_payload(company, None, Some(Decimal::ONE), Some("XYZ".into()), None)
@@ -229,4 +268,6 @@ async fn render_time_currency_override_is_validated() {
         .unwrap_err();
     assert_eq!(err.code(), "currency_not_supported");
     assert_eq!(err.http_status(), 422);
+
+    shed_config(&pool, ack.config_id).await;
 }

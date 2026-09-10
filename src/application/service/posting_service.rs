@@ -9,6 +9,13 @@
 //! Implements double-entry posting per `docs/erp/gl-posting-contract.md` and the golden cases in
 //! `docs/business-flows/golden-cases.md`.
 //!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — nothing here keys a statement on
+//! `company_id`. The `company_id` carried by `PostingRequest` is the documented legacy twin:
+//! unstripped producers still pass one and still get correct behavior. It rides along into the
+//! persistence port (whose adapter scopes every statement by the ambient org scope instead),
+//! the host seams (budget control, deferred tax), and the event payloads — never into a WHERE
+//! clause.
+//!
 //! This file is user-owned (see `metaphor.codegen.yaml`) and survives regeneration.
 
 use std::sync::Arc;

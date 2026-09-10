@@ -8,6 +8,10 @@
 //!   GET /accounting/reports/partner-ledger?company_id=..&party_type=customer|supplier&party_id=..&as_of=..
 //!   GET /accounting/reports/aged-receivables?company_id=..&as_of=..
 //!   GET /accounting/reports/aged-payables?company_id=..&as_of=..
+//!
+//! Tenancy (ADR-0029): the `company_id` query parameter is the legacy twin — the wire shapes
+//! keep it so unstripped callers compile and run unchanged; the module keys no statement on it
+//! and the composing service's tenancy decorator scopes every read.
 
 use std::sync::Arc;
 
@@ -65,19 +69,22 @@ fn err(e: anyhow::Error) -> (StatusCode, Json<serde_json::Value>) {
 // ── Tenant consistency ────────────────────────────────────────────────────────
 //
 // The reads take `company_id` from the query string so standalone callers can
-// name their scope. When a host has mounted an ambient company scope
-// (backbone-auth's `company_auth` wraps every request in `with_company_scope`),
-// the query's company must agree with it — otherwise an authenticated tenant
-// could name any company and receive a misleading empty-but-balanced report
-// branded with the foreign id (the database fence returns no rows either way;
-// this is the contract layer that says so explicitly, mirroring the reconcile
-// verbs' guard). With no ambient scope (unit tests, trusted internal hosts) the
-// check is skipped — the module keeps its standalone shape.
+// name their scope; it is the legacy twin (ADR-0029) — the module keys no statement on it and
+// cross-tenant isolation is the composing service's tenancy decorator. The query's company
+// must still agree with the caller's authenticated identity when one is established: either
+// the legacy request company scope (backbone-auth's `company_auth` wraps every request in
+// `with_company_scope`) or the ambient org scope's legacy company id — otherwise an
+// authenticated tenant could name any company and receive a misleading empty-but-balanced
+// report branded with the foreign id. With no scope at all (unit tests, trusted internal
+// hosts) the check is skipped — the module keeps its standalone shape.
 
 const COMPANY_MISMATCH: &str = "company_mismatch";
 
 fn company_forbidden(q_company: Uuid) -> Option<(StatusCode, Json<serde_json::Value>)> {
-    match backbone_orm::current_company() {
+    let authenticated = backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .or_else(|| backbone_orm::current_company());
+    match authenticated {
         Some(authenticated) if authenticated != q_company => Some((
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({

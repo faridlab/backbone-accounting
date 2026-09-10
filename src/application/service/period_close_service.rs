@@ -3,6 +3,10 @@
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Application orchestration over the
 //! `PeriodCloseRepository` port (+ `PostingService` for the closing entry) — no `sqlx`/`PgPool`
 //! here. Proven by `tests/period_close_golden_cases.rs`.
+//!
+//! Tenancy (ADR-0029): the `company_id` parameter is the legacy twin — kept so unstripped
+//! callers compile and run unchanged; nothing here keys a statement on it (the adapters scope
+//! by the ambient org scope).
 
 use std::sync::Arc;
 

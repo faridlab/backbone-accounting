@@ -1,13 +1,21 @@
 //! Golden cases for the reconciliation graph (partial edges → full groups).
 //!
 //! Runs against a real Postgres (DATABASE_URL, defaults to :5433/backbone_accounting).
-//! Each test seeds its own company + chart of accounts — isolated and parallel-safe.
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence, so
+//! the graph reads aggregate globally. Each test therefore emulates the undecorated
+//! deployment the way a real one looks: a fresh single-tenant database — one lock, and the
+//! accounting tables WIPED before seeding (the exact-count oracles only hold against the
+//! test's own rows). The old cross-company fail-closed pin is repinned to the undecorated
+//! truth: locator resolution is global on an unfenced database; isolation is the
+//! composing service's decorator.
 //!
 //! Covers: the CLAMP, every guard's distinct refusal code, partial→full group
 //! completion + flags, the matching-group union-find read, party residuals
-//! (aging), cross-company fail-closed, the exchange-difference machinery with its
-//! side-effecting unlink (nets zero), group repair after unlink, reverse-then-reconcile
-//! pairing, and concurrent clamping (never over-edges).
+//! (aging), the unfenced-locator semantics, the exchange-difference machinery with
+//! its side-effecting unlink (nets zero), group repair after unlink,
+//! reverse-then-reconcile pairing, and concurrent clamping (never over-edges).
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -23,7 +31,6 @@ use backbone_accounting::application::service::reconcile_write_service::Reconcil
 use backbone_accounting::domain::reconcile_graph::{
     LineLocator, PairRequest, ORIGIN_MANUAL, ORIGIN_SETTLEMENT,
 };
-use backbone_accounting::domain::repositories::posting_repository::PostingRepository;
 use backbone_accounting::infrastructure::persistence::{
     SqlxPostingRepository, SqlxReconcileGraphRepository,
 };
@@ -37,6 +44,38 @@ async fn pool() -> PgPool {
         "postgresql://postgres:postgres@localhost:5433/backbone_accounting".to_string()
     });
     PgPool::connect(&url).await.expect("connect DB")
+}
+
+/// Serializes the database-touching probes in this file (see the header note): the
+/// exact-count oracles only hold against the test's own rows.
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Reset the accounting tables to an empty single-tenant database. Circular FK pairs
+/// (journal_lines.ledger_id <-> ledgers.journal_line_id, and every self-referential
+/// link) are severed first; the deletes then run children-first.
+async fn wipe(pool: &PgPool) {
+    for sql in [
+        "UPDATE accounting.journal_lines SET ledger_id=NULL, reconciliation_id=NULL, full_reconcile_id=NULL, related_line_id=NULL",
+        "UPDATE accounting.ledgers SET reverses_id=NULL, reversed_by_id=NULL, reconciliation_id=NULL",
+        "UPDATE accounting.journals SET reverses_id=NULL, reversed_by_id=NULL",
+        "UPDATE accounting.accounting_posts SET reverses_post_id=NULL, reversed_by_post_id=NULL",
+        "UPDATE accounting.accounts SET parent_id=NULL, source_id=NULL",
+        "UPDATE accounting.fiscal_periods SET parent_id=NULL",
+        "UPDATE accounting.reconciliations SET previous_reconciliation_id=NULL",
+        "UPDATE accounting.reconciliation_items SET matched_with_id=NULL",
+        "DELETE FROM accounting.reconciliation_items",
+        "DELETE FROM accounting.partial_reconciles",
+        "DELETE FROM accounting.reconciliations",
+        "DELETE FROM accounting.ledgers",
+        "DELETE FROM accounting.journal_lines",
+        "DELETE FROM accounting.full_reconciles",
+        "DELETE FROM accounting.accounting_posts",
+        "DELETE FROM accounting.journals",
+        "DELETE FROM accounting.accounts",
+        "DELETE FROM accounting.fiscal_periods",
+    ] {
+        sqlx::query(sql).execute(pool).await.expect("wipe");
+    }
 }
 
 /// Seed a fresh company with a reconcilable chart. Returns (company, code→account id).
@@ -76,14 +115,12 @@ async fn seed(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_header, is_detail, status, is_reconcilable)
-               VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
-                       FALSE,TRUE,'active'::account_status,$9)"#,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,
+                       FALSE,TRUE,'active'::account_status,$7)"#,
         )
         .bind(id)
-        .bind(company_id)
-        .bind(code)
         .bind(code)
         .bind(name)
         .bind(at)
@@ -152,20 +189,13 @@ async fn post(
 }
 
 /// The journal-line id for (source identity, account) — the locator's storage shape.
-async fn line_id(
-    pool: &PgPool,
-    company: Uuid,
-    source_type: &str,
-    source_id: Uuid,
-    account_id: Uuid,
-) -> Uuid {
+async fn line_id(pool: &PgPool, source_type: &str, source_id: Uuid, account_id: Uuid) -> Uuid {
     sqlx::query_scalar(
         "SELECT l.id FROM accounting.journal_lines l \
          JOIN accounting.journals j ON j.id = l.journal_id \
-         WHERE l.company_id=$1 AND l.source_type=$2 AND l.source_id=$3 AND l.account_id=$4 \
+         WHERE l.source_type=$1 AND l.source_id=$2 AND l.account_id=$3 \
          ORDER BY l.id LIMIT 1",
     )
-    .bind(company)
     .bind(source_type)
     .bind(source_id)
     .bind(account_id)
@@ -174,15 +204,13 @@ async fn line_id(
     .unwrap()
 }
 
-async fn residual(pool: &PgPool, company: Uuid, line: Uuid) -> Decimal {
+async fn residual(pool: &PgPool, line: Uuid) -> Decimal {
     sqlx::query_scalar(
         "SELECT (l.base_debit_amount + l.base_credit_amount) \
               - COALESCE((SELECT SUM(pr.amount) FROM accounting.partial_reconciles pr \
-                          WHERE pr.company_id = l.company_id \
-                            AND (pr.debit_move_id = l.id OR pr.credit_move_id = l.id)), 0) \
-         FROM accounting.journal_lines l WHERE l.company_id=$1 AND l.id=$2",
+                          WHERE pr.debit_move_id = l.id OR pr.credit_move_id = l.id), 0) \
+         FROM accounting.journal_lines l WHERE l.id=$1",
     )
-    .bind(company)
     .bind(line)
     .fetch_one(pool)
     .await
@@ -258,7 +286,9 @@ async fn post_receipt(
 
 #[tokio::test]
 async fn clamps_to_the_smaller_residual_and_keeps_chain_partial() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -279,10 +309,10 @@ async fn clamps_to_the_smaller_residual_and_keeps_chain_partial() {
     assert_eq!(out.applied, dec("60"));
     assert!(out.partial_id.is_some());
     // Chain is still partial: AR residual 40, receipt 0, no group, no flags.
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    let pay_line = line_id(&pool, company, "payment", payment, coa["1200"]).await;
-    assert_eq!(residual(&pool, company, inv_line).await, dec("40"));
-    assert_eq!(residual(&pool, company, pay_line).await, dec("0"));
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
+    assert_eq!(residual(&pool, inv_line).await, dec("40"));
+    assert_eq!(residual(&pool, pay_line).await, dec("0"));
     let flags: (bool, Option<Uuid>) = sqlx::query_as(
         "SELECT is_reconciled, full_reconcile_id FROM accounting.journal_lines WHERE id=$1",
     )
@@ -299,7 +329,9 @@ async fn clamps_to_the_smaller_residual_and_keeps_chain_partial() {
 
 #[tokio::test]
 async fn guard_refusals_carry_distinct_codes() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -370,7 +402,7 @@ async fn guard_refusals_carry_distinct_codes() {
     assert_eq!(code(e), "party_mismatch");
 
     // Cross-currency.
-    let pay_line = line_id(&pool, company, "payment", payment, coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
     sqlx::query("UPDATE accounting.journal_lines SET currency='USD' WHERE id=$1")
         .bind(pay_line)
         .execute(&pool)
@@ -397,27 +429,25 @@ async fn guard_refusals_carry_distinct_codes() {
     let draft_src = Uuid::new_v4();
     sqlx::query(
         r#"INSERT INTO accounting.journals
-             (id, company_id, journal_number, journal_type, source, source_type, source_id,
+             (id, journal_number, journal_type, source, source_type, source_id,
               transaction_date, posting_date, description, currency, status, is_reversing)
-           VALUES ($1,$2,'DRAFT-1','general'::journal_type,'manual'::journal_source,'payment',$3,
+           VALUES ($1,'DRAFT-1','general'::journal_type,'manual'::journal_source,'payment',$2,
                    '2026-06-15','2026-06-15','draft probe','IDR','draft'::journal_status,FALSE)"#,
     )
     .bind(draft_journal)
-    .bind(company)
     .bind(draft_src)
     .execute(&pool)
     .await
     .unwrap();
     sqlx::query(
         r#"INSERT INTO accounting.journal_lines
-             (id, journal_id, company_id, line_number, account_id, account_number, account_name,
+             (id, journal_id, line_number, account_id, account_number, account_name,
               debit_amount, credit_amount, currency, base_debit_amount, base_credit_amount,
               is_posted, source_type, source_id)
-           VALUES ($1,$2,$3,1,$4,'1200','AR',0,50,'IDR',0,50,FALSE,'payment',$5)"#,
+           VALUES ($1,$2,1,$3,'1200','AR',0,50,'IDR',0,50,FALSE,'payment',$4)"#,
     )
     .bind(Uuid::new_v4())
     .bind(draft_journal)
-    .bind(company)
     .bind(coa["1200"])
     .bind(draft_src)
     .execute(&pool)
@@ -449,7 +479,9 @@ async fn guard_refusals_carry_distinct_codes() {
 
 #[tokio::test]
 async fn partial_then_full_group_sets_flags_and_label() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -480,11 +512,11 @@ async fn partial_then_full_group_sets_flags_and_label() {
     assert_eq!(out.applied, dec("40"));
     let group = out.full_reconcile_id.expect("full group");
 
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
     for lid in [
         inv_line,
-        line_id(&pool, company, "payment", p1, coa["1200"]).await,
-        line_id(&pool, company, "payment", p2, coa["1200"]).await,
+        line_id(&pool, "payment", p1, coa["1200"]).await,
+        line_id(&pool, "payment", p2, coa["1200"]).await,
     ] {
         let row: (bool, Option<Uuid>, Option<chrono::DateTime<chrono::Utc>>) = sqlx::query_as(
             "SELECT is_reconciled, full_reconcile_id, reconciled_at \
@@ -505,9 +537,8 @@ async fn partial_then_full_group_sets_flags_and_label() {
     assert!(g.residuals.iter().all(|(_, r)| *r == Decimal::ZERO));
     // All three partials link the group.
     let linked: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE company_id=$1 AND full_reconcile_id=$2",
+        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE full_reconcile_id=$1",
     )
-    .bind(company)
     .bind(group)
     .fetch_one(&pool)
     .await
@@ -517,7 +548,9 @@ async fn partial_then_full_group_sets_flags_and_label() {
 
 #[tokio::test]
 async fn matching_group_reads_a_multi_payment_chain() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -540,7 +573,7 @@ async fn matching_group_reads_a_multi_payment_chain() {
     }
 
     // Any line in the 5-line component sees the same group: 4 partials, all zero residual.
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
     let g = svc.matching_group(company, inv_line).await.unwrap();
     assert!(g.label.starts_with("F-"));
     assert_eq!(g.line_ids.len(), 5);
@@ -548,7 +581,7 @@ async fn matching_group_reads_a_multi_payment_chain() {
     assert!(g.residuals.iter().all(|(_, r)| *r == Decimal::ZERO));
 
     // From a payment line too — union-find over the same component.
-    let pay_line = line_id(&pool, company, "payment", payments[2], coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payments[2], coa["1200"]).await;
     let g2 = svc.matching_group(company, pay_line).await.unwrap();
     assert_eq!(g2.label, g.label);
     assert_eq!(g2.full_reconcile_id, g.full_reconcile_id);
@@ -556,7 +589,9 @@ async fn matching_group_reads_a_multi_payment_chain() {
 
 #[tokio::test]
 async fn residuals_for_party_lists_only_open_lines() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -580,7 +615,7 @@ async fn residuals_for_party_lists_only_open_lines() {
     // Only invoice 2's line remains open — the settled one and the receipt are gone.
     assert_eq!(open.len(), 1);
     assert_eq!(open[0].residual, dec("70"));
-    let open_line = line_id(&pool, company, "order", i2, coa["1200"]).await;
+    let open_line = line_id(&pool, "order", i2, coa["1200"]).await;
     assert_eq!(open[0].line_id, open_line);
 
     // A different party sees nothing.
@@ -591,9 +626,15 @@ async fn residuals_for_party_lists_only_open_lines() {
     assert!(none.is_empty());
 }
 
+/// Undecorated truth (ADR-0029): the module carries NO tenancy, so locator resolution
+/// is global — a pair request naming any legacy company twin still resolves lines that
+/// exist. Cross-locator isolation is the composing service's tenancy decorator (RLS);
+/// an undecorated deployment gets an unfenced module, and this pins exactly that.
 #[tokio::test]
-async fn cross_company_locator_is_not_found() {
+async fn locator_resolution_is_global_on_an_unfenced_database() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let (other, _) = seed(&pool).await;
     let party = Uuid::new_v4();
@@ -602,8 +643,9 @@ async fn cross_company_locator_is_not_found() {
     let payment = post_receipt(&posting, company, coa["1100"], coa["1200"], party, "100").await;
     let svc = reconcile_svc(&pool);
 
-    // Ask under the OTHER company's scope: the fence + explicit predicates hide the lines.
-    let e = svc
+    // Ask under a DIFFERENT request company: the line still resolves and the edge
+    // applies — there is no module-side company predicate left to hide it.
+    let out = svc
         .reconcile_pair(&pair(
             other,
             loc("order", invoice, coa["1200"]),
@@ -611,13 +653,15 @@ async fn cross_company_locator_is_not_found() {
             "10",
         ))
         .await
-        .unwrap_err();
-    assert_eq!(e.code(), "line_not_found");
+        .expect("unfenced resolution");
+    assert_eq!(out.applied, dec("10"));
 }
 
 #[tokio::test]
 async fn unreconcile_restores_outstanding_and_repairs_the_group() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -641,10 +685,10 @@ async fn unreconcile_restores_outstanding_and_repairs_the_group() {
 
     svc.unreconcile(company, partial, None).await.unwrap();
 
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    let pay_line = line_id(&pool, company, "payment", payment, coa["1200"]).await;
-    assert_eq!(residual(&pool, company, inv_line).await, dec("100"));
-    assert_eq!(residual(&pool, company, pay_line).await, dec("100"));
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
+    assert_eq!(residual(&pool, inv_line).await, dec("100"));
+    assert_eq!(residual(&pool, pay_line).await, dec("100"));
     // Flags cleared, group dissolved, no partials left.
     let flags: (bool, Option<Uuid>) = sqlx::query_as(
         "SELECT is_reconciled, full_reconcile_id FROM accounting.journal_lines WHERE id=$1",
@@ -661,19 +705,18 @@ async fn unreconcile_restores_outstanding_and_repairs_the_group() {
             .await
             .unwrap();
     assert_eq!(groups, 0, "emptied group must dissolve");
-    let edges: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE company_id=$1",
-    )
-    .bind(company)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let edges: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.partial_reconciles")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(edges, 0);
 }
 
 #[tokio::test]
 async fn exchange_difference_arises_and_unlink_nets_zero() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -683,8 +726,8 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     // Seed multi-rate postings by hand: both docs are 100, but the invoice books at
     // rate 1.1 (base 110) while the receipt books at 1.0 (base 100). The 10 gap is
     // the exchange difference the edge must materialize.
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    let pay_line = line_id(&pool, company, "payment", payment, coa["1200"]).await;
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
     sqlx::query(
         "UPDATE accounting.journal_lines SET exchange_rate=1.1, base_debit_amount=110 \
          WHERE id=$1",
@@ -696,9 +739,8 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     // Keep the invoice journal balanced in base: revenue leg books at the same 1.1.
     sqlx::query(
         "UPDATE accounting.journal_lines SET exchange_rate=1.1, base_credit_amount=110 \
-         WHERE company_id=$1 AND source_id=$2 AND account_id=$3",
+         WHERE source_id=$1 AND account_id=$2",
     )
-    .bind(company)
     .bind(invoice)
     .bind(coa["4000"])
     .execute(&pool)
@@ -755,9 +797,8 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     let unlink_rev: Uuid = sqlx::query_scalar(
         "SELECT j.id FROM accounting.journals j \
          JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
-         WHERE j.company_id=$1 AND ap.idempotency_key=$2",
+         WHERE ap.idempotency_key=$1",
     )
-    .bind(company)
     .bind(format!("unlink:{exch_journal}"))
     .fetch_one(&pool)
     .await
@@ -767,9 +808,8 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     let ar_net: Decimal = sqlx::query_scalar(
         "SELECT COALESCE(SUM(l.base_debit_amount - l.base_credit_amount),0) \
          FROM accounting.journal_lines l \
-         WHERE l.company_id=$1 AND l.account_id=$2 AND l.journal_id IN ($3, $4)",
+         WHERE l.account_id=$1 AND l.journal_id IN ($2, $3)",
     )
-    .bind(company)
     .bind(coa["1200"])
     .bind(exch_journal)
     .bind(unlink_rev)
@@ -780,9 +820,8 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     let fx_net: Decimal = sqlx::query_scalar(
         "SELECT COALESCE(SUM(l.base_debit_amount - l.base_credit_amount),0) \
          FROM accounting.journal_lines l \
-         WHERE l.company_id=$1 AND l.account_id=$2 AND l.journal_id IN ($3, $4)",
+         WHERE l.account_id=$1 AND l.journal_id IN ($2, $3)",
     )
-    .bind(company)
     .bind(coa["4900"])
     .bind(exch_journal)
     .bind(unlink_rev)
@@ -792,21 +831,20 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     assert_eq!(fx_net, Decimal::ZERO);
 
     // Graph: no edges, no groups, both original lines restored to full face.
-    let edges: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM accounting.partial_reconciles WHERE company_id=$1",
-    )
-    .bind(company)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let edges: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.partial_reconciles")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(edges, 0);
-    assert_eq!(residual(&pool, company, inv_line).await, dec("110"));
-    assert_eq!(residual(&pool, company, pay_line).await, dec("100"));
+    assert_eq!(residual(&pool, inv_line).await, dec("110"));
+    assert_eq!(residual(&pool, pay_line).await, dec("100"));
 }
 
 #[tokio::test]
 async fn reverse_then_reconcile_pairs_a_reversed_payment_automatically() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -828,9 +866,8 @@ async fn reverse_then_reconcile_pairs_a_reversed_payment_automatically() {
 
     // The payment's reversal (same source identity, is_reversing journal).
     let orig_post: Uuid = sqlx::query_scalar(
-        "SELECT id FROM accounting.accounting_posts WHERE company_id=$1 AND source_type='payment' AND source_id=$2",
+        "SELECT id FROM accounting.accounting_posts WHERE source_type='payment' AND source_id=$1",
     )
-    .bind(company)
     .bind(payment)
     .fetch_one(&pool)
     .await
@@ -851,27 +888,27 @@ async fn reverse_then_reconcile_pairs_a_reversed_payment_automatically() {
         .unwrap();
 
     // The payment AR line + reversal AR line now form their own FULL group.
-    let pay_line = line_id(&pool, company, "payment", payment, coa["1200"]).await;
+    let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
     let g = svc.matching_group(company, pay_line).await.unwrap();
     assert!(g.label.starts_with("F-"), "label was {}", g.label);
     assert_eq!(g.line_ids.len(), 2);
     assert!(g.residuals.iter().all(|(_, r)| *r == Decimal::ZERO));
-    let rule: String = sqlx::query_scalar(
-        "SELECT metadata->>'rule' FROM accounting.partial_reconciles WHERE company_id=$1 LIMIT 1",
-    )
-    .bind(company)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let rule: String =
+        sqlx::query_scalar("SELECT metadata->>'rule' FROM accounting.partial_reconciles LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(rule, "reverse_then_reconcile");
     // And the invoice line is back to fully open.
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    assert_eq!(residual(&pool, company, inv_line).await, dec("100"));
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    assert_eq!(residual(&pool, inv_line).await, dec("100"));
 }
 
 #[tokio::test]
 async fn concurrent_reconciles_never_over_edge() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -897,15 +934,13 @@ async fn concurrent_reconciles_never_over_edge() {
     let applied: Decimal = [a.unwrap().applied, b.unwrap().applied].iter().sum();
     assert_eq!(applied, dec("100"));
 
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    assert_eq!(residual(&pool, company, inv_line).await, Decimal::ZERO);
-    let total: Decimal = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(amount),0) FROM accounting.partial_reconciles WHERE company_id=$1",
-    )
-    .bind(company)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    assert_eq!(residual(&pool, inv_line).await, Decimal::ZERO);
+    let total: Decimal =
+        sqlx::query_scalar("SELECT COALESCE(SUM(amount),0) FROM accounting.partial_reconciles")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(total, dec("100"));
 }
 
@@ -916,7 +951,9 @@ async fn concurrent_reconciles_never_over_edge() {
 /// mint a second group over the winner's, orphaning it. One group, uniform stamp, no orphans.
 #[tokio::test]
 async fn concurrent_completions_stamp_one_group() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let party = Uuid::new_v4();
     let posting = posting_svc(&pool);
@@ -945,18 +982,16 @@ async fn concurrent_completions_stamp_one_group() {
         "the two claims exactly consume the invoice"
     );
 
-    let inv_line = line_id(&pool, company, "order", invoice, coa["1200"]).await;
-    let p1_line = line_id(&pool, company, "payment", p1, coa["1200"]).await;
-    let p2_line = line_id(&pool, company, "payment", p2, coa["1200"]).await;
+    let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
+    let p1_line = line_id(&pool, "payment", p1, coa["1200"]).await;
+    let p2_line = line_id(&pool, "payment", p2, coa["1200"]).await;
     for l in [inv_line, p1_line, p2_line] {
-        assert_eq!(residual(&pool, company, l).await, Decimal::ZERO);
+        assert_eq!(residual(&pool, l).await, Decimal::ZERO);
     }
-    let groups: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.full_reconciles WHERE company_id=$1")
-            .bind(company)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let groups: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.full_reconciles")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(
         groups, 1,
         "overlapping completions share one group, no orphan"
@@ -975,10 +1010,9 @@ async fn concurrent_completions_stamp_one_group() {
         "one stamp across the component"
     );
     let orphans: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM accounting.full_reconciles fr WHERE company_id=$1 AND NOT EXISTS \
+        "SELECT COUNT(*) FROM accounting.full_reconciles fr WHERE NOT EXISTS \
          (SELECT 1 FROM accounting.partial_reconciles p WHERE p.full_reconcile_id = fr.id)",
     )
-    .bind(company)
     .fetch_one(&pool)
     .await
     .unwrap();
@@ -999,7 +1033,9 @@ async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, coa) = seed(&pool).await;
     let other = Uuid::new_v4();
     let app =

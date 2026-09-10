@@ -3,6 +3,14 @@
 //! Domain trait (port). The application `PostingService` depends on this, never on a `PgPool`.
 //! The SQLx implementation lives in `infrastructure/persistence/posting_repository.rs`.
 //! Methods take/return plain DTOs — no `sqlx::Row` leaks across the boundary.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic — it writes no scoping column and every
+//! statement is scoped by the composing service's tenancy decorator. The `company_id` params
+//! and DTO fields below are the documented legacy twin: unstripped producers still pass one,
+//! and the port keeps its shapes so those callers compile and run unchanged. The adapter never
+//! keys a statement on it; when a company key is genuinely needed it is sourced from the
+//! ambient org scope's legacy company id and fails closed when no scope is bound — never
+//! guessed.
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -40,6 +48,9 @@ pub struct LedgerEntryInput {
 /// lock internally.
 #[derive(Debug, Clone)]
 pub struct PostingWrite {
+    /// The legacy tenancy twin (ADR-0029): the module writes no scoping column, but unstripped
+    /// producers still identify their books with one. Carried for the host seams and event
+    /// payloads; never keyed into a statement.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: String,
@@ -101,6 +112,7 @@ pub struct ManualJournalForPost {
 #[derive(Debug, Clone)]
 pub struct ManualJournalCommit {
     pub journal_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — see `PostingWrite::company_id`.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub journal_number: String,
@@ -120,6 +132,7 @@ pub struct ManualJournalCommit {
 /// A failed-post audit record.
 #[derive(Debug, Clone)]
 pub struct FailedPost {
+    /// The legacy tenancy twin (ADR-0029) — see `PostingWrite::company_id`.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: String,
@@ -178,8 +191,9 @@ pub trait PostingRepository: Send + Sync {
 
     /// Conn-taking core of `commit_posting` — the same atomic write riding a caller-held
     /// transaction (the reconciliation write path posts exchange-difference and unlink-reversal
-    /// journals inside the caller's unit of work). The caller must have bound `app.company_id`
-    /// on the connection. On an idempotency-race loss the caller's transaction is aborted and
+    /// journals inside the caller's unit of work). The caller must have relayed the ambient org
+    /// scope onto the connection (`org_scope::bind_org_scope_on`); the decorator's fence scopes
+    /// every statement. On an idempotency-race loss the caller's transaction is aborted and
     /// the error message is "concurrent posting conflict" — the caller surfaces it.
     async fn commit_posting_on(
         &self,
@@ -187,7 +201,8 @@ pub trait PostingRepository: Send + Sync {
         write: PostingWrite,
     ) -> anyhow::Result<PostingCommit>;
 
-    /// Load a manual journal + its lines for posting (must exist + match tenant).
+    /// Load a manual journal + its lines for posting (must exist; on a decorated deployment the
+    /// decorator's fence makes a cross-tenant id match zero rows).
     async fn find_manual_journal_for_post(
         &self,
         journal_id: Uuid,

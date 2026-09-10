@@ -6,8 +6,12 @@
 //! transaction. This is the same posture as the wire contract (`ReconcileSink` in
 //! `backbone-gl-posting`): the connection is the transaction handle, which is why the
 //! type appears here despite the domain layer otherwise avoiding `sqlx` in its contract
-//! TYPES. Callers must have bound `app.company_id` on the connection (every statement also
-//! carries an explicit `company_id` predicate — belt and braces under the strict fence).
+//! TYPES. Callers must have relayed the ambient org scope onto the connection
+//! (`org_scope::bind_org_scope_on`) — the composing service's tenancy decorator scopes every
+//! statement through it (ADR-0029). The `company_id` params are the documented legacy twin:
+//! they keep their shapes so unstripped callers compile and run unchanged; the adapter never
+//! keys a statement on them and sources a company key where genuinely needed from the
+//! ambient scope's legacy company id, failing closed when none is bound.
 //!
 //! The SQLx implementation lives in `infrastructure/persistence/reconcile_graph_repository.rs`.
 
@@ -26,6 +30,7 @@ use crate::domain::reconcile_graph::{
 #[derive(Debug, Clone)]
 pub struct JournalReversalMeta {
     pub journal_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — see the module-level note.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub posting_date: NaiveDate,

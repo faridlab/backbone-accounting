@@ -6,6 +6,12 @@
 //! Living in the domain layer means neither the port nor the rules depend on the
 //! application or infrastructure layers — and `PostingError` carries no `sqlx`
 //! type, so the domain stays persistence-agnostic.
+//!
+//! Tenancy (ADR-0029): the module is tenant-agnostic. The `company_id` fields in these
+//! contract shapes are the documented legacy twin — unstripped producers still pass one and
+//! still get correct behavior. It is carried through to host seams and event payloads only;
+//! the persistence adapter scopes every statement by the ambient org scope, never by this
+//! field.
 
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
@@ -31,6 +37,8 @@ pub struct PostingLine {
 /// A request to record a balanced set of lines in the GL (the inbound contract shape).
 #[derive(Debug, Clone)]
 pub struct PostingRequest {
+    /// The legacy tenancy twin (ADR-0029) — see the module-level note. Unstripped producers
+    /// keep passing it; nothing keys a statement on it.
     pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: String, // posting_source_type: order|payment|settlement|refund|expense|inventory|manual
@@ -44,12 +52,16 @@ pub struct PostingRequest {
     pub lines: Vec<PostingLine>,
     /// The REAL dedup key when set: two posts with the same `(company_id, idempotency_key)` collapse
     /// to one, and the producer may reuse `source_id` across its several posts. When `None`, dedup
-    /// falls back to the tuple `(company_id, source_type, source_id, posting_type)`.
+    /// falls back to the tuple `(company_id, source_type, source_id, posting_type)`. The `company_id`
+    /// element of those tuples is the caller's own identity (the legacy twin, ADR-0029); the module
+    /// scopes dedup by the ambient org scope instead — on a decorated deployment the decorator's
+    /// per-unit unique index keeps the tuple per-org.
     pub idempotency_key: Option<String>,
 }
 
 impl PostingRequest {
-    /// Convenience constructor for an original posting.
+    /// Convenience constructor for an original posting. `company_id` is the legacy tenancy twin
+    /// (ADR-0029) — kept so unstripped producers compile and run unchanged.
     pub fn original(
         company_id: Uuid,
         source_type: &str,
@@ -156,6 +168,7 @@ pub trait PostingEventSink: Send + Sync {
 pub struct AccountingPostPosted {
     pub post_id: Uuid,
     pub journal_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — carried in the payload for unstripped consumers.
     pub company_id: Uuid,
     pub source_type: String,
     pub source_id: Uuid,
@@ -167,6 +180,7 @@ pub struct AccountingPostPosted {
 /// Published when a posting is rejected (validation failure). Carries the stable error code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountingPostFailed {
+    /// The legacy tenancy twin (ADR-0029) — see `AccountingPostPosted::company_id`.
     pub company_id: Uuid,
     pub source_type: String,
     pub source_id: Uuid,

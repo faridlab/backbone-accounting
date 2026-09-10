@@ -3,6 +3,13 @@
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Enum parameters bind as
 //! text with an explicit `::enum_type` cast — the sqlx runtime-tokio-rustls build has
 //! no compile-time knowledge of the database enum OIDs, so an uncast string bind fails.
+//!
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing service's
+//! tenancy decorator owns org scoping. The port's `company_id` lanes are the documented legacy
+//! twin: they keep their shapes for unstripped callers, but no statement keys on a tenant
+//! column. Statements ride the caller's connection, which must carry the ambient org scope
+//! (relayed with `org_scope::bind_org_scope_on`); an undecorated deployment gets an unfenced
+//! module.
 
 use crate::domain::chart_dataset::ChartDataset;
 use crate::domain::repositories::chart_install_repository::{
@@ -25,14 +32,13 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
     async fn company_has_postings(
         &self,
         tx: &mut sqlx::PgConnection,
-        company_id: Uuid,
+        _company_id: Uuid,
     ) -> anyhow::Result<bool> {
         let has: bool = sqlx::query_scalar(
             "SELECT EXISTS (
-                SELECT 1 FROM accounting.journal_lines WHERE company_id = $1
+                SELECT 1 FROM accounting.journal_lines
             )",
         )
-        .bind(company_id)
         .fetch_one(&mut *tx)
         .await?;
         Ok(has)
@@ -41,7 +47,7 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
     async fn overlapping_accounts(
         &self,
         tx: &mut sqlx::PgConnection,
-        company_id: Uuid,
+        _company_id: Uuid,
         dataset: &ChartDataset,
     ) -> anyhow::Result<Vec<OverlappingAccount>> {
         let numbers: Vec<String> = dataset.accounts.iter().map(|a| a.number.clone()).collect();
@@ -50,11 +56,9 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
         let rows = sqlx::query(
             r#"SELECT id, account_number, account_code, chart_code
                  FROM accounting.accounts
-                WHERE company_id = $1
-                  AND (metadata->>'deleted_at') IS NULL
-                  AND (account_number = ANY($2) OR account_code = ANY($3))"#,
+                WHERE (metadata->>'deleted_at') IS NULL
+                  AND (account_number = ANY($1) OR account_code = ANY($2))"#,
         )
-        .bind(company_id)
         .bind(&numbers)
         .bind(&codes)
         .fetch_all(&mut *tx)
@@ -86,16 +90,16 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
                      FROM accounting.accounts WHERE id = $1
                ), up AS (
                    INSERT INTO accounting.accounts
-                       (id, company_id, account_number, account_code, name,
+                       (id, account_number, account_code, name,
                         account_type, account_subtype, normal_balance,
                         parent_id, level, path, is_header, is_detail,
                         currency, is_reconcilable, sort_order,
                         chart_code, chart_version)
-                   VALUES ($1, $2, $3, $4, $5,
-                           $6::account_type, $7::account_subtype, $8::normal_balance,
-                           $9, $10, $11, $12, $13,
-                           $14, $15, $16,
-                           $17, $18)
+                   VALUES ($1, $2, $3, $4,
+                           $5::account_type, $6::account_subtype, $7::normal_balance,
+                           $8, $9, $10, $11, $12,
+                           $13, $14, $15,
+                           $16, $17)
                    ON CONFLICT (id) DO UPDATE SET
                        account_number   = EXCLUDED.account_number,
                        account_code     = EXCLUDED.account_code,
@@ -119,7 +123,6 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
                  FROM up LEFT JOIN pre ON true"#,
         )
         .bind(row.id)
-        .bind(row.company_id)
         .bind(&row.def.number)
         .bind(&row.def.code)
         .bind(&row.def.name)

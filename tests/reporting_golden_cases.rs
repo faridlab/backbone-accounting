@@ -1,7 +1,13 @@
 //! Golden-case oracle for financial-statement generation (Trial Balance, Balance Sheet,
 //! Income Statement). Numbers are derived exactly from the posting golden cases (GC-1, GC-3).
-//! Requires DATABASE_URL (defaults to local dev Postgres on :5433). Each test uses a fresh
-//! company_id → isolated and parallel-safe.
+//! Requires DATABASE_URL (defaults to local dev Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence, so
+//! the statement reads aggregate GLOBALLY. Each test therefore emulates the undecorated
+//! deployment the way a real one looks: a fresh single-tenant database. It runs under one
+//! lock and WIPES the accounting tables before seeding, which makes the exact-total
+//! oracles below exactly as discriminating as they were under the old company predicate.
 
 use std::collections::HashMap;
 
@@ -14,6 +20,38 @@ use backbone_accounting::application::service::posting_service::{
     PostingLine, PostingRequest, PostingService,
 };
 use backbone_accounting::application::service::reporting_service::ReportingService;
+
+/// Serializes the database-touching probes in this file (see the header note): the
+/// exact-total oracles only hold against the test's own rows.
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Reset the accounting tables to an empty single-tenant database. Circular FK pairs
+/// (journal_lines.ledger_id <-> ledgers.journal_line_id, and every self-referential
+/// link) are severed first; the deletes then run children-first.
+async fn wipe(pool: &PgPool) {
+    for sql in [
+        "UPDATE accounting.journal_lines SET ledger_id=NULL, reconciliation_id=NULL, full_reconcile_id=NULL, related_line_id=NULL",
+        "UPDATE accounting.ledgers SET reverses_id=NULL, reversed_by_id=NULL, reconciliation_id=NULL",
+        "UPDATE accounting.journals SET reverses_id=NULL, reversed_by_id=NULL",
+        "UPDATE accounting.accounting_posts SET reverses_post_id=NULL, reversed_by_post_id=NULL",
+        "UPDATE accounting.accounts SET parent_id=NULL, source_id=NULL",
+        "UPDATE accounting.fiscal_periods SET parent_id=NULL",
+        "UPDATE accounting.reconciliations SET previous_reconciliation_id=NULL",
+        "UPDATE accounting.reconciliation_items SET matched_with_id=NULL",
+        "DELETE FROM accounting.reconciliation_items",
+        "DELETE FROM accounting.partial_reconciles",
+        "DELETE FROM accounting.reconciliations",
+        "DELETE FROM accounting.ledgers",
+        "DELETE FROM accounting.journal_lines",
+        "DELETE FROM accounting.full_reconciles",
+        "DELETE FROM accounting.accounting_posts",
+        "DELETE FROM accounting.journals",
+        "DELETE FROM accounting.accounts",
+        "DELETE FROM accounting.fiscal_periods",
+    ] {
+        sqlx::query(sql).execute(pool).await.expect("wipe");
+    }
+}
 
 fn dec(s: &str) -> Decimal {
     Decimal::from_str_exact(s).unwrap()
@@ -70,14 +108,12 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,
                        TRUE, FALSE, 'active'::account_status)"#,
         )
         .bind(id)
-        .bind(company_id)
-        .bind(code)
         .bind(code)
         .bind(name)
         .bind(at)
@@ -157,7 +193,9 @@ async fn post_purchase_invoice(svc: &PostingService, company: Uuid, a: &HashMap<
 // RGC-1 — reports after a single sales invoice ────────────────────────────────
 #[tokio::test]
 async fn rgc1_after_sales_invoice() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -199,7 +237,9 @@ async fn rgc1_after_sales_invoice() {
 // RGC-2 — reports after sales + purchase ──────────────────────────────────────
 #[tokio::test]
 async fn rgc2_after_sales_and_purchase() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -237,7 +277,9 @@ async fn rgc2_after_sales_and_purchase() {
 // RGC-3 — period filter excludes activity outside the window ──────────────────
 #[tokio::test]
 async fn rgc3_period_filter() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -273,7 +315,7 @@ async fn rgc3_period_filter() {
 // Helper — insert one account row with explicit hierarchy flags/parent.
 async fn seed_account(
     pool: &PgPool,
-    company_id: Uuid,
+    _company_id: Uuid,
     id: Uuid,
     parent: Option<Uuid>,
     code: &str,
@@ -286,13 +328,12 @@ async fn seed_account(
 ) {
     sqlx::query(
         r#"INSERT INTO accounting.accounts
-            (id, company_id, parent_id, account_number, account_code, name, account_type,
+            (id, parent_id, account_number, account_code, name, account_type,
              account_subtype, normal_balance, is_detail, is_header, level, status)
-           VALUES ($1,$2,$3,$4,$4,$5,$6::account_type,$7::account_subtype,$8::normal_balance,
-                   $9,$10,$11,'active'::account_status)"#,
+           VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,
+                   $8,$9,$10,'active'::account_status)"#,
     )
     .bind(id)
-    .bind(company_id)
     .bind(parent)
     .bind(code)
     .bind(name)
@@ -310,7 +351,9 @@ async fn seed_account(
 // RGC-4 — general ledger: per-account sections with opening/closing from the running balance.
 #[tokio::test]
 async fn rgc4_general_ledger() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -380,7 +423,9 @@ async fn rgc4_general_ledger() {
 // RGC-5 — partner ledger + aged AR/AP over open residuals.
 #[tokio::test]
 async fn rgc5_partner_ledger_and_aging() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -477,7 +522,9 @@ async fn rgc5_partner_ledger_and_aging() {
 // RGC-6 — trial-balance tree: headers aggregate their detail descendants.
 #[tokio::test]
 async fn rgc6_trial_balance_tree() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let company = Uuid::new_v4();
     let header = Uuid::new_v4();
     let bank = Uuid::new_v4();
@@ -597,7 +644,9 @@ async fn rgc6_trial_balance_tree() {
 // 06-15 chain (500,000 then 800,000) regardless of date — silently inconsistent.
 #[tokio::test]
 async fn rgc7_backdated_posting_gl_consistency() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, a) = seed_coa(&pool).await;
     let posting = PostingService::new(std::sync::Arc::new(
         backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
@@ -704,7 +753,9 @@ async fn reporting_reads_refuse_company_mismatch_under_ambient_scope() {
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
+    wipe(&pool).await;
     let (company, _a) = seed_coa(&pool).await;
     let other = Uuid::new_v4();
     let app =

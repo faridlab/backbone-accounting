@@ -5,6 +5,10 @@
 //! returns the chain JSON.
 //!
 //! Requires DATABASE_URL (defaults to local dev Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the `company_id` param keeps its shape as the
+//! legacy twin but no table carries a tenant column and the chain walk keys on ids alone, so
+//! each test's freshly-minted chain is isolated from every other test's regardless of order.
 
 use std::sync::Arc;
 
@@ -37,13 +41,12 @@ async fn seed_accounts(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_detail, is_header, parent_id, level, status)
-               VALUES ($1,$2,$3,$3,$4,'asset'::account_type,'current_asset'::account_subtype,
-                       'debit'::normal_balance, TRUE, FALSE, $5, $6, 'active'::account_status)"#,
+               VALUES ($1,$2,$2,$3,'asset'::account_type,'current_asset'::account_subtype,
+                       'debit'::normal_balance, TRUE, FALSE, $4, $5, 'active'::account_status)"#,
         )
         .bind(id)
-        .bind(company)
         .bind(code)
         .bind(name)
         .bind(parent)
@@ -64,11 +67,10 @@ async fn seed_cost_centers(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
         (leaf, "CC-1-1", "Production", Some(mid), 2),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounting.cost_centers (id, company_id, code, name, parent_id, level)
-               VALUES ($1,$2,$3,$4,$5,$6)"#,
+            r#"INSERT INTO accounting.cost_centers (id, code, name, parent_id, level)
+               VALUES ($1,$2,$3,$4,$5)"#,
         )
         .bind(id)
-        .bind(company)
         .bind(code)
         .bind(name)
         .bind(parent)
@@ -115,10 +117,10 @@ async fn seed_fiscal_periods(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.fiscal_periods
-                (id, company_id, period_code, name, parent_id, level, start_date, end_date, fiscal_year)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,2026)"#,
+                (id, period_code, name, parent_id, level, start_date, end_date, fiscal_year)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,2026)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(parent).bind(level).bind(start).bind(end)
+        .bind(id).bind(code).bind(name).bind(parent).bind(level).bind(start).bind(end)
         .execute(pool).await.unwrap();
     }
     (company, root, mid, leaf)

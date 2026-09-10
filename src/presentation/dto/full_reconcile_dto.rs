@@ -5,10 +5,10 @@
 //! DTOs provide a clean separation between domain entities and API
 //! representations, with validation and OpenAPI documentation support.
 
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 
 #[cfg(feature = "openapi")]
 #[cfg(feature = "openapi")]
@@ -32,12 +32,6 @@ use crate::domain::entity::FullReconcile;
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFullReconcileDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[serde(alias = "exchange_total")]
     pub exchange_total: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
@@ -58,12 +52,6 @@ pub struct CreateFullReconcileDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFullReconcileDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(alias = "company_id")]
-    pub company_id: Uuid,
     #[serde(alias = "exchange_total")]
     pub exchange_total: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
@@ -84,12 +72,6 @@ pub struct UpdateFullReconcileDto {
 #[cfg_attr(feature = "validation", derive(Validate))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchFullReconcileDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    #[serde(skip_serializing_if = "Option::is_none", alias = "company_id")]
-    pub company_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "exchange_total")]
     pub exchange_total: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
@@ -100,7 +82,7 @@ pub struct PatchFullReconcileDto {
 impl PatchFullReconcileDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.company_id.is_some() || self.exchange_total.is_some() || self.reconciled_at.is_some()
+        self.exchange_total.is_some() || self.reconciled_at.is_some()
     }
 }
 
@@ -116,16 +98,8 @@ impl PatchFullReconcileDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct FullReconcileResponseDto {
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
+    #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     pub id: Uuid,
-    #[cfg_attr(
-        feature = "openapi",
-        schema(example = "550e8400-e29b-41d4-a716-446655440000")
-    )]
-    pub company_id: Uuid,
     pub exchange_total: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     pub reconciled_at: DateTime<Utc>,
@@ -190,7 +164,6 @@ impl FullReconcileListResponseDto {
 #[serde(rename_all = "camelCase")]
 pub struct FullReconcileSummaryDto {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub exchange_total: Decimal,
     pub reconciled_at: DateTime<Utc>,
     pub created_at: Option<DateTime<Utc>>,
@@ -204,7 +177,6 @@ impl From<FullReconcile> for FullReconcileResponseDto {
     fn from(entity: FullReconcile) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             exchange_total: entity.exchange_total,
             reconciled_at: entity.reconciled_at,
             created_at: entity.created_at,
@@ -218,7 +190,6 @@ impl From<FullReconcile> for FullReconcileSummaryDto {
     fn from(entity: FullReconcile) -> Self {
         Self {
             id: entity.id,
-            company_id: entity.company_id,
             exchange_total: entity.exchange_total,
             reconciled_at: entity.reconciled_at,
             created_at: Some(entity.created_at),
@@ -230,7 +201,6 @@ impl From<CreateFullReconcileDto> for FullReconcile {
     fn from(dto: CreateFullReconcileDto) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id: dto.company_id,
             exchange_total: dto.exchange_total,
             reconciled_at: dto.reconciled_at,
             created_at: Utc::now(),
@@ -244,7 +214,6 @@ impl From<&FullReconcile> for FullReconcileResponseDto {
     fn from(entity: &FullReconcile) -> Self {
         Self {
             id: entity.id.clone(),
-            company_id: entity.company_id.clone(),
             exchange_total: entity.exchange_total.clone(),
             reconciled_at: entity.reconciled_at.clone(),
             created_at: entity.created_at.clone(),
@@ -263,7 +232,6 @@ impl backbone_core::FromCreateDto<CreateFullReconcileDto> for FullReconcile {
 impl backbone_core::ApplyUpdateDto<UpdateFullReconcileDto> for FullReconcile {
     fn apply_update(mut self, dto: UpdateFullReconcileDto) -> backbone_core::ServiceResult<Self> {
         self.updated_at = Utc::now();
-        self.company_id = dto.company_id;
         self.exchange_total = dto.exchange_total;
         self.reconciled_at = dto.reconciled_at;
         Ok(self)

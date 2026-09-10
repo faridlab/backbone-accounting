@@ -6,6 +6,10 @@
 //! `BankReconciliationRepository` port — no `sqlx`/`PgPool` here. Matching is greedy by exact
 //! signed amount; timing/partial matches are a later enhancement. Proven by
 //! `tests/reconciliation_golden_cases.rs`.
+//!
+//! Tenancy (ADR-0029): the `ReconcileRequest::company_id` threaded through the port calls is
+//! the legacy twin — kept so unstripped callers compile and run unchanged; nothing here keys a
+//! statement on it (the adapter scopes by the ambient org scope).
 
 use std::sync::Arc;
 

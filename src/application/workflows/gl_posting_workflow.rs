@@ -8,10 +8,10 @@
 //! - atomically write Journal + JournalLines + immutable Ledger rows (running balance)
 //! - update account balances, mark the AccountingPost posted, emit AccountingPostPosted
 
-use backbone_core::flow::{WorkflowContext, WorkflowStep};
-use chrono;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use chrono;
+use backbone_core::flow::{WorkflowStep, WorkflowContext};
 
 /// Error type for flow execution
 #[derive(Debug, Clone, thiserror::Error)]
@@ -123,9 +123,7 @@ impl GLPostingFlowInstance {
     pub fn is_complete(&self) -> bool {
         matches!(
             self.status,
-            GLPostingFlowStatus::Completed
-                | GLPostingFlowStatus::Failed
-                | GLPostingFlowStatus::Cancelled
+            GLPostingFlowStatus::Completed | GLPostingFlowStatus::Failed | GLPostingFlowStatus::Cancelled
         )
     }
 
@@ -160,9 +158,7 @@ impl GLPostingFlowInstance {
 // add `pub entity: GLPosting` in the // <<< CUSTOM section and remove the todo!.
 #[allow(unused_variables)]
 impl WorkflowContext<GLPostingFlowInstance> for GLPostingFlowInstance {
-    fn entity(&self) -> &GLPostingFlowInstance {
-        self
-    }
+    fn entity(&self) -> &GLPostingFlowInstance { self }
     fn set_var(&mut self, key: &str, value: serde_json::Value) {
         self.set_context(key, value);
     }
@@ -217,10 +213,17 @@ pub trait GLPostingStepHandler: Send + Sync {
     ) -> Result<Option<GLPostingFlowStep>, FlowError>;
 
     /// Handle terminal step posted
-    async fn handle_posted(&self, instance: &mut GLPostingFlowInstance) -> Result<(), FlowError>;
+    async fn handle_posted(
+        &self,
+        instance: &mut GLPostingFlowInstance,
+    ) -> Result<(), FlowError>;
 
     /// Handle terminal step rejected
-    async fn handle_rejected(&self, instance: &mut GLPostingFlowInstance) -> Result<(), FlowError>;
+    async fn handle_rejected(
+        &self,
+        instance: &mut GLPostingFlowInstance,
+    ) -> Result<(), FlowError>;
+
 }
 
 /// Executor for GLPosting flow
@@ -235,10 +238,7 @@ impl<H: GLPostingStepHandler> GLPostingFlowExecutor<H> {
     }
 
     /// Start a new flow instance
-    pub async fn start(
-        &self,
-        instance_id: impl Into<String>,
-    ) -> Result<GLPostingFlowInstance, FlowError> {
+    pub async fn start(&self, instance_id: impl Into<String>) -> Result<GLPostingFlowInstance, FlowError> {
         let mut instance = GLPostingFlowInstance::new(instance_id);
         instance.status = GLPostingFlowStatus::Running;
         instance.current_step = Some(GLPostingFlowStep::IdempotencyCheck);
@@ -246,10 +246,7 @@ impl<H: GLPostingStepHandler> GLPostingFlowExecutor<H> {
     }
 
     /// Execute the current step
-    pub async fn execute_step(
-        &self,
-        instance: &mut GLPostingFlowInstance,
-    ) -> Result<(), FlowError> {
+    pub async fn execute_step(&self, instance: &mut GLPostingFlowInstance) -> Result<(), FlowError> {
         let current_step = match instance.current_step {
             Some(step) => step,
             None => return Err(FlowError::NoCurrentStep),
@@ -259,18 +256,24 @@ impl<H: GLPostingStepHandler> GLPostingFlowExecutor<H> {
             GLPostingFlowStep::IdempotencyCheck => {
                 self.handler.handle_idempotency_check(instance).await?
             }
-            GLPostingFlowStep::Validate => self.handler.handle_validate(instance).await?,
-            GLPostingFlowStep::WriteJournal => self.handler.handle_write_journal(instance).await?,
+            GLPostingFlowStep::Validate => {
+                self.handler.handle_validate(instance).await?
+            }
+            GLPostingFlowStep::WriteJournal => {
+                self.handler.handle_write_journal(instance).await?
+            }
             GLPostingFlowStep::WriteJournalLines => {
                 self.handler.handle_write_journal_lines(instance).await?
             }
-            GLPostingFlowStep::WriteLedger => self.handler.handle_write_ledger(instance).await?,
-            GLPostingFlowStep::UpdateAccountBalances => {
-                self.handler
-                    .handle_update_account_balances(instance)
-                    .await?
+            GLPostingFlowStep::WriteLedger => {
+                self.handler.handle_write_ledger(instance).await?
             }
-            GLPostingFlowStep::MarkPosted => self.handler.handle_mark_posted(instance).await?,
+            GLPostingFlowStep::UpdateAccountBalances => {
+                self.handler.handle_update_account_balances(instance).await?
+            }
+            GLPostingFlowStep::MarkPosted => {
+                self.handler.handle_mark_posted(instance).await?
+            }
             GLPostingFlowStep::Posted => {
                 self.handler.handle_posted(instance).await?;
                 None // Terminal step

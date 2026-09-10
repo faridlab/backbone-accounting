@@ -1,9 +1,11 @@
 //! SqlxReportingRepository — SQLx adapter for the reporting port.
 //!
-//! Fence discipline: every read rides the company-scoped helpers (request connection →
-//! task-local bind → plain pool), and every statement carries an explicit `company_id`
-//! predicate — the bare-pool shape this replaces silently emptied under the app role because
-//! `set_config(is_local)` evaporates off a pooled connection.
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing service's
+//! tenancy decorator owns org scoping. The port's `company_id` lanes are the documented legacy
+//! twin: they keep their shapes for unstripped callers, but no statement here keys on a tenant
+//! column. Every read rides the request-dedicated connection when the composing service bound
+//! one (carrying the decorator's fence variables), plainly on the pool otherwise. An
+//! undecorated deployment gets an unfenced module.
 
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -11,6 +13,11 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use backbone_orm::org_scope;
+// The multi-row read twin lives only in the legacy `company_scope` module. Its connection
+// discipline is what this adapter needs — request-dedicated connection when the composing
+// service bound one, plain pool otherwise. The helper's legacy task-local branch is never
+// taken: this module sets no legacy scope of its own (ADR-0029).
 use backbone_orm::company_scope::fetch_all_rows_scoped;
 
 use crate::domain::repositories::reporting_repository::{
@@ -26,8 +33,7 @@ fn as_of_residual_expr(pos: usize) -> String {
     format!(
         r#"(l.base_debit_amount + l.base_credit_amount)
              - COALESCE((SELECT SUM(pr.amount) FROM accounting.partial_reconciles pr
-                         WHERE pr.company_id = l.company_id
-                           AND pr.max_date <= ${pos}
+                         WHERE pr.max_date <= ${pos}
                            AND (pr.debit_move_id = l.id OR pr.credit_move_id = l.id)), 0)"#
     )
 }
@@ -46,7 +52,7 @@ impl SqlxReportingRepository {
 impl ReportingRepository for SqlxReportingRepository {
     async fn account_sums(
         &self,
-        company_id: Uuid,
+        _company_id: Uuid,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
     ) -> anyhow::Result<Vec<AccountSumRow>> {
@@ -59,22 +65,20 @@ impl ReportingRepository for SqlxReportingRepository {
                    FROM accounting.accounts a
                    LEFT JOIN accounting.ledgers l
                      ON l.account_id = a.id
-                    AND l.posting_date <= $2
-                    AND ($3::date IS NULL OR l.posting_date >= $3)
-                   WHERE a.company_id = $1
-                     AND a.is_detail = TRUE
+                    AND l.posting_date <= $1
+                    AND ($2::date IS NULL OR l.posting_date >= $2)
+                   WHERE a.is_detail = TRUE
                      AND (a.metadata->>'deleted_at') IS NULL
                    GROUP BY a.id, a.account_type, a.account_number, a.name
                    ORDER BY a.account_number"#,
             )
-            .bind(company_id)
             .bind(hi)
             .bind(lo),
         )
         .await?;
 
         Ok(rows
-            .into_iter()
+            .iter()
             .map(|r| AccountSumRow {
                 account_id: r.get("aid"),
                 account_type: r.get("at"),
@@ -86,23 +90,21 @@ impl ReportingRepository for SqlxReportingRepository {
             .collect())
     }
 
-    async fn account_directory(&self, company_id: Uuid) -> anyhow::Result<Vec<AccountNodeRow>> {
+    async fn account_directory(&self, _company_id: Uuid) -> anyhow::Result<Vec<AccountNodeRow>> {
         let rows = fetch_all_rows_scoped(
             &self.pool,
             sqlx::query(
                 r#"SELECT id, parent_id, account_number, name, account_type::text AS at,
                           level, is_header, is_detail
                    FROM accounting.accounts
-                   WHERE company_id = $1
-                     AND (metadata->>'deleted_at') IS NULL
+                   WHERE (metadata->>'deleted_at') IS NULL
                    ORDER BY account_number"#,
-            )
-            .bind(company_id),
+            ),
         )
         .await?;
 
         Ok(rows
-            .into_iter()
+            .iter()
             .map(|r| AccountNodeRow {
                 id: r.get("id"),
                 parent_id: r.get("parent_id"),
@@ -118,7 +120,7 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn gl_lines(
         &self,
-        company_id: Uuid,
+        _company_id: Uuid,
         account_id: Option<Uuid>,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
@@ -166,15 +168,13 @@ impl ReportingRepository for SqlxReportingRepository {
                             l.party_type::text AS party_type, l.party_id,
                             l.source_type, l.source_reference, l.is_reconciled
                      FROM accounting.ledgers l
-                     WHERE l.company_id = $1
-                       AND ($2::uuid IS NULL OR l.account_id = $2)
+                     WHERE ($1::uuid IS NULL OR l.account_id = $1)
                    ) hist
-                   WHERE posting_date <= $3
-                     AND ($4::date IS NULL OR posting_date >= $4)
+                   WHERE posting_date <= $2
+                     AND ($3::date IS NULL OR posting_date >= $3)
                    ORDER BY account_number, account_id, posting_date, sequence_number, id
-                   LIMIT $5 OFFSET $6"#,
+                   LIMIT $4 OFFSET $5"#,
             )
-            .bind(company_id)
             .bind(account_id)
             .bind(hi)
             .bind(lo)
@@ -184,7 +184,7 @@ impl ReportingRepository for SqlxReportingRepository {
         .await?;
 
         Ok(rows
-            .into_iter()
+            .iter()
             .map(|r| GlLineRow {
                 account_id: r.get("account_id"),
                 account_number: r.get("account_number"),
@@ -210,7 +210,7 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn party_ledger_lines(
         &self,
-        company_id: Uuid,
+        _company_id: Uuid,
         party_type: &str,
         party_id: Uuid,
         as_of: NaiveDate,
@@ -223,20 +223,17 @@ impl ReportingRepository for SqlxReportingRepository {
                FROM accounting.journal_lines l
                JOIN accounting.journals j ON j.id = l.journal_id
                JOIN accounting.accounts a ON a.id = l.account_id
-                                        AND a.company_id = l.company_id
-               WHERE l.company_id = $1
-                 AND l.party_type = $2::party_type
-                 AND l.party_id = $3
-                 AND j.transaction_date <= $4
+               WHERE l.party_type = $1::party_type
+                 AND l.party_id = $2
+                 AND j.transaction_date <= $3
                  AND a.account_subtype IN ('accounts_receivable'::account_subtype,
                                            'accounts_payable'::account_subtype)
                ORDER BY j.transaction_date, l.id"#,
-            residual = as_of_residual_expr(4)
+            residual = as_of_residual_expr(3)
         );
         let rows = fetch_all_rows_scoped(
             &self.pool,
             sqlx::query(&sql)
-                .bind(company_id)
                 .bind(party_type)
                 .bind(party_id)
                 .bind(as_of),
@@ -244,7 +241,7 @@ impl ReportingRepository for SqlxReportingRepository {
         .await?;
 
         Ok(rows
-            .into_iter()
+            .iter()
             .map(|r| PartyLedgerRow {
                 line_id: r.get("id"),
                 account_id: r.get("account_id"),
@@ -263,7 +260,7 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn aged_open_items(
         &self,
-        company_id: Uuid,
+        _company_id: Uuid,
         account_subtype: &str,
         as_of: NaiveDate,
     ) -> anyhow::Result<Vec<AgedItemRow>> {
@@ -273,26 +270,24 @@ impl ReportingRepository for SqlxReportingRepository {
                       {residual} AS residual
                FROM accounting.journal_lines l
                JOIN accounting.journals j ON j.id = l.journal_id
-               JOIN accounting.accounts a ON a.id = l.account_id AND a.company_id = l.company_id
-               WHERE l.company_id = $1
-                 AND a.account_subtype = $2::account_subtype
-                 AND j.transaction_date <= $3
+               JOIN accounting.accounts a ON a.id = l.account_id
+               WHERE a.account_subtype = $1::account_subtype
+                 AND j.transaction_date <= $2
                  AND l.party_id IS NOT NULL
                  AND {residual} > 0
                ORDER BY l.party_id, j.transaction_date, l.id"#,
-            residual = as_of_residual_expr(3)
+            residual = as_of_residual_expr(2)
         );
         let rows = fetch_all_rows_scoped(
             &self.pool,
             sqlx::query(&sql)
-                .bind(company_id)
                 .bind(account_subtype)
                 .bind(as_of),
         )
         .await?;
 
         Ok(rows
-            .into_iter()
+            .iter()
             .map(|r| AgedItemRow {
                 party_type: r.get("pt"),
                 party_id: r.get("party_id"),

@@ -3,6 +3,10 @@
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`).
 //!   POST /accounting/reconcile                         (body = ReconcileRequest)
 //!   POST /accounting/periods/{period_id}/close         (body = { company_id, retained_earnings_account_id })
+//!
+//! Tenancy (ADR-0029): the `company_id` fields in the wire bodies are the legacy twin — kept
+//! so unstripped callers compile and run unchanged; the module keys no statement on them and
+//! the composing service's tenancy decorator scopes the underlying reads/writes.
 
 use std::sync::Arc;
 

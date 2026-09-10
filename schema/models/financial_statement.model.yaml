@@ -55,6 +55,9 @@ enums:
 # =============================================================================
 
 models:
+  # Tenancy: none, by design (ADR-0029). Tenant-agnostic and reusable; a composing
+  # service's tenancy decorator owns org scoping for this table, including the
+  # org-scoped per-unit statement-number unique.
   - name: FinancialStatement
     collection: financial_statements
     description: "Generated financial statement"
@@ -64,14 +67,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique statement identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this statement # logical FK to organization.Company.id"
 
       # =======================================================================
       # Statement Identification
@@ -450,14 +445,7 @@ models:
         description: "Approved by user"
 
     indexes:
-      - type: unique
-        fields: [company_id, statement_number]
-        where: "deleted_at IS NULL"
-      - type: index
-        fields: [company_id, statement_type, fiscal_year]
-      - type: index
-        fields: [company_id, fiscal_period_id]
-      - type: index
-        fields: [company_id, status]
-      - type: index
-        fields: [company_id, as_of_date]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit
+      # statement-number unique — one live number per org unit among live rows — is
+      # installed by the composing service's tenancy decorator (org_unit_id-leading),
+      # not declared here.

@@ -12,6 +12,10 @@
 //! The port rides the caller's connection so a flip journal commits atomically
 //! with the partial that triggered it. `None` (unwired) simply means no flips:
 //! accounting keeps working for hosts without a cash-basis tax module.
+//!
+//! Tenancy (ADR-0029): the `company_id` parameter is the legacy twin — accounting carries
+//! no tenancy of its own and forwards the company id that rode in with the reconciled
+//! document; the host adapter scopes its own tax-table reads by it.
 
 use async_trait::async_trait;
 use rust_decimal::Decimal;

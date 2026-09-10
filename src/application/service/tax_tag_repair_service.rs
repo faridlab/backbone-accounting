@@ -8,7 +8,8 @@
 //! `tags` jsonb on posted journal lines and stamps an audit row per run.
 //!
 //! Guards (all typed refusals, all fail-closed):
-//! - **Company-fenced** — the run binds the request's company (RLS) and the
+//! - **Unit-fenced** — the run relays the ambient org scope onto its
+//!   transaction (the composing service's tenancy decorator's fence), and the
 //!   HTTP layer rejects a body company that disagrees with the ambient scope.
 //! - **Reason mandatory** — `reason_required`; an empty justification refuses.
 //! - **Lock posture** — a window overlapping a LOCKED fiscal period refuses
@@ -26,6 +27,13 @@
 //! the mapping here. The rules are applied set-at-a-time in SQL inside the
 //! verb's transaction; the lines' amounts, accounts, and party data are never
 //! touched.
+//!
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing
+//! service's tenancy decorator owns org scoping. The `company_id` lanes here are
+//! the documented legacy twin: request shapes and verb signatures keep them so
+//! unstripped callers compile and run unchanged, but no statement keys on a
+//! tenant column. An undecorated deployment has no ambient scope and skips the
+//! relay entirely (unfenced by design).
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -47,6 +55,8 @@ pub struct TaxTagRule {
 
 #[derive(Debug, Clone)]
 pub struct RepairRequest {
+    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
+    /// run unchanged; no statement keys on it.
     pub company_id: Uuid,
     pub date_from: NaiveDate,
     pub date_to: NaiveDate,
@@ -171,24 +181,28 @@ impl TaxTagRepairService {
     }
 
     /// List the audit trail (most recent first) — the read side of the ledger.
+    /// `company_id` is the legacy tenancy twin (ADR-0029): kept in the signature
+    /// for unstripped callers, unused here.
     pub async fn list_runs(
         &self,
-        company_id: Uuid,
+        _company_id: Uuid,
         limit: i64,
     ) -> Result<Vec<RepairRunRow>, TaxTagRepairError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
+        // caller bound one; an undecorated deployment skips this entirely.
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
         let rows = sqlx::query_as::<_, RepairRunRow>(
             r#"SELECT id, date_from, date_to, rules, lines_examined, lines_retagged,
                       dry_run, overridden_closed_periods, actor, reason, ran_at
                  FROM accounting.tax_tag_repair_runs
-                WHERE company_id=$1
                 ORDER BY ran_at DESC
-                LIMIT GREATEST(1, LEAST($2, 200))"#,
+                LIMIT GREATEST(1, LEAST($1, 200))"#,
         )
-        .bind(company_id)
         .bind(limit)
         .fetch_all(&mut *tx)
         .await
@@ -221,22 +235,25 @@ impl TaxTagRepairService {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, req.company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
+        // caller bound one; an undecorated deployment skips this entirely.
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
         // Lock-posture guards: the window must not cross a locked period, and
         // closed periods demand an explicit override.
         let overlapping = |status: &str| {
             format!(
                 r#"SELECT period_code FROM accounting.fiscal_periods
-                    WHERE company_id=$1 AND status='{status}'
-                      AND start_date <= $3 AND end_date >= $2
+                    WHERE status='{status}'
+                      AND start_date <= $2 AND end_date >= $1
                     ORDER BY period_code"#
             )
         };
         let locked: Vec<String> = sqlx::query_scalar(&overlapping("locked"))
-            .bind(req.company_id)
             .bind(req.date_from)
             .bind(req.date_to)
             .fetch_all(&mut *tx)
@@ -246,7 +263,6 @@ impl TaxTagRepairService {
             return Err(TaxTagRepairError::LockedPeriodInWindow(locked));
         }
         let closed: Vec<String> = sqlx::query_scalar(&overlapping("closed"))
-            .bind(req.company_id)
             .bind(req.date_from)
             .bind(req.date_to)
             .fetch_all(&mut *tx)
@@ -274,18 +290,17 @@ impl TaxTagRepairService {
             // count) constant regardless of which selectors a rule sets.
             // Postgres binds parameters positionally, so each statement gets
             // its own predicate with DENSE placeholder numbering — reusing a
-            // predicate whose selector slots sit at $5/$6 in a statement that
-            // binds no $4 shifts every later bind by one (the boolean lands in
+            // predicate whose selector slots sit at $4/$5 in a statement that
+            // binds no $3 shifts every later bind by one (the boolean lands in
             // the uuid slot and the call dies on "cannot cast type boolean to
             // uuid"). Journals soft-delete through their metadata bag (no
             // deleted_at column), so the live-row filter reads the metadata
             // key.
             let predicate = |acct: usize, tax: usize| {
                 format!(
-                    r#"jl.company_id = $1
-                    AND jl.is_posted
+                    r#"jl.is_posted
                     AND (j.metadata->>'deleted_at') IS NULL
-                    AND j.transaction_date BETWEEN $2 AND $3
+                    AND j.transaction_date BETWEEN $1 AND $2
                     AND (${acct}::uuid IS NULL OR jl.account_id = ${acct})
                     AND (${tax}::boolean IS NULL OR jl.is_tax_line = ${tax})"#
                 )
@@ -294,13 +309,12 @@ impl TaxTagRepairService {
             let (examined, changed) = if req.dry_run {
                 let row: (i64, i64) = sqlx::query_as(&format!(
                     r#"SELECT COUNT(*),
-                              COUNT(*) FILTER (WHERE jl.tags IS DISTINCT FROM $4)
+                              COUNT(*) FILTER (WHERE jl.tags IS DISTINCT FROM $3)
                          FROM accounting.journal_lines jl
                          JOIN accounting.journals j ON j.id = jl.journal_id
                         WHERE {}"#,
-                    predicate(5, 6)
+                    predicate(4, 5)
                 ))
-                .bind(req.company_id)
                 .bind(req.date_from)
                 .bind(req.date_to)
                 .bind(&tags_json)
@@ -316,14 +330,13 @@ impl TaxTagRepairService {
                 // repair-run row, not a per-line stamp.
                 let changed = sqlx::query(&format!(
                     r#"UPDATE accounting.journal_lines jl
-                          SET tags = $4
+                          SET tags = $3
                          FROM accounting.journals j
                         WHERE j.id = jl.journal_id
                           AND {}
-                          AND jl.tags IS DISTINCT FROM $4"#,
-                    predicate(5, 6)
+                          AND jl.tags IS DISTINCT FROM $3"#,
+                    predicate(4, 5)
                 ))
-                .bind(req.company_id)
                 .bind(req.date_from)
                 .bind(req.date_to)
                 .bind(&tags_json)
@@ -334,15 +347,14 @@ impl TaxTagRepairService {
                 .map_err(|e| internal(e))?
                 .rows_affected() as i64;
                 // This statement binds no tag value, so its selector slots are
-                // $4/$5, not $5/$6.
+                // $3/$4, not $4/$5.
                 let examined = sqlx::query_scalar(&format!(
                     r#"SELECT COUNT(*)
                          FROM accounting.journal_lines jl
                          JOIN accounting.journals j ON j.id = jl.journal_id
                         WHERE {}"#,
-                    predicate(4, 5)
+                    predicate(3, 4)
                 ))
-                .bind(req.company_id)
                 .bind(req.date_from)
                 .bind(req.date_to)
                 .bind(rule.account_id)
@@ -371,13 +383,12 @@ impl TaxTagRepairService {
 
         let run_id: Uuid = sqlx::query_scalar(
             r#"INSERT INTO accounting.tax_tag_repair_runs
-                 (company_id, date_from, date_to, rules, lines_examined,
+                 (date_from, date_to, rules, lines_examined,
                   lines_retagged, dry_run, overridden_closed_periods, actor,
                   reason, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
                RETURNING id"#,
         )
-        .bind(req.company_id)
         .bind(req.date_from)
         .bind(req.date_to)
         .bind(&rules_json)

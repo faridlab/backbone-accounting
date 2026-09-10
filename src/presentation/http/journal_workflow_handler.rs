@@ -8,6 +8,11 @@
 //!
 //! `approve` posts the journal to the ledger; `void` posts a reversal. Both flow through the
 //! audited `PostingService` core (FOR UPDATE per-account lock, idempotency, immutable ledger).
+//!
+//! Tenancy (ADR-0029): the `company_id` each request carries is the legacy twin — the wire
+//! shapes keep it so unstripped callers compile and run unchanged, but the module keys no
+//! statement on it; the composing service's tenancy decorator scopes every statement through
+//! the ambient org scope.
 
 use std::sync::Arc;
 
@@ -189,9 +194,11 @@ pub fn create_journal_workflow_routes(service: Arc<JournalWorkflowService>) -> R
 // Authenticated variant — derives approve/reject/void actors from the principal
 // =============================================================================
 //
-// `company_id` still comes from the body (AuthContext carries no tenant; cross-tenant isolation
-// is RLS-enforced — see ADR-0011). The actor fields (`approved_by`/`rejected_by`/`voided_by`) are
-// taken from the verified `AuthContext`, making the audit trail non-repudiable.
+// `company_id` still comes from the body (AuthContext carries no tenant); it is the legacy
+// tenancy twin (ADR-0029) — the module keys no statement on it. Cross-tenant isolation is owned
+// by the composing service's tenancy decorator. The actor fields
+// (`approved_by`/`rejected_by`/`voided_by`) are taken from the verified `AuthContext`, making
+// the audit trail non-repudiable.
 
 #[cfg(feature = "auth")]
 use axum::Extension;

@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use rust_decimal::Decimal;
 
 /// Strongly-typed ID for FullReconcile
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,15 +10,9 @@ use uuid::Uuid;
 pub struct FullReconcileId(pub Uuid);
 
 impl FullReconcileId {
-    pub fn new(id: Uuid) -> Self {
-        Self(id)
-    }
-    pub fn generate() -> Self {
-        Self(Uuid::new_v4())
-    }
-    pub fn into_inner(self) -> Uuid {
-        self.0
-    }
+    pub fn new(id: Uuid) -> Self { Self(id) }
+    pub fn generate() -> Self { Self(Uuid::new_v4()) }
+    pub fn into_inner(self) -> Uuid { self.0 }
 }
 
 impl std::fmt::Display for FullReconcileId {
@@ -35,34 +29,25 @@ impl std::str::FromStr for FullReconcileId {
 }
 
 impl From<Uuid> for FullReconcileId {
-    fn from(id: Uuid) -> Self {
-        Self(id)
-    }
+    fn from(id: Uuid) -> Self { Self(id) }
 }
 
 impl From<FullReconcileId> for Uuid {
-    fn from(id: FullReconcileId) -> Self {
-        id.0
-    }
+    fn from(id: FullReconcileId) -> Self { id.0 }
 }
 
 impl AsRef<Uuid> for FullReconcileId {
-    fn as_ref(&self) -> &Uuid {
-        &self.0
-    }
+    fn as_ref(&self) -> &Uuid { &self.0 }
 }
 
 impl std::ops::Deref for FullReconcileId {
     type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct FullReconcile {
     pub id: Uuid,
-    pub company_id: Uuid,
     pub exchange_total: Decimal,
     pub reconciled_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
@@ -77,10 +62,9 @@ impl FullReconcile {
     }
 
     /// Create a new FullReconcile with required fields
-    pub fn new(company_id: Uuid, exchange_total: Decimal, reconciled_at: DateTime<Utc>) -> Self {
+    pub fn new(exchange_total: Decimal, reconciled_at: DateTime<Utc>) -> Self {
         Self {
             id: Uuid::new_v4(),
-            company_id,
             exchange_total,
             reconciled_at,
             created_at: Utc::now(),
@@ -109,6 +93,7 @@ impl FullReconcile {
         &self.updated_at
     }
 
+
     // ==========================================================
     // Fluent Setters (with_* for optional fields)
     // ==========================================================
@@ -127,25 +112,14 @@ impl FullReconcile {
     pub fn apply_patch(&mut self, fields: std::collections::HashMap<String, serde_json::Value>) {
         for (key, value) in fields {
             match key.as_str() {
-                "company_id" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.company_id = v;
-                    }
-                }
                 "exchange_total" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.exchange_total = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.exchange_total = v; }
                 }
                 "reconciled_at" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.reconciled_at = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.reconciled_at = v; }
                 }
                 "metadata" => {
-                    if let Ok(v) = serde_json::from_value(value) {
-                        self.metadata = v;
-                    }
+                    if let Ok(v) = serde_json::from_value(value) { self.metadata = v; }
                 }
                 _ => {} // ignore unknown fields
             }
@@ -201,14 +175,10 @@ impl backbone_orm::EntityRepoMeta for FullReconcile {
     fn column_types() -> std::collections::HashMap<String, String> {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
-        m.insert("company_id".to_string(), "uuid".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {
         &[]
-    }
-    fn company_field() -> Option<&'static str> {
-        Some("company_id")
     }
 }
 
@@ -218,19 +188,12 @@ impl backbone_orm::EntityRepoMeta for FullReconcile {
 /// System fields (id, metadata, timestamps) are auto-initialized.
 #[derive(Debug, Clone, Default)]
 pub struct FullReconcileBuilder {
-    company_id: Option<Uuid>,
     exchange_total: Option<Decimal>,
     reconciled_at: Option<DateTime<Utc>>,
     metadata: Option<serde_json::Value>,
 }
 
 impl FullReconcileBuilder {
-    /// Set the company_id field (required)
-    pub fn company_id(mut self, value: Uuid) -> Self {
-        self.company_id = Some(value);
-        self
-    }
-
     /// Set the exchange_total field (default: `Decimal::from(0)`)
     pub fn exchange_total(mut self, value: Decimal) -> Self {
         self.exchange_total = Some(value);
@@ -253,13 +216,9 @@ impl FullReconcileBuilder {
     ///
     /// Returns Err if any required field without a default is missing.
     pub fn build(self) -> Result<FullReconcile, String> {
-        let company_id = self
-            .company_id
-            .ok_or_else(|| "company_id is required".to_string())?;
 
         Ok(FullReconcile {
             id: Uuid::new_v4(),
-            company_id,
             exchange_total: self.exchange_total.unwrap_or(Decimal::from(0)),
             reconciled_at: self.reconciled_at.unwrap_or(Utc::now()),
             created_at: Utc::now(),

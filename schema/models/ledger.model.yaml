@@ -8,6 +8,8 @@ models:
   # ---------------------------------------------------------------------------
   # Ledger - General ledger entry with running balance
   # ---------------------------------------------------------------------------
+  # Tenancy: none, by design (ADR-0029). Tenant-agnostic and reusable; a composing
+  # service's tenancy decorator owns org scoping for this table.
   - name: Ledger
     collection: ledgers
     description: "General ledger entry showing running balance"
@@ -17,14 +19,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique ledger entry identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns these books # logical FK to organization.Company.id"
 
       # =======================================================================
       # Account Reference
@@ -166,7 +160,7 @@ models:
       branch_id:
         type: uuid?
         attributes: ["@exclude_from_foreign_key_check"]
-        description: "Branch (denormalized from journal, null = company-level) # logical FK to organization.Branch.id"
+        description: "Branch for the entry's org dimension (denormalized from the journal, optional) # logical FK to organization.Branch.id"
 
       # =======================================================================
       # Party (AR/AP subledger) — required iff account_subtype in {accounts_receivable, accounts_payable}
@@ -326,30 +320,14 @@ models:
         inverse: ledgers
 
     indexes:
-      - type: index
-        fields: [company_id, account_id, transaction_date]
-      - type: index
-        fields: [company_id, account_id, sequence_number]
-      - type: index
-        fields: [company_id, fiscal_year, fiscal_month]
-      - type: index
-        fields: [company_id, transaction_date]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+      # leading account-statement, period, and AR/AP aging indexes are installed by the
+      # composing service's tenancy decorator, not declared here. The journal and
+      # journal-line traceability indexes are domain, tenant-free, and stay.
       - type: index
         fields: [journal_id]
       - type: index
         fields: [journal_line_id]
       - type: index
-        fields: [company_id, account_id, is_reconciled]
-      - type: index
-        fields: [company_id, is_opening_balance]
-      - type: index
-        fields: [company_id, is_closing_entry]
-      - type: index
-        fields: [company_id, branch_id, account_id, transaction_date]
-      - type: index
         fields: [branch_id, transaction_date]
         where: "branch_id IS NOT NULL"
-      # AR/AP subledger aging
-      - type: index
-        fields: [company_id, party_type, party_id, account_id, transaction_date]
-        where: "party_id IS NOT NULL"

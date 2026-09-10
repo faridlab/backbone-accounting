@@ -24,7 +24,6 @@ impl TestDataGenerator for AccountingPostTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "branch_id": null,
             "source_type": "order",
             "source_id": Uuid::new_v4().to_string(),
@@ -55,7 +54,6 @@ impl TestDataGenerator for AccountingPostTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "branch_id": null,
             "source_type": "order",
             "source_id": Uuid::new_v4().to_string(),

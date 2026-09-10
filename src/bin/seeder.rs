@@ -17,27 +17,26 @@ use backbone_accounting::seeders::SeedAccountingPostSeeder;
 use backbone_accounting::seeders::SeedCostCenterSeeder;
 use backbone_accounting::seeders::SeedFinancialStatementSeeder;
 use backbone_accounting::seeders::SeedFiscalPeriodSeeder;
-use backbone_accounting::seeders::SeedFullReconcileSeeder;
-use backbone_accounting::seeders::SeedJournalLineSeeder;
 use backbone_accounting::seeders::SeedJournalSeeder;
+use backbone_accounting::seeders::SeedJournalLineSeeder;
 use backbone_accounting::seeders::SeedLedgerSeeder;
-use backbone_accounting::seeders::SeedPartialReconcileSeeder;
-use backbone_accounting::seeders::SeedReconciliationItemSeeder;
 use backbone_accounting::seeders::SeedReconciliationSeeder;
+use backbone_accounting::seeders::SeedReconciliationItemSeeder;
+use backbone_accounting::seeders::SeedFullReconcileSeeder;
+use backbone_accounting::seeders::SeedPartialReconcileSeeder;
 use backbone_accounting::seeders::Seeder;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let force = args.iter().any(|a| a == "--force");
-    let filter: Option<&str> = args
-        .iter()
+    let filter: Option<&str> = args.iter()
         .skip(1)
         .find(|a| !a.starts_with("-"))
         .map(|s| s.as_str());
 
-    let database_url =
-        env::var("DATABASE_URL").map_err(|e| anyhow::anyhow!("DATABASE_URL must be set: {e}"))?;
+    let database_url = env::var("DATABASE_URL")
+        .map_err(|e| anyhow::anyhow!("DATABASE_URL must be set: {e}"))?;
 
     println!("Connecting to database...");
 

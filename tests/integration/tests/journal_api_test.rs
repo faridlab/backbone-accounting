@@ -24,7 +24,6 @@ impl TestDataGenerator for JournalTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "journal_number": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "reference_number": null,
             "journal_type": "general",
@@ -77,7 +76,6 @@ impl TestDataGenerator for JournalTestData {
         let now = Utc::now().to_rfc3339();
         json!({
             "id": id,
-            "company_id": Uuid::new_v4().to_string(),
             "journal_number": format!("Test {}", Uuid::new_v4().to_string().split('-').next().unwrap()),
             "reference_number": null,
             "journal_type": "general",

@@ -17,13 +17,13 @@ pub const TABLE_NAME: &str = "accounting.ledgers";
 ///
 /// All standard CRUD, soft-delete, pagination, and bulk methods are
 /// provided automatically via `Deref` to `backbone_orm::GenericCrudRepository`.
-pub struct LedgerRepository(backbone_orm::GenericCrudRepository<Ledger, backbone_orm::SoftDelete>);
+pub struct LedgerRepository(
+    backbone_orm::GenericCrudRepository<Ledger, backbone_orm::SoftDelete>,
+);
 
 impl std::ops::Deref for LedgerRepository {
     type Target = backbone_orm::GenericCrudRepository<Ledger, backbone_orm::SoftDelete>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl LedgerRepository {

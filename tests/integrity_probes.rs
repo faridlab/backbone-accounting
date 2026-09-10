@@ -3,9 +3,19 @@
 //! Probe 1 — concurrent double-post cannot corrupt the ledger (DB-enforced idempotency).
 //! Probe 2 — the posted-GL CRUD write verbs are NOT mounted by the guarded composition.
 //! Requires DATABASE_URL (defaults to local dev Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence.
+//! Every probe therefore isolates itself by fresh identifiers: seeded accounts and source
+//! ids are per-run UUIDs (all count/chain queries key on those), the posting date is
+//! derived from the run's company UUID (the fiscal-period guard reads periods by date
+//! overlap globally), and the idempotency keys carry a run-unique suffix (the strip
+//! re-based the idempotency uniques tenant-free, so a fixed key would dedup against a
+//! previous run's post instead of exercising concurrency).
 
 use std::collections::HashMap;
 
+use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -25,6 +35,17 @@ async fn pool() -> PgPool {
     });
     PgPool::connect(&url).await.unwrap()
 }
+
+/// The 15th of a month chosen by the run's company UUID — see the header note on the
+/// globally-read fiscal-period guard.
+fn posting_date(company: Uuid) -> NaiveDate {
+    let offset = (company.as_u128() % 240) as u32;
+    NaiveDate::from_ymd_opt(2026, 1, 15)
+        .unwrap()
+        .checked_add_months(chrono::Months::new(offset))
+        .unwrap()
+}
+
 async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     let company = Uuid::new_v4();
     let mut m = HashMap::new();
@@ -35,11 +56,11 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, HashMap<&'static str, Uuid>) {
     ] {
         let id = Uuid::new_v4();
         sqlx::query(
-            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
+        .bind(id).bind(code).bind(name).bind(at).bind(st).bind(nb)
         .execute(pool).await.unwrap();
         m.insert(code, id);
     }
@@ -62,7 +83,7 @@ async fn concurrent_double_post_does_not_double_count() {
             company,
             "order",
             source,
-            chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+            posting_date(company),
         );
         r.lines = vec![
             PostingLine {
@@ -110,11 +131,13 @@ async fn concurrent_double_post_does_not_double_count() {
     r2.unwrap();
 
     // Exactly one posted entry and one journal's worth of ledger rows — no double-count.
-    let posted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounting_posts WHERE company_id=$1 AND posting_status='posted'")
-        .bind(company).fetch_one(&pool).await.unwrap();
+    // The post and the ledger rows are keyed on this run's fresh source/account UUIDs —
+    // an undecorated database has no company predicate to scope them with.
+    let posted: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM accounting.accounting_posts WHERE source_type='order' AND source_id=$1 AND posting_status='posted'")
+        .bind(source).fetch_one(&pool).await.unwrap();
     let ledgers: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-            .bind(company)
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id = ANY($1)")
+            .bind(&[a["1200"], a["4000"], a["2200"]][..])
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -158,11 +181,11 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
         ),
     ] {
         sqlx::query(
-            r#"INSERT INTO accounting.accounts (id, company_id, account_number, account_code, name, account_type,
+            r#"INSERT INTO accounting.accounts (id, account_number, account_code, name, account_type,
                 account_subtype, normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,TRUE,FALSE,'active'::account_status)"#,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,TRUE,FALSE,'active'::account_status)"#,
         )
-        .bind(id).bind(company).bind(code).bind(name).bind(at).bind(st).bind(nb)
+        .bind(id).bind(code).bind(name).bind(at).bind(st).bind(nb)
         .execute(&pool).await.unwrap();
     }
     let svc = PostingService::new(std::sync::Arc::new(
@@ -172,18 +195,22 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
     let n = 8;
 
     // N posts, each with a DISTINCT source_id + idempotency_key, all hitting Cash + Revenue.
+    // The key carries a run-unique suffix: the idempotency uniques are tenant-free, so a
+    // fixed key would resolve to a previous run's post instead of racing this run's.
+    let run_tag = Uuid::new_v4().simple().to_string();
     let mut handles = Vec::new();
     for i in 0..n {
         let svc = svc.clone();
         let source = Uuid::new_v4();
+        let run_tag = run_tag.clone();
         handles.push(tokio::spawn(async move {
             let mut r = PostingRequest::original(
                 company,
                 "order",
                 source,
-                chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+                posting_date(company),
             )
-            .with_idempotency_key(format!("probe2-{i}"));
+            .with_idempotency_key(format!("probe2-{i}-{run_tag}"));
             r.lines = vec![
                 PostingLine {
                     account_id: cash,
@@ -218,15 +245,15 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
     let expected = dec("800000.00"); // 8 * 100000
 
     // (a) No duplicate sequence_number per account — the running-balance chain is unbroken.
+    // The accounts are fresh per run, so keying on the account alone scopes every query.
     for acct in [cash, rev] {
         let dups: i64 = sqlx::query_scalar(
             r#"SELECT COUNT(*) FROM (
                  SELECT sequence_number FROM accounting.ledgers
-                 WHERE company_id=$1 AND account_id=$2
+                 WHERE account_id=$1
                  GROUP BY sequence_number HAVING COUNT(*) > 1
                ) t"#,
         )
-        .bind(company)
         .bind(acct)
         .fetch_one(&pool)
         .await
@@ -242,9 +269,8 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
     for acct in [cash, rev] {
         let rows: Vec<(Decimal, Decimal, Decimal)> = sqlx::query_as(
             r#"SELECT balance_before, balance_change, balance_after FROM accounting.ledgers
-               WHERE company_id=$1 AND account_id=$2 ORDER BY sequence_number"#,
+               WHERE account_id=$1 ORDER BY sequence_number"#,
         )
-        .bind(company)
         .bind(acct)
         .fetch_all(&pool)
         .await

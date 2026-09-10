@@ -1,9 +1,13 @@
 //! HierarchyRepository — persistence port for reading an entity's ancestor chain.
 //!
 //! Serves the three hierarchical entities (account, cost_center, fiscal_period), which all share
-//! `id`, `company_id`, `parent_id`, `level`, `name`, plus a code column. One generic port + one
+//! `id`, `parent_id`, `level`, `name`, plus a code column. One generic port + one
 //! recursive-CTE adapter serve all three; the `HierarchyTable` enum supplies the table + code
 //! column names (hardcoded constants — never user input, so no injection surface).
+//!
+//! Tenancy (ADR-0029): the `company_id` param is the documented legacy twin — the port keeps
+//! its shape so unstripped callers compile and run unchanged; the adapter never keys a
+//! statement on it (the ambient org scope scopes the read instead).
 
 use async_trait::async_trait;
 use uuid::Uuid;

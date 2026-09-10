@@ -3,6 +3,11 @@
 //! Owns the reads (bank account, unreconciled book entries, closing balance) and the atomic
 //! persist (reconciliation row + matched/unmatched items + ledger reconcile marks). The matching
 //! algorithm itself is pure domain logic that stays in `BankReconciliationService`.
+//!
+//! Tenancy (ADR-0029): the `company_id` params and the `ReconciliationCommit::company_id` field
+//! are the documented legacy twin — the port keeps its shapes so unstripped callers compile and
+//! run unchanged; the adapter never keys a statement on them (the ambient org scope scopes
+//! every statement instead).
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -41,6 +46,7 @@ pub struct UnmatchedStatement {
 /// Everything needed to atomically persist a reconciliation + its items + ledger marks.
 #[derive(Debug, Clone)]
 pub struct ReconciliationCommit {
+    /// The legacy tenancy twin (ADR-0029) — see the module-level note.
     pub company_id: Uuid,
     pub account_id: Uuid,
     pub account_number: String,

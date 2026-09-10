@@ -4435,7 +4435,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - account_number
         - account_code
         - name
@@ -4458,9 +4457,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         account_number:
@@ -4560,7 +4556,6 @@ components:
     CreateAccountRequest:
       type: object
       required:
-        - company_id
         - account_number
         - account_code
         - name
@@ -4582,9 +4577,6 @@ components:
         - is_cloned
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_number:
           type: string
           maxLength: 20
@@ -4669,7 +4661,6 @@ components:
     UpdateAccountRequest:
       type: object
       required:
-        - company_id
         - account_number
         - account_code
         - name
@@ -4691,9 +4682,6 @@ components:
         - is_cloned
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_number:
           type: string
           maxLength: 20
@@ -4778,9 +4766,6 @@ components:
     PatchAccountRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_number:
           type: string
           maxLength: 20
@@ -4876,7 +4861,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - source_type
         - source_id
         - posting_type
@@ -4889,9 +4873,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         branch_id:
@@ -4986,7 +4967,6 @@ components:
     CreateAccountingPostRequest:
       type: object
       required:
-        - company_id
         - source_type
         - source_id
         - posting_type
@@ -4998,9 +4978,6 @@ components:
         - max_retries
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         branch_id:
           nullable: true
           type: string
@@ -5080,7 +5057,6 @@ components:
     UpdateAccountingPostRequest:
       type: object
       required:
-        - company_id
         - source_type
         - source_id
         - posting_type
@@ -5092,9 +5068,6 @@ components:
         - max_retries
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         branch_id:
           nullable: true
           type: string
@@ -5174,9 +5147,6 @@ components:
     PatchAccountingPostRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         branch_id:
           nullable: true
           type: string
@@ -5267,7 +5237,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - code
         - name
         - level
@@ -5277,9 +5246,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         code:
@@ -5329,7 +5295,6 @@ components:
     CreateCostCenterRequest:
       type: object
       required:
-        - company_id
         - code
         - name
         - level
@@ -5338,9 +5303,6 @@ components:
         - sort_order
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 30
@@ -5375,7 +5337,6 @@ components:
     UpdateCostCenterRequest:
       type: object
       required:
-        - company_id
         - code
         - name
         - level
@@ -5384,9 +5345,6 @@ components:
         - sort_order
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 30
@@ -5421,9 +5379,6 @@ components:
     PatchCostCenterRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         code:
           type: string
           maxLength: 30
@@ -5469,7 +5424,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - statement_number
         - statement_type
         - name
@@ -5488,9 +5442,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         statement_number:
@@ -5697,7 +5648,6 @@ components:
     CreateFinancialStatementRequest:
       type: object
       required:
-        - company_id
         - statement_number
         - statement_type
         - name
@@ -5715,9 +5665,6 @@ components:
         - currency
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         statement_number:
           type: string
           maxLength: 30
@@ -5909,7 +5856,6 @@ components:
     UpdateFinancialStatementRequest:
       type: object
       required:
-        - company_id
         - statement_number
         - statement_type
         - name
@@ -5927,9 +5873,6 @@ components:
         - currency
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         statement_number:
           type: string
           maxLength: 30
@@ -6121,9 +6064,6 @@ components:
     PatchFinancialStatementRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         statement_number:
           type: string
           maxLength: 30
@@ -6326,7 +6266,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - period_code
         - name
         - period_type
@@ -6352,9 +6291,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         period_code:
@@ -6493,7 +6429,6 @@ components:
     CreateFiscalPeriodRequest:
       type: object
       required:
-        - company_id
         - period_code
         - name
         - period_type
@@ -6518,9 +6453,6 @@ components:
         - income_statement_generated
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         period_code:
           type: string
           maxLength: 20
@@ -6644,7 +6576,6 @@ components:
     UpdateFiscalPeriodRequest:
       type: object
       required:
-        - company_id
         - period_code
         - name
         - period_type
@@ -6669,9 +6600,6 @@ components:
         - income_statement_generated
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         period_code:
           type: string
           maxLength: 20
@@ -6795,9 +6723,6 @@ components:
     PatchFiscalPeriodRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         period_code:
           type: string
           maxLength: 20
@@ -6932,7 +6857,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - journal_number
         - journal_type
         - transaction_date
@@ -6952,9 +6876,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         journal_number:
@@ -7127,7 +7048,6 @@ components:
     CreateJournalRequest:
       type: object
       required:
-        - company_id
         - journal_number
         - journal_type
         - transaction_date
@@ -7146,9 +7066,6 @@ components:
         - attachments
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         journal_number:
           type: string
           maxLength: 30
@@ -7306,7 +7223,6 @@ components:
     UpdateJournalRequest:
       type: object
       required:
-        - company_id
         - journal_number
         - journal_type
         - transaction_date
@@ -7325,9 +7241,6 @@ components:
         - attachments
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         journal_number:
           type: string
           maxLength: 30
@@ -7485,9 +7398,6 @@ components:
     PatchJournalRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         journal_number:
           type: string
           maxLength: 30
@@ -7657,7 +7567,6 @@ components:
       required:
         - id
         - journal_id
-        - company_id
         - line_number
         - account_id
         - account_number
@@ -7679,9 +7588,6 @@ components:
           type: string
           format: uuid
         journal_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         branch_id:
@@ -7820,7 +7726,6 @@ components:
       type: object
       required:
         - journal_id
-        - company_id
         - line_number
         - account_id
         - account_number
@@ -7839,9 +7744,6 @@ components:
         - data
       properties:
         journal_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         branch_id:
@@ -7967,7 +7869,6 @@ components:
       type: object
       required:
         - journal_id
-        - company_id
         - line_number
         - account_id
         - account_number
@@ -7986,9 +7887,6 @@ components:
         - data
       properties:
         journal_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         branch_id:
@@ -8114,9 +8012,6 @@ components:
       type: object
       properties:
         journal_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         branch_id:
@@ -8252,7 +8147,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - account_id
         - account_number
         - account_name
@@ -8281,9 +8175,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         account_id:
@@ -8433,7 +8324,6 @@ components:
     CreateLedgerRequest:
       type: object
       required:
-        - company_id
         - account_id
         - account_number
         - account_name
@@ -8461,9 +8351,6 @@ components:
         - is_reversed
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_id:
           type: string
           format: uuid
@@ -8598,7 +8485,6 @@ components:
     UpdateLedgerRequest:
       type: object
       required:
-        - company_id
         - account_id
         - account_number
         - account_name
@@ -8626,9 +8512,6 @@ components:
         - is_reversed
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_id:
           type: string
           format: uuid
@@ -8763,9 +8646,6 @@ components:
     PatchLedgerRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         account_id:
           type: string
           format: uuid
@@ -8911,7 +8791,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - reconciliation_number
         - account_id
         - account_number
@@ -8948,9 +8827,6 @@ components:
         - metadata
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         reconciliation_number:
@@ -9102,7 +8978,6 @@ components:
     CreateReconciliationRequest:
       type: object
       required:
-        - company_id
         - reconciliation_number
         - account_id
         - account_number
@@ -9138,9 +9013,6 @@ components:
         - adjusting_journal_ids
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         reconciliation_number:
           type: string
           maxLength: 30
@@ -9277,7 +9149,6 @@ components:
     UpdateReconciliationRequest:
       type: object
       required:
-        - company_id
         - reconciliation_number
         - account_id
         - account_number
@@ -9313,9 +9184,6 @@ components:
         - adjusting_journal_ids
         - metadata
       properties:
-        company_id:
-          type: string
-          format: uuid
         reconciliation_number:
           type: string
           maxLength: 30
@@ -9452,9 +9320,6 @@ components:
     PatchReconciliationRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         reconciliation_number:
           type: string
           maxLength: 30
@@ -9603,7 +9468,6 @@ components:
       required:
         - id
         - reconciliation_id
-        - company_id
         - item_number
         - source
         - book_debit
@@ -9622,9 +9486,6 @@ components:
           type: string
           format: uuid
         reconciliation_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         item_number:
@@ -9756,7 +9617,6 @@ components:
       type: object
       required:
         - reconciliation_id
-        - company_id
         - item_number
         - source
         - book_debit
@@ -9772,9 +9632,6 @@ components:
         - data
       properties:
         reconciliation_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         item_number:
@@ -9893,7 +9750,6 @@ components:
       type: object
       required:
         - reconciliation_id
-        - company_id
         - item_number
         - source
         - book_debit
@@ -9909,9 +9765,6 @@ components:
         - data
       properties:
         reconciliation_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         item_number:
@@ -10030,9 +9883,6 @@ components:
       type: object
       properties:
         reconciliation_id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         item_number:
@@ -10161,16 +10011,12 @@ components:
       type: object
       required:
         - id
-        - company_id
         - exchange_total
         - reconciled_at
         - created_at
         - updated_at
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         exchange_total:
@@ -10204,13 +10050,9 @@ components:
     CreateFullReconcileRequest:
       type: object
       required:
-        - company_id
         - exchange_total
         - reconciled_at
       properties:
-        company_id:
-          type: string
-          format: uuid
         exchange_total:
           type: string
         reconciled_at:
@@ -10223,13 +10065,9 @@ components:
     UpdateFullReconcileRequest:
       type: object
       required:
-        - company_id
         - exchange_total
         - reconciled_at
       properties:
-        company_id:
-          type: string
-          format: uuid
         exchange_total:
           type: string
         reconciled_at:
@@ -10242,9 +10080,6 @@ components:
     PatchFullReconcileRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         exchange_total:
           type: string
         reconciled_at:
@@ -10268,7 +10103,6 @@ components:
       type: object
       required:
         - id
-        - company_id
         - debit_move_id
         - credit_move_id
         - amount
@@ -10279,9 +10113,6 @@ components:
         - updated_at
       properties:
         id:
-          type: string
-          format: uuid
-        company_id:
           type: string
           format: uuid
         debit_move_id:
@@ -10348,7 +10179,6 @@ components:
     CreatePartialReconcileRequest:
       type: object
       required:
-        - company_id
         - debit_move_id
         - credit_move_id
         - amount
@@ -10356,9 +10186,6 @@ components:
         - max_date
         - origin
       properties:
-        company_id:
-          type: string
-          format: uuid
         debit_move_id:
           type: string
           format: uuid
@@ -10404,7 +10231,6 @@ components:
     UpdatePartialReconcileRequest:
       type: object
       required:
-        - company_id
         - debit_move_id
         - credit_move_id
         - amount
@@ -10412,9 +10238,6 @@ components:
         - max_date
         - origin
       properties:
-        company_id:
-          type: string
-          format: uuid
         debit_move_id:
           type: string
           format: uuid
@@ -10460,9 +10283,6 @@ components:
     PatchPartialReconcileRequest:
       type: object
       properties:
-        company_id:
-          type: string
-          format: uuid
         debit_move_id:
           type: string
           format: uuid

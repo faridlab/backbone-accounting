@@ -4,6 +4,10 @@
 //! the `financial_statement` entity is not the compute target). All shaping (normal-side
 //! signing, A=L+E tying, tree rollups, aging buckets) is pure domain logic that stays in
 //! `ReportingService`.
+//!
+//! Tenancy (ADR-0029): the `company_id` params are the documented legacy twin — the port keeps
+//! its shapes so unstripped callers compile and run unchanged; the adapter never keys a
+//! statement on them (the ambient org scope scopes every statement instead).
 
 use async_trait::async_trait;
 use chrono::NaiveDate;

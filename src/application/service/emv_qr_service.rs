@@ -3,16 +3,25 @@
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). The pure TLV/CRC
 //! builder lives in `domain/emv_qr.rs`; this service owns the
-//! `accounting.emv_qr_configs` row per company (optionally per bank-account
-//! slot) and renders payloads from it at display time. Payloads are NEVER
-//! stored — a config correction immediately changes every subsequently
-//! rendered QR, and nothing stale can be served from a cache of rows.
+//! `accounting.emv_qr_configs` row per unit-wide default (optionally per
+//! bank-account slot) and renders payloads from it at display time. Payloads
+//! are NEVER stored — a config correction immediately changes every
+//! subsequently rendered QR, and nothing stale can be served from a cache of
+//! rows.
 //!
 //! The display legs (amount / currency / invoice reference) arrive as call
 //! parameters because invoices live in the billing module and this module
 //! deliberately holds no Cargo edge into it: the composing host reads the
 //! invoice there and calls this verb with the values. A missing configuration
 //! refuses (`qr_config_missing`) — there is no fallback payload.
+//!
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing
+//! service's tenancy decorator owns org scoping. The `company_id` lanes here are
+//! the documented legacy twin: input/ack shapes and verb signatures keep them so
+//! unstripped callers compile and run unchanged, but no statement keys on a
+//! tenant column. Every verb relays the ambient org scope onto its transaction;
+//! an undecorated deployment has no ambient scope and skips the relay entirely
+//! (unfenced by design).
 
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -27,6 +36,8 @@ use crate::domain::emv_qr::{
 /// (`bank_account_id = None`) or one bank account's override.
 #[derive(Debug, Clone)]
 pub struct EmvQrConfigInput {
+    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
+    /// run unchanged; no statement keys on it.
     pub company_id: Uuid,
     pub bank_account_id: Option<Uuid>,
     pub merchant_name: String,
@@ -42,6 +53,7 @@ pub struct EmvQrConfigInput {
 #[derive(Debug, Clone, Serialize)]
 pub struct EmvQrConfigAck {
     pub config_id: Uuid,
+    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
     pub company_id: Uuid,
     pub bank_account_id: Option<Uuid>,
 }
@@ -59,7 +71,7 @@ pub struct EmvPayloadAck {
 pub enum EmvQrServiceError {
     /// Validation failed in the domain builder; carries the typed cause.
     Build(EmvQrError),
-    /// No configuration exists for the company (or the requested slot).
+    /// No configuration exists (for the requested slot or the unit-wide default).
     ConfigMissing(Uuid),
     /// Storage failure.
     Internal(String),
@@ -128,7 +140,7 @@ impl EmvQrService {
         }
     }
 
-    /// Write (or replace) the company's QR display configuration for a slot.
+    /// Write (or replace) the QR display configuration for a slot.
     ///
     /// The profile is validated through the domain builder BEFORE the write —
     /// an overlong merchant name or unsupported currency refuses here, so a
@@ -145,24 +157,30 @@ impl EmvQrService {
             .begin()
             .await
             .map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, input.company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
+        // transaction when the caller bound one. An undecorated deployment has no
+        // ambient scope and skips this entirely (unfenced by design).
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
-        // One atomic upsert. The conflict target is the slot's unique
-        // expression index (COALESCE folds the NULL company-default slot into
-        // the same key space as bank-specific ones), so an insert-or-update
-        // race between two writers converges on one row here in a single
-        // statement — a caught unique violation could not be retried inside
+        // One atomic upsert. The conflict target is the slot's tenant-free unique
+        // expression index (COALESCE folds the NULL unit-default slot into the same
+        // key space as bank-specific ones; bank_account_id is globally unique, so
+        // the org-free form is exactly the per-unit constraint), so an
+        // insert-or-update race between two writers converges on one row here in a
+        // single statement — a caught unique violation could not be retried inside
         // the same transaction anyway (the failed statement aborts it).
         let config_id: Uuid = sqlx::query_scalar(
             r#"INSERT INTO accounting.emv_qr_configs
-                 (company_id, bank_account_id, merchant_name, merchant_city,
+                 (bank_account_id, merchant_name, merchant_city,
                   country_code, mcc, gui, merchant_identifier, currency,
                   initiation_method, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
                ON CONFLICT
-                 (company_id, COALESCE(bank_account_id, '00000000-0000-0000-0000-000000000000'::uuid))
+                 (COALESCE(bank_account_id, '00000000-0000-0000-0000-000000000000'::uuid))
                DO UPDATE SET
                  merchant_name     = EXCLUDED.merchant_name,
                  merchant_city     = EXCLUDED.merchant_city,
@@ -175,7 +193,6 @@ impl EmvQrService {
                  updated_at        = NOW()
                RETURNING id"#,
         )
-        .bind(input.company_id)
         .bind(input.bank_account_id)
         .bind(&input.merchant_name)
         .bind(&input.merchant_city)
@@ -200,15 +217,15 @@ impl EmvQrService {
     /// Render the merchant-presented payload for one invoice display.
     ///
     /// Slot resolution: the bank-account-specific config when present, else the
-    /// company-wide default; neither → `qr_config_missing` (fail closed, no
+    /// unit-wide default; neither → `qr_config_missing` (fail closed, no
     /// fallback payload). `currency` overrides the configured default when
     /// given; `amount` of `None` renders a static QR without tag 54.
     ///
-    /// The read binds the company inside its own transaction on purpose:
-    /// `bind_company_on` uses `set_config(..., is_local)`, whose setting only
+    /// The read relays the ambient org scope inside its own transaction on
+    /// purpose: the relay uses `set_config(..., is_local)`, whose setting only
     /// lives for the current transaction. On a bare pooled connection the
-    /// ADR-0014 fence sees no company, the read silently returns no rows, and
-    /// every render degrades to `qr_config_missing` — invisible on
+    /// decorator's fence (ADR-0029) sees no scope, the read silently returns no
+    /// rows, and every render degrades to `qr_config_missing` — invisible on
     /// owner/superuser DSNs (they bypass RLS), fatal on any fenced app-role
     /// deployment.
     pub async fn invoice_payload(
@@ -220,21 +237,23 @@ impl EmvQrService {
         reference: Option<String>,
     ) -> Result<EmvPayloadAck, EmvQrServiceError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
-        backbone_orm::company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(|e| internal(e))?;
+        // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
+        // caller bound one; an undecorated deployment skips this entirely.
+        if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
+            backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e))?;
+        }
 
         let row = sqlx::query_as::<_, StoredConfig>(
             r#"SELECT merchant_name, merchant_city, country_code, mcc, gui,
                       merchant_identifier, currency, initiation_method
                  FROM accounting.emv_qr_configs
-                WHERE company_id=$1
-                  AND (bank_account_id IS NOT DISTINCT FROM $2
+                WHERE (bank_account_id IS NOT DISTINCT FROM $1
                        OR bank_account_id IS NULL)
-                ORDER BY (bank_account_id IS NOT DISTINCT FROM $2) DESC
+                ORDER BY (bank_account_id IS NOT DISTINCT FROM $1) DESC
                 LIMIT 1"#,
         )
-        .bind(company_id)
         .bind(bank_account_id)
         .fetch_optional(&mut *tx)
         .await

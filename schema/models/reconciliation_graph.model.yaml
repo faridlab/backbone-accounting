@@ -21,6 +21,9 @@ models:
   # ---------------------------------------------------------------------------
   # FullReconcile - a set of lines + partials whose residuals all reached zero
   # ---------------------------------------------------------------------------
+  # Tenancy: none, by design (ADR-0029) — both entities in this file. Tenant-agnostic
+  # and reusable; a composing service's tenancy decorator owns org scoping for these
+  # tables.
   - name: FullReconcile
     collection: full_reconciles
     description: "Group of journal lines fully reconciled together"
@@ -30,14 +33,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique full-reconcile identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this group # logical FK to organization.Company.id"
 
       # =======================================================================
       # Aggregates
@@ -80,8 +75,8 @@ models:
         inverse: full_reconcile
 
     indexes:
-      - type: index
-        fields: [company_id, reconciled_at]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic; the composing
+      # service's tenancy decorator owns org scoping for this table.
 
   # ---------------------------------------------------------------------------
   # PartialReconcile - one debit↔credit matching edge with a partial amount
@@ -95,14 +90,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique partial-reconcile identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this edge # logical FK to organization.Company.id"
 
       # =======================================================================
       # The matched pair (both lines sit on the SAME reconcilable account)
@@ -128,12 +115,12 @@ models:
         description: "Exchange-difference journal this edge generated # logical FK to accounting.Journal.id — reversed on unlink"
 
       # =======================================================================
-      # Amounts (company currency; doc-currency sides kept for forward-compat)
+      # Amounts (books currency; doc-currency sides kept for forward-compat)
       # =======================================================================
       amount:
         type: decimal
         attributes: ["@required", "@positive", "@precision(18,2)"]
-        description: "Reconciled amount, always positive, company currency"
+        description: "Reconciled amount, always positive, books currency"
 
       debit_amount_currency:
         type: decimal?
@@ -205,18 +192,13 @@ models:
         inverse: partials
 
     indexes:
-      # Residual computation scans these two per side
-      - type: index
-        fields: [company_id, debit_move_id]
-      - type: index
-        fields: [company_id, credit_move_id]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The org_unit_id-
+      # leading residual-scan pair (per matched side), the source-trace index, and the
+      # max-date scan are installed by the composing service's tenancy decorator, not
+      # declared here. The full-reconcile group lookup is domain, tenant-free, and stays.
       - type: index
         fields: [full_reconcile_id]
         where: "full_reconcile_id IS NOT NULL"
-      - type: index
-        fields: [company_id, source_type, source_id]
-      - type: index
-        fields: [company_id, max_date]
 
 # =============================================================================
 # Enums

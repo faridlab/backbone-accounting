@@ -5,14 +5,24 @@
 //!                                              → reject   (no ledger)
 //!   posted → void (reversal posted, net zero, original retained)
 //!
-//! Requires DATABASE_URL (defaults to local dev Postgres on :5433). Each test seeds its own
-//! company_id + chart of accounts, so tests are isolated and parallel-safe.
+//! Requires DATABASE_URL (defaults to local dev Postgres on :5433).
+//!
+//! Tenancy: the module ships NONE (ADR-0029) — the request shapes keep the legacy company
+//! twin but no table carries a tenant column, and an undecorated database has no fence.
+//! Each test seeds its own chart (fresh UUID rows) and its own journal, the posting date
+//! is derived per test (the fiscal-period guard reads periods by date overlap globally
+//! undecorated), and the probes run under one lock because of that global period surface.
 
+use chrono::Datelike;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use backbone_accounting::application::service::journal_workflow_service::JournalWorkflowService;
+
+/// Serializes the database-touching probes in this file (see the header note): the
+/// fiscal-period table is a global singleton surface on an undecorated database.
+static DB_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn dec(s: &str) -> Decimal {
     Decimal::from_str_exact(s).unwrap()
@@ -43,13 +53,12 @@ async fn seed_coa(pool: &PgPool) -> (Uuid, Uuid, Uuid) {
     ] {
         sqlx::query(
             r#"INSERT INTO accounting.accounts
-                (id, company_id, account_number, account_code, name, account_type, account_subtype,
+                (id, account_number, account_code, name, account_type, account_subtype,
                  normal_balance, is_detail, is_header, status)
-               VALUES ($1,$2,$3,$3,$4,$5::account_type,$6::account_subtype,$7::normal_balance,
+               VALUES ($1,$2,$2,$3,$4::account_type,$5::account_subtype,$6::normal_balance,
                        TRUE, FALSE, 'active'::account_status)"#,
         )
         .bind(id)
-        .bind(company)
         .bind(code)
         .bind(name)
         .bind(at)
@@ -73,18 +82,26 @@ async fn insert_draft_journal(
 ) -> Uuid {
     let j = Uuid::new_v4();
     let total = dec(debit);
+    // Whole-month per-test window: see the header note on the globally-read
+    // fiscal-period guard.
+    let offset = (company.as_u128() % 240) as u32;
+    let date = chrono::NaiveDate::from_ymd_opt(2026, 1, 15)
+        .unwrap()
+        .checked_add_months(chrono::Months::new(offset))
+        .unwrap();
     sqlx::query(
         r#"INSERT INTO accounting.journals
-            (id, company_id, journal_number, journal_type, transaction_date, posting_date,
+            (id, journal_number, journal_type, transaction_date, posting_date,
              fiscal_year, fiscal_month, description, currency, total_debit, total_credit,
              line_count, source, source_type, status)
-           VALUES ($1,$2,$3,'general'::journal_type,$4,$4,2026,6,'manual draft','IDR',$5,$5,2,
+           VALUES ($1,$2,'general'::journal_type,$3,$3,$4,$5,'manual draft','IDR',$6,$6,2,
                    'manual'::journal_source,'manual','draft'::journal_status)"#,
     )
     .bind(j)
-    .bind(company)
     .bind(format!("MJD-{j}"))
-    .bind(chrono::NaiveDate::from_ymd_opt(2026, 6, 15).unwrap())
+    .bind(date)
+    .bind(date.year() as i32)
+    .bind(date.month() as i32)
     .bind(total)
     .execute(pool)
     .await
@@ -99,13 +116,12 @@ async fn insert_draft_journal(
     {
         sqlx::query(
             r#"INSERT INTO accounting.journal_lines
-                (id, journal_id, company_id, line_number, account_id, account_number, account_name,
+                (id, journal_id, line_number, account_id, account_number, account_name,
                  debit_amount, credit_amount, currency, is_posted)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'IDR',FALSE)"#,
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'IDR',FALSE)"#,
         )
         .bind(Uuid::new_v4())
         .bind(j)
-        .bind(company)
         .bind((i + 1) as i32)
         .bind(id)
         .bind(code)
@@ -140,6 +156,7 @@ async fn current_balance(pool: &PgPool, acct: Uuid) -> Decimal {
 // ── approve posts a draft journal to the ledger ──
 #[tokio::test]
 async fn approve_posts_draft_journal() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
@@ -190,6 +207,7 @@ async fn approve_posts_draft_journal() {
 // ── reject writes no ledger rows ──
 #[tokio::test]
 async fn reject_keeps_ledger_empty() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
@@ -213,8 +231,8 @@ async fn reject_keeps_ledger_empty() {
 
     assert_eq!(journal_status(&pool, j).await, "rejected");
     let ledgers: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-            .bind(company)
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id = ANY($1)")
+            .bind(&[bank, rev])
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -225,6 +243,7 @@ async fn reject_keeps_ledger_empty() {
 // ── void posts a reversal; net effect zero, original retained ──
 #[tokio::test]
 async fn void_reverses_to_zero() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
@@ -255,8 +274,8 @@ async fn void_reverses_to_zero() {
 
     // Original ledger retained (2 rows) + 2 reversal rows = 4.
     let ledgers: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE company_id=$1")
-            .bind(company)
+        sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id = ANY($1)")
+            .bind(&[bank, rev])
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -284,6 +303,7 @@ async fn void_reverses_to_zero() {
 // ── submit is a state machine: rejects a non-draft journal ──
 #[tokio::test]
 async fn submit_rejects_non_draft() {
+    let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
     let (company, bank, rev) = seed_coa(&pool).await;
     let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;

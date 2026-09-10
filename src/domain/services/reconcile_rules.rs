@@ -19,7 +19,10 @@ fn is_party_subtype(subtype: &str) -> bool {
 
 /// Validate a candidate edge and return the CLAMPED amount to apply.
 ///
-/// - G1: both lines belong to the requesting company
+/// - G1: both lines belong to the requesting company — OWNED BY THE TENANCY DECORATOR since
+///   the strip (ADR-0029): locators resolve through the ambient org scope, so a cross-tenant
+///   id resolves to zero rows under the decorator's fence. The parameter is kept so callers
+///   (and this fn's shape) stay stable; nothing is compared against it here anymore.
 /// - G2: both lines sit on the SAME account
 /// - G2b: both lines share the same document currency (cross-currency edges are the
 ///   deferred FX surface — fail closed rather than post a wrong-rate match)
@@ -34,7 +37,7 @@ fn is_party_subtype(subtype: &str) -> bool {
 /// G8 (period-open for the exchange-move date) is checked by the write service only when
 /// an exchange difference actually arises.
 pub fn validate_pair(
-    company_id: Uuid,
+    _company_id: Uuid,
     debit: &ReconcileLineSnapshot,
     credit: &ReconcileLineSnapshot,
     flags: &AccountReconcileFlags,
@@ -42,11 +45,6 @@ pub fn validate_pair(
     residual_debit: Decimal,
     residual_credit: Decimal,
 ) -> Result<Decimal, ReconcileError> {
-    // G1 — same company. (Locators resolve company-scoped, so a cross-company locator is a
-    // 404 before this runs; the guard stays as defense in depth.)
-    if debit.company_id != company_id || credit.company_id != company_id {
-        return Err(ReconcileError::SameCompanyRequired);
-    }
     // G2 — one reconcilable control account, both sides.
     if debit.account_id != credit.account_id {
         return Err(ReconcileError::SameAccountRequired);

@@ -106,3 +106,8 @@ user_owned:
   - "docs/extension-guide.md"
   - "docs/business-flows/**"
   - "docs/adr/**"
+
+  # Hand-authored migrations (the tenancy strip — the strip's ordering guard is
+  # hand-authored logic, not schema-derived emission).
+  - "migrations/20260910232200_strip_tenancy.up.sql"
+  - "migrations/20260910232200_strip_tenancy.down.sql"

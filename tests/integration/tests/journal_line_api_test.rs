@@ -25,7 +25,6 @@ impl TestDataGenerator for JournalLineTestData {
         json!({
             "id": Uuid::new_v4().to_string(),
             "journal_id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "branch_id": null,
             "party_type": null,
             "party_id": null,
@@ -72,7 +71,6 @@ impl TestDataGenerator for JournalLineTestData {
         json!({
             "id": id,
             "journal_id": Uuid::new_v4().to_string(),
-            "company_id": Uuid::new_v4().to_string(),
             "branch_id": null,
             "party_type": null,
             "party_id": null,
@@ -122,22 +120,10 @@ impl TestDataGenerator for JournalLineTestData {
 
     async fn seed_dependencies(&self, api: &ApiTest) -> Vec<(String, String)> {
         let mut deps: Vec<(String, String)> = Vec::new();
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/journals",
-            &super::journal_api_test::JournalTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/journals", &super::journal_api_test::JournalTestData).await {
             deps.push(("journal_id".to_string(), id));
         }
-        if let Some(id) = super::crud_test_base::create_and_get_id(
-            api,
-            "/api/v1/accounts",
-            &super::account_api_test::AccountTestData,
-        )
-        .await
-        {
+        if let Some(id) = super::crud_test_base::create_and_get_id(api, "/api/v1/accounts", &super::account_api_test::AccountTestData).await {
             deps.push(("account_id".to_string(), id));
         }
         deps

@@ -8,6 +8,10 @@ models:
   # ---------------------------------------------------------------------------
   # Reconciliation - Account reconciliation header
   # ---------------------------------------------------------------------------
+  # Tenancy: none, by design (ADR-0029). Tenant-agnostic and reusable; a composing
+  # service's tenancy decorator owns org scoping for both tables in this file,
+  # including the org-scoped per-unit reconciliation-number and per-account-statement
+  # uniques.
   - name: Reconciliation
     collection: reconciliations
     description: "Account reconciliation for bank and other accounts"
@@ -17,14 +21,6 @@ models:
         type: uuid
         attributes: ["@id", "@default(uuid)"]
         description: "Unique reconciliation identifier"
-
-      # =======================================================================
-      # Company (books owner) — partitions the BOOKS. The isolation boundary is UNDECIDED; see organization/company.model.yaml.
-      # =======================================================================
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Legal entity that owns this reconciliation # logical FK to organization.Company.id"
 
       # =======================================================================
       # Reference
@@ -333,18 +329,10 @@ models:
         description: "Reviewed by user"
 
     indexes:
-      - type: unique
-        fields: [company_id, reconciliation_number]
-        where: "deleted_at IS NULL"
-      - type: unique
-        fields: [company_id, account_id, statement_date]
-        where: "deleted_at IS NULL"
-      - type: index
-        fields: [company_id, account_id, period_start]
-      - type: index
-        fields: [company_id, status]
-      - type: index
-        fields: [company_id, is_balanced]
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic. The per-unit
+      # reconciliation-number unique and the one-reconciliation-per-account-and-statement
+      # guard are installed by the composing service's tenancy decorator
+      # (org_unit_id-leading), not declared here.
 
   # ---------------------------------------------------------------------------
   # ReconciliationItem - Individual items in reconciliation
@@ -366,11 +354,6 @@ models:
         type: uuid
         attributes: ["@required", "@foreign_key(Reconciliation.id)"]
         description: "Parent reconciliation"
-
-      company_id:
-        type: uuid
-        attributes: ["@required", "@exclude_from_foreign_key_check"]
-        description: "Books owner (denormalized from reconciliation) # logical FK to organization.Company.id"
 
       # =======================================================================
       # Item Number
@@ -598,6 +581,8 @@ models:
     indexes:
       # ReconciliationItem has no @audit_metadata (no soft-delete; cascade child —
       # repository is generated `no_soft_delete`), so no `deleted_at IS NULL` predicate.
+      # No tenancy indexes (ADR-0029): the module is tenant-agnostic; the composing
+      # service's tenancy decorator owns org scoping for this table.
       - type: unique
         fields: [reconciliation_id, item_number]
       - type: index
@@ -605,8 +590,6 @@ models:
       - type: index
         fields: [ledger_id]
         where: "ledger_id IS NOT NULL"
-      - type: index
-        fields: [company_id, is_outstanding]
       - type: index
         fields: [reconciliation_id, source]
       - type: index

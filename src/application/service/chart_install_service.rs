@@ -1,5 +1,5 @@
 //! Chart install engine — turns a registered [`ChartDataset`] into real `accounts`
-//! rows for one company, in one transaction.
+//! rows, in one transaction.
 //!
 //! Posture (Odoo 19's chart model): datasets are DATA; there are no template tables.
 //! Installing writes ordinary, manager-editable account rows stamped with chart
@@ -21,12 +21,19 @@
 //! Every row id is deterministic: `uuid5(NAMESPACE_URL, "account:{company}:{chart}:{code}")`.
 //! That makes re-install an idempotent upsert by construction and gives tax
 //! orchestration (which runs after install, keyed on account codes) a stable map.
+//!
+//! Tenancy (ADR-0029): the module carries no tenancy of its own — the composing service's
+//! tenancy decorator owns org scoping. The `company_id` lanes here are the documented legacy
+//! twin: the engine keeps feeding them into deterministic-id derivation, the persistence
+//! port, and the report so unstripped callers compile and run unchanged, but no statement
+//! keys on them. The install transaction relays the ambient org scope; an undecorated
+//! deployment gets an unfenced module.
 
 use crate::domain::chart_dataset::{validate_dataset, ChartDataset, DatasetError};
 use crate::domain::repositories::chart_install_repository::{
     ChartAccountRow, ChartInstallRepository, UpsertOutcome,
 };
-use backbone_orm::company_scope;
+use backbone_orm::org_scope;
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -46,6 +53,7 @@ pub struct ChartInfo {
 pub struct InstallReport {
     pub chart_code: String,
     pub chart_version: String,
+    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
     pub company_id: Uuid,
     /// Rows freshly inserted.
     pub accounts_installed: usize,
@@ -111,6 +119,8 @@ impl ChartInstallService {
     }
 
     /// Deterministic id for one dataset row — stable across reinstalls and versions.
+    /// The company element is the legacy tenancy twin (ADR-0029): kept in the hash so
+    /// existing ids stay stable across the strip.
     fn deterministic_id(company_id: Uuid, chart_code: &str, account_code: &str) -> Uuid {
         Uuid::new_v5(
             &Uuid::NAMESPACE_URL,
@@ -162,8 +172,9 @@ impl ChartInstallService {
         rows
     }
 
-    /// Install `chart_code` onto `company_id`. One transaction; the tenant is bound on
-    /// the transaction first so the strict fence accepts the writes as the app role.
+    /// Install `chart_code` onto `company_id`. One transaction; the ambient org scope is
+    /// relayed onto it first so the composing service's tenancy fence accepts the writes
+    /// as the app role (ADR-0029 — no relay on an undecorated deployment).
     pub async fn install(
         &self,
         company_id: Uuid,
@@ -186,11 +197,16 @@ impl ChartInstallService {
         let rows = self.derive_rows(company_id, &ds);
 
         let mut tx = self.pool.begin().await?;
-        // Strict fence: writes need the company GUC for the RLS WITH CHECK, reads to
-        // see the company's rows at all.
-        company_scope::bind_company_on(&mut tx, company_id)
-            .await
-            .map_err(anyhow::Error::from)?;
+        // Tenancy posture (ADR-0029): the module owns no scoping column — the composing
+        // service's tenancy decorator does. Relay the AMBIENT request scope onto this
+        // transaction when the caller bound one: the fence accepts the writes as the app
+        // role and the reads below see only this unit's rows. An undecorated deployment has
+        // no ambient scope and skips this entirely (unfenced by design).
+        if let Some(scope) = org_scope::current_org_scope() {
+            org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(anyhow::Error::from)?;
+        }
 
         if self.repo.company_has_postings(&mut tx, company_id).await? {
             return Err(ChartInstallError::ChartHasPostings(

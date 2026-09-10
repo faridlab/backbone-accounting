@@ -12,6 +12,10 @@
 //! (module-level default-deny is the composition's job — see the ADR).
 //!
 //! This file is user-owned (see `metaphor.codegen.yaml`) and survives regeneration.
+//!
+//! Tenancy (ADR-0029): the `company_id` each request carries is the legacy twin — the wire
+//! shapes keep it so unstripped callers compile and run unchanged; the module keys no
+//! statement on it and the composing service's tenancy decorator scopes every statement.
 
 use std::sync::Arc;
 
@@ -138,19 +142,22 @@ fn error_response(e: &ReconcileError) -> axum::response::Response {
 
 // ── Tenant consistency ────────────────────────────────────────────────────────
 //
-// The verb services bind RLS with the REQUEST's `company_id` (it rides the same
-// transaction as the write, so it must be explicit). That value would override
-// whatever scope the caller's token established — so when a host has mounted an
-// ambient company scope (backbone-auth's `company_auth` wraps every request in
-// `with_company_scope(token.company_id)`), the request's company must agree with
-// it. Without this check an authenticated tenant could name ANY company in the
-// body and read or reshape its books. With no ambient scope (unit tests, trusted
-// internal hosts) the check is skipped — the module keeps its standalone shape.
+// The module keys no statement on the request's `company_id` (ADR-0029) — it is the legacy
+// twin, and cross-tenant isolation is the composing service's tenancy decorator. The request's
+// company must still agree with the caller's authenticated identity when one is established:
+// either the legacy request company scope (backbone-auth's `company_auth` wraps every request
+// in `with_company_scope(token.company_id)`) or the ambient org scope's legacy company id.
+// Without this check an authenticated tenant could name ANY company in the body and reshape
+// its books through the legacy seams. With no scope at all (unit tests, trusted internal
+// hosts) the check is skipped — the module keeps its standalone shape.
 
 const COMPANY_MISMATCH: &str = "company_mismatch";
 
 fn tenant_mismatch(req_company: Uuid) -> bool {
-    match backbone_orm::current_company() {
+    let authenticated = backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .or_else(|| backbone_orm::current_company());
+    match authenticated {
         Some(authenticated) => authenticated != req_company,
         None => false,
     }

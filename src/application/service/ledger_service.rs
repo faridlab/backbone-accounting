@@ -7,9 +7,9 @@
 
 use backbone_core::GenericCrudService;
 
+use crate::presentation::dto::{CreateLedgerDto, UpdateLedgerDto};
 use crate::domain::entity::Ledger;
 use crate::infrastructure::persistence::LedgerRepository;
-use crate::presentation::dto::{CreateLedgerDto, UpdateLedgerDto};
 
 /// Application service for Ledger entities.
 ///
@@ -25,8 +25,12 @@ use crate::presentation::dto::{CreateLedgerDto, UpdateLedgerDto};
 ///     // add domain-specific dependencies here
 /// }
 /// ```
-pub type LedgerService =
-    GenericCrudService<Ledger, CreateLedgerDto, UpdateLedgerDto, LedgerRepository>;
+pub type LedgerService = GenericCrudService<
+    Ledger,
+    CreateLedgerDto,
+    UpdateLedgerDto,
+    LedgerRepository,
+>;
 
 // <<< CUSTOM
 // END CUSTOM

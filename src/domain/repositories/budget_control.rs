@@ -59,7 +59,10 @@ pub struct BudgetBreach {
 /// Host-implemented budget control for the posting chokepoint.
 ///
 /// Contract:
-/// - Every read is scoped to `company_id`.
+/// - Every read is scoped to `company_id`. That key arrives as the posting's legacy tenancy
+///   twin (ADR-0029): accounting itself carries no tenancy, so it forwards the
+///   producer-supplied company id unchanged and the host adapter owns the scoping of its own
+///   budget reads.
 /// - Lines are matched by exact `(account, cost_center, period-covering
 ///   posting_date)` key; a `None` cost center matches only positions whose
 ///   cost center is also `None` (never an aggregate rollup).

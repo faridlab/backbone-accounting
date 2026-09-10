@@ -5,11 +5,11 @@
 //! These DTOs are the ONLY types other modules should use.
 //! They are decoupled from internal domain entities.
 
-use crate::domain::entity::*;
-use chrono::{DateTime, NaiveDate, Utc};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::{DateTime, Utc, NaiveDate};
+use rust_decimal::Decimal;
+use crate::domain::entity::*;
 
 // ============================================================================
 // ACCOUNT TYPES
@@ -49,7 +49,6 @@ impl From<AccountId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountDto {
     pub id: AccountId,
-    pub company_id: Uuid,
     pub account_number: String,
     pub account_code: String,
     pub name: String,
@@ -133,7 +132,6 @@ impl From<AccountingPostId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountingPostDto {
     pub id: AccountingPostId,
-    pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: PostingSourceType,
     pub source_id: Uuid,
@@ -209,7 +207,6 @@ impl From<CostCenterId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CostCenterDto {
     pub id: CostCenterId,
-    pub company_id: Uuid,
     pub code: String,
     pub name: String,
     pub description: Option<String>,
@@ -274,7 +271,6 @@ impl From<FinancialStatementId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FinancialStatementDto {
     pub id: FinancialStatementId,
-    pub company_id: Uuid,
     pub statement_number: String,
     pub statement_type: StatementType,
     pub name: String,
@@ -390,7 +386,6 @@ impl From<FiscalPeriodId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FiscalPeriodDto {
     pub id: FiscalPeriodId,
-    pub company_id: Uuid,
     pub period_code: String,
     pub name: String,
     pub period_type: PeriodType,
@@ -483,7 +478,6 @@ impl From<JournalId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalDto {
     pub id: JournalId,
-    pub company_id: Uuid,
     pub journal_number: String,
     pub reference_number: Option<String>,
     pub journal_type: JournalType,
@@ -583,7 +577,6 @@ impl From<JournalLineId> for Uuid {
 pub struct JournalLineDto {
     pub id: JournalLineId,
     pub journal_id: Uuid,
-    pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub party_type: Option<PartyType>,
     pub party_id: Option<Uuid>,
@@ -675,7 +668,6 @@ impl From<LedgerId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LedgerDto {
     pub id: LedgerId,
-    pub company_id: Uuid,
     pub account_id: Uuid,
     pub account_number: String,
     pub account_name: String,
@@ -771,7 +763,6 @@ impl From<ReconciliationId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconciliationDto {
     pub id: ReconciliationId,
-    pub company_id: Uuid,
     pub reconciliation_number: String,
     pub account_id: Uuid,
     pub account_number: String,
@@ -875,7 +866,6 @@ impl From<ReconciliationItemId> for Uuid {
 pub struct ReconciliationItemDto {
     pub id: ReconciliationItemId,
     pub reconciliation_id: Uuid,
-    pub company_id: Uuid,
     pub item_number: i32,
     pub source: String,
     pub ledger_id: Option<Uuid>,
@@ -963,7 +953,6 @@ impl From<FullReconcileId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FullReconcileDto {
     pub id: FullReconcileId,
-    pub company_id: Uuid,
     pub exchange_total: Decimal,
     pub reconciled_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
@@ -1022,7 +1011,6 @@ impl From<PartialReconcileId> for Uuid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialReconcileDto {
     pub id: PartialReconcileId,
-    pub company_id: Uuid,
     pub debit_move_id: Uuid,
     pub credit_move_id: Uuid,
     pub full_reconcile_id: Option<Uuid>,
