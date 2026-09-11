@@ -13,6 +13,8 @@ models:
   # including the org-scoped per-unit journal-number unique.
   - name: Journal
     collection: journals
+    # Data-change audit capture (ADR-0025): per-row trigger → auditlog.capture_data_change.
+    audited: true
     description: "Journal entry header for financial transactions"
 
     fields:
@@ -334,6 +336,8 @@ models:
   # ---------------------------------------------------------------------------
   - name: JournalLine
     collection: journal_lines
+    # Data-change audit capture (ADR-0025): per-row trigger → auditlog.capture_data_change.
+    audited: true
     description: "Journal entry line (debit or credit)"
 
     fields:

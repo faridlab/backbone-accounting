@@ -12,6 +12,10 @@ use std::sync::Arc;
 use crate::application::service::AccountService;
 use crate::application::service::AccountingPostService;
 use crate::application::service::CostCenterService;
+use crate::application::service::EmvQrConfigService;
+use crate::application::service::BankCheckSequenceService;
+use crate::application::service::PrintedCheckService;
+use crate::application::service::TaxTagRepairRunService;
 use crate::application::service::FinancialStatementService;
 use crate::application::service::FiscalPeriodService;
 use crate::application::service::JournalService;
@@ -46,6 +50,14 @@ pub struct AppState {
     pub accounting_post_service: Arc<AccountingPostService>,
     /// CostCenter service
     pub cost_center_service: Arc<CostCenterService>,
+    /// EmvQrConfig service
+    pub emv_qr_config_service: Arc<EmvQrConfigService>,
+    /// BankCheckSequence service
+    pub bank_check_sequence_service: Arc<BankCheckSequenceService>,
+    /// PrintedCheck service
+    pub printed_check_service: Arc<PrintedCheckService>,
+    /// TaxTagRepairRun service
+    pub tax_tag_repair_run_service: Arc<TaxTagRepairRunService>,
     /// FinancialStatement service
     pub financial_statement_service: Arc<FinancialStatementService>,
     /// FiscalPeriod service
@@ -72,6 +84,10 @@ impl AppState {
         account_service: Arc<AccountService>,
         accounting_post_service: Arc<AccountingPostService>,
         cost_center_service: Arc<CostCenterService>,
+        emv_qr_config_service: Arc<EmvQrConfigService>,
+        bank_check_sequence_service: Arc<BankCheckSequenceService>,
+        printed_check_service: Arc<PrintedCheckService>,
+        tax_tag_repair_run_service: Arc<TaxTagRepairRunService>,
         financial_statement_service: Arc<FinancialStatementService>,
         fiscal_period_service: Arc<FiscalPeriodService>,
         journal_service: Arc<JournalService>,
@@ -86,6 +102,10 @@ impl AppState {
             account_service,
             accounting_post_service,
             cost_center_service,
+            emv_qr_config_service,
+            bank_check_sequence_service,
+            printed_check_service,
+            tax_tag_repair_run_service,
             financial_statement_service,
             fiscal_period_service,
             journal_service,
@@ -104,6 +124,10 @@ impl AppState {
             account_service: module.account_service.clone(),
             accounting_post_service: module.accounting_post_service.clone(),
             cost_center_service: module.cost_center_service.clone(),
+            emv_qr_config_service: module.emv_qr_config_service.clone(),
+            bank_check_sequence_service: module.bank_check_sequence_service.clone(),
+            printed_check_service: module.printed_check_service.clone(),
+            tax_tag_repair_run_service: module.tax_tag_repair_run_service.clone(),
             financial_statement_service: module.financial_statement_service.clone(),
             fiscal_period_service: module.fiscal_period_service.clone(),
             journal_service: module.journal_service.clone(),
@@ -125,6 +149,10 @@ pub struct AppStateBuilder {
     account_service: Option<Arc<AccountService>>,
     accounting_post_service: Option<Arc<AccountingPostService>>,
     cost_center_service: Option<Arc<CostCenterService>>,
+    emv_qr_config_service: Option<Arc<EmvQrConfigService>>,
+    bank_check_sequence_service: Option<Arc<BankCheckSequenceService>>,
+    printed_check_service: Option<Arc<PrintedCheckService>>,
+    tax_tag_repair_run_service: Option<Arc<TaxTagRepairRunService>>,
     financial_statement_service: Option<Arc<FinancialStatementService>>,
     fiscal_period_service: Option<Arc<FiscalPeriodService>>,
     journal_service: Option<Arc<JournalService>>,
@@ -157,6 +185,30 @@ impl AppStateBuilder {
     /// Set the CostCenter service.
     pub fn with_cost_center_service(mut self, service: Arc<CostCenterService>) -> Self {
         self.cost_center_service = Some(service);
+        self
+    }
+
+    /// Set the EmvQrConfig service.
+    pub fn with_emv_qr_config_service(mut self, service: Arc<EmvQrConfigService>) -> Self {
+        self.emv_qr_config_service = Some(service);
+        self
+    }
+
+    /// Set the BankCheckSequence service.
+    pub fn with_bank_check_sequence_service(mut self, service: Arc<BankCheckSequenceService>) -> Self {
+        self.bank_check_sequence_service = Some(service);
+        self
+    }
+
+    /// Set the PrintedCheck service.
+    pub fn with_printed_check_service(mut self, service: Arc<PrintedCheckService>) -> Self {
+        self.printed_check_service = Some(service);
+        self
+    }
+
+    /// Set the TaxTagRepairRun service.
+    pub fn with_tax_tag_repair_run_service(mut self, service: Arc<TaxTagRepairRunService>) -> Self {
+        self.tax_tag_repair_run_service = Some(service);
         self
     }
 
@@ -224,6 +276,10 @@ impl AppStateBuilder {
             account_service: self.account_service.expect("account_service is required"),
             accounting_post_service: self.accounting_post_service.expect("accounting_post_service is required"),
             cost_center_service: self.cost_center_service.expect("cost_center_service is required"),
+            emv_qr_config_service: self.emv_qr_config_service.expect("emv_qr_config_service is required"),
+            bank_check_sequence_service: self.bank_check_sequence_service.expect("bank_check_sequence_service is required"),
+            printed_check_service: self.printed_check_service.expect("printed_check_service is required"),
+            tax_tag_repair_run_service: self.tax_tag_repair_run_service.expect("tax_tag_repair_run_service is required"),
             financial_statement_service: self.financial_statement_service.expect("financial_statement_service is required"),
             fiscal_period_service: self.fiscal_period_service.expect("fiscal_period_service is required"),
             journal_service: self.journal_service.expect("journal_service is required"),

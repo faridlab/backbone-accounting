@@ -9,6 +9,10 @@ pub use backbone_core::{Specification, AndSpecification, OrSpecification, NotSpe
 pub mod account_specification;
 pub mod accounting_post_specification;
 pub mod cost_center_specification;
+pub mod emv_qr_config_specification;
+pub mod bank_check_sequence_specification;
+pub mod printed_check_specification;
+pub mod tax_tag_repair_run_specification;
 pub mod financial_statement_specification;
 pub mod fiscal_period_specification;
 pub mod journal_specification;

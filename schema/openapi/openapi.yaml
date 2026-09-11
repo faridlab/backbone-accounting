@@ -17,6 +17,14 @@ tags:
     description: AccountingPost management endpoints
   - name: CostCenters
     description: CostCenter management endpoints
+  - name: EmvQrConfigs
+    description: EmvQrConfig management endpoints
+  - name: BankCheckSequences
+    description: BankCheckSequence management endpoints
+  - name: PrintedChecks
+    description: PrintedCheck management endpoints
+  - name: TaxTagRepairRuns
+    description: TaxTagRepairRun management endpoints
   - name: FinancialStatements
     description: FinancialStatement management endpoints
   - name: FiscalPeriods
@@ -1121,6 +1129,1470 @@ paths:
         - CostCenters
       summary: Bulk permanently-delete CostCenters from trash by ids (atomic)
       operationId: bulkPermanentDeleteCostCenters
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/emv_qr_configs:
+    get:
+      tags:
+        - EmvQrConfigs
+      summary: List EmvQrConfigs
+      description: Get a paginated list of EmvQrConfigs with optional filtering and sorting
+      operationId: listEmvQrConfigs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfigList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Create EmvQrConfig
+      description: Create a new EmvQrConfig
+      operationId: createEmvQrConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmvQrConfigRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/emv_qr_configs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - EmvQrConfigs
+      summary: Get EmvQrConfig by ID
+      operationId: getEmvQrConfig
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - EmvQrConfigs
+      summary: Update EmvQrConfig (full)
+      operationId: updateEmvQrConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmvQrConfigRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - EmvQrConfigs
+      summary: Update EmvQrConfig (partial)
+      operationId: patchEmvQrConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchEmvQrConfigRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - EmvQrConfigs
+      summary: Delete EmvQrConfig (soft)
+      operationId: deleteEmvQrConfig
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/emv_qr_configs/bulk:
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk create EmvQrConfigs
+      operationId: bulkCreateEmvQrConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateEmvQrConfigRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmvQrConfig'
+    put:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk update EmvQrConfigs (full, atomic)
+      operationId: bulkUpdateEmvQrConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateEmvQrConfigRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfigBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk partial-update EmvQrConfigs (atomic)
+      operationId: bulkPatchEmvQrConfigs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfigBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/emv_qr_configs/upsert:
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Upsert EmvQrConfig
+      operationId: upsertEmvQrConfig
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmvQrConfigRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+
+  /api/v1/emv_qr_configs/trash:
+    get:
+      tags:
+        - EmvQrConfigs
+      summary: List deleted EmvQrConfigs
+      operationId: listDeletedEmvQrConfigs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfigList'
+
+  /api/v1/emv_qr_configs/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Restore deleted EmvQrConfig
+      operationId: restoreEmvQrConfig
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfig'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/emv_qr_configs/empty:
+    delete:
+      tags:
+        - EmvQrConfigs
+      summary: Empty trash for EmvQrConfigs
+      operationId: emptyTrashEmvQrConfigs
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/emv_qr_configs/delete/bulk:
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk soft-delete EmvQrConfigs by ids (atomic)
+      operationId: bulkDeleteEmvQrConfigs
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/emv_qr_configs/restore/bulk:
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk restore EmvQrConfigs by ids (atomic)
+      operationId: bulkRestoreEmvQrConfigs
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmvQrConfigBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/emv_qr_configs/restore/all:
+    post:
+      tags:
+        - EmvQrConfigs
+      summary: Restore all soft-deleted EmvQrConfigs
+      operationId: restoreAllEmvQrConfigs
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/emv_qr_configs/trash/bulk:
+    delete:
+      tags:
+        - EmvQrConfigs
+      summary: Bulk permanently-delete EmvQrConfigs from trash by ids (atomic)
+      operationId: bulkPermanentDeleteEmvQrConfigs
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bank_check_sequences:
+    get:
+      tags:
+        - BankCheckSequences
+      summary: List BankCheckSequences
+      description: Get a paginated list of BankCheckSequences with optional filtering and sorting
+      operationId: listBankCheckSequences
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequenceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Create BankCheckSequence
+      description: Create a new BankCheckSequence
+      operationId: createBankCheckSequence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBankCheckSequenceRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/bank_check_sequences/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - BankCheckSequences
+      summary: Get BankCheckSequence by ID
+      operationId: getBankCheckSequence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - BankCheckSequences
+      summary: Update BankCheckSequence (full)
+      operationId: updateBankCheckSequence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankCheckSequenceRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - BankCheckSequences
+      summary: Update BankCheckSequence (partial)
+      operationId: patchBankCheckSequence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBankCheckSequenceRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - BankCheckSequences
+      summary: Delete BankCheckSequence (soft)
+      operationId: deleteBankCheckSequence
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bank_check_sequences/bulk:
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Bulk create BankCheckSequences
+      operationId: bulkCreateBankCheckSequences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateBankCheckSequenceRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankCheckSequence'
+    put:
+      tags:
+        - BankCheckSequences
+      summary: Bulk update BankCheckSequences (full, atomic)
+      operationId: bulkUpdateBankCheckSequences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateBankCheckSequenceRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequenceBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - BankCheckSequences
+      summary: Bulk partial-update BankCheckSequences (atomic)
+      operationId: bulkPatchBankCheckSequences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequenceBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bank_check_sequences/upsert:
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Upsert BankCheckSequence
+      operationId: upsertBankCheckSequence
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankCheckSequenceRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+
+  /api/v1/bank_check_sequences/trash:
+    get:
+      tags:
+        - BankCheckSequences
+      summary: List deleted BankCheckSequences
+      operationId: listDeletedBankCheckSequences
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequenceList'
+
+  /api/v1/bank_check_sequences/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Restore deleted BankCheckSequence
+      operationId: restoreBankCheckSequence
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/bank_check_sequences/empty:
+    delete:
+      tags:
+        - BankCheckSequences
+      summary: Empty trash for BankCheckSequences
+      operationId: emptyTrashBankCheckSequences
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/bank_check_sequences/delete/bulk:
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Bulk soft-delete BankCheckSequences by ids (atomic)
+      operationId: bulkDeleteBankCheckSequences
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bank_check_sequences/restore/bulk:
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Bulk restore BankCheckSequences by ids (atomic)
+      operationId: bulkRestoreBankCheckSequences
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankCheckSequenceBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/bank_check_sequences/restore/all:
+    post:
+      tags:
+        - BankCheckSequences
+      summary: Restore all soft-deleted BankCheckSequences
+      operationId: restoreAllBankCheckSequences
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/bank_check_sequences/trash/bulk:
+    delete:
+      tags:
+        - BankCheckSequences
+      summary: Bulk permanently-delete BankCheckSequences from trash by ids (atomic)
+      operationId: bulkPermanentDeleteBankCheckSequences
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/printed_checks:
+    get:
+      tags:
+        - PrintedChecks
+      summary: List PrintedChecks
+      description: Get a paginated list of PrintedChecks with optional filtering and sorting
+      operationId: listPrintedChecks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheckList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - PrintedChecks
+      summary: Create PrintedCheck
+      description: Create a new PrintedCheck
+      operationId: createPrintedCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePrintedCheckRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/printed_checks/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - PrintedChecks
+      summary: Get PrintedCheck by ID
+      operationId: getPrintedCheck
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - PrintedChecks
+      summary: Update PrintedCheck (full)
+      operationId: updatePrintedCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePrintedCheckRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - PrintedChecks
+      summary: Update PrintedCheck (partial)
+      operationId: patchPrintedCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchPrintedCheckRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - PrintedChecks
+      summary: Delete PrintedCheck (soft)
+      operationId: deletePrintedCheck
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/printed_checks/bulk:
+    post:
+      tags:
+        - PrintedChecks
+      summary: Bulk create PrintedChecks
+      operationId: bulkCreatePrintedChecks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreatePrintedCheckRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrintedCheck'
+    put:
+      tags:
+        - PrintedChecks
+      summary: Bulk update PrintedChecks (full, atomic)
+      operationId: bulkUpdatePrintedChecks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdatePrintedCheckRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheckBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - PrintedChecks
+      summary: Bulk partial-update PrintedChecks (atomic)
+      operationId: bulkPatchPrintedChecks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheckBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/printed_checks/upsert:
+    post:
+      tags:
+        - PrintedChecks
+      summary: Upsert PrintedCheck
+      operationId: upsertPrintedCheck
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePrintedCheckRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+
+  /api/v1/printed_checks/trash:
+    get:
+      tags:
+        - PrintedChecks
+      summary: List deleted PrintedChecks
+      operationId: listDeletedPrintedChecks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheckList'
+
+  /api/v1/printed_checks/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - PrintedChecks
+      summary: Restore deleted PrintedCheck
+      operationId: restorePrintedCheck
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheck'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/printed_checks/empty:
+    delete:
+      tags:
+        - PrintedChecks
+      summary: Empty trash for PrintedChecks
+      operationId: emptyTrashPrintedChecks
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/printed_checks/delete/bulk:
+    post:
+      tags:
+        - PrintedChecks
+      summary: Bulk soft-delete PrintedChecks by ids (atomic)
+      operationId: bulkDeletePrintedChecks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/printed_checks/restore/bulk:
+    post:
+      tags:
+        - PrintedChecks
+      summary: Bulk restore PrintedChecks by ids (atomic)
+      operationId: bulkRestorePrintedChecks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintedCheckBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/printed_checks/restore/all:
+    post:
+      tags:
+        - PrintedChecks
+      summary: Restore all soft-deleted PrintedChecks
+      operationId: restoreAllPrintedChecks
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/printed_checks/trash/bulk:
+    delete:
+      tags:
+        - PrintedChecks
+      summary: Bulk permanently-delete PrintedChecks from trash by ids (atomic)
+      operationId: bulkPermanentDeletePrintedChecks
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permanently_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/tax_tag_repair_runs:
+    get:
+      tags:
+        - TaxTagRepairRuns
+      summary: List TaxTagRepairRuns
+      description: Get a paginated list of TaxTagRepairRuns with optional filtering and sorting
+      operationId: listTaxTagRepairRuns
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRunList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Create TaxTagRepairRun
+      description: Create a new TaxTagRepairRun
+      operationId: createTaxTagRepairRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaxTagRepairRunRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/tax_tag_repair_runs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags:
+        - TaxTagRepairRuns
+      summary: Get TaxTagRepairRun by ID
+      operationId: getTaxTagRepairRun
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - TaxTagRepairRuns
+      summary: Update TaxTagRepairRun (full)
+      operationId: updateTaxTagRepairRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaxTagRepairRunRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - TaxTagRepairRuns
+      summary: Update TaxTagRepairRun (partial)
+      operationId: patchTaxTagRepairRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchTaxTagRepairRunRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - TaxTagRepairRuns
+      summary: Delete TaxTagRepairRun (soft)
+      operationId: deleteTaxTagRepairRun
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tax_tag_repair_runs/bulk:
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk create TaxTagRepairRuns
+      operationId: bulkCreateTaxTagRepairRuns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateTaxTagRepairRunRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaxTagRepairRun'
+    put:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk update TaxTagRepairRuns (full, atomic)
+      operationId: bulkUpdateTaxTagRepairRuns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                  - $ref: '#/components/schemas/UpdateTaxTagRepairRunRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRunBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    patch:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk partial-update TaxTagRepairRuns (atomic)
+      operationId: bulkPatchTaxTagRepairRuns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [ids, patch]
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: string }
+                    patch:
+                      type: object
+                      additionalProperties: true
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, patch]
+                        properties:
+                          id: { type: string }
+                          patch: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRunBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/tax_tag_repair_runs/upsert:
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Upsert TaxTagRepairRun
+      operationId: upsertTaxTagRepairRun
+      parameters:
+        - name: key_field
+          in: query
+          schema:
+            type: string
+        - name: key_value
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaxTagRepairRunRequest'
+      responses:
+        '200':
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+
+  /api/v1/tax_tag_repair_runs/trash:
+    get:
+      tags:
+        - TaxTagRepairRuns
+      summary: List deleted TaxTagRepairRuns
+      operationId: listDeletedTaxTagRepairRuns
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRunList'
+
+  /api/v1/tax_tag_repair_runs/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Restore deleted TaxTagRepairRun
+      operationId: restoreTaxTagRepairRun
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRun'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tax_tag_repair_runs/empty:
+    delete:
+      tags:
+        - TaxTagRepairRuns
+      summary: Empty trash for TaxTagRepairRuns
+      operationId: emptyTrashTaxTagRepairRuns
+      responses:
+        '200':
+          description: Trash emptied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+
+  /api/v1/tax_tag_repair_runs/delete/bulk:
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk soft-delete TaxTagRepairRuns by ids (atomic)
+      operationId: bulkDeleteTaxTagRepairRuns
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  soft_deleted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/tax_tag_repair_runs/restore/bulk:
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk restore TaxTagRepairRuns by ids (atomic)
+      operationId: bulkRestoreTaxTagRepairRuns
+      requestBody:
+        $ref: '#/components/requestBodies/BatchIds'
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxTagRepairRunBulkResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/tax_tag_repair_runs/restore/all:
+    post:
+      tags:
+        - TaxTagRepairRuns
+      summary: Restore all soft-deleted TaxTagRepairRuns
+      operationId: restoreAllTaxTagRepairRuns
+      responses:
+        '200':
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored: { type: integer }
+
+  /api/v1/tax_tag_repair_runs/trash/bulk:
+    delete:
+      tags:
+        - TaxTagRepairRuns
+      summary: Bulk permanently-delete TaxTagRepairRuns from trash by ids (atomic)
+      operationId: bulkPermanentDeleteTaxTagRepairRuns
       requestBody:
         $ref: '#/components/requestBodies/BatchIds'
       responses:
@@ -5417,6 +6889,696 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CostCenter'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    EmvQrConfig:
+      type: object
+      required:
+        - id
+        - merchant_name
+        - merchant_city
+        - country_code
+        - mcc
+        - gui
+        - merchant_identifier
+        - currency
+        - initiation_method
+        - created_at
+        - updated_at
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchant_name:
+          type: string
+          maxLength: 25
+        merchant_city:
+          type: string
+          maxLength: 15
+        country_code:
+          type: string
+          maxLength: 2
+        mcc:
+          type: string
+        gui:
+          type: string
+          maxLength: 32
+        merchant_identifier:
+          type: string
+          maxLength: 32
+        currency:
+          type: string
+        initiation_method:
+          type: string
+        bank_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    EmvQrConfigBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmvQrConfig'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateEmvQrConfigRequest:
+      type: object
+      required:
+        - merchant_name
+        - merchant_city
+        - country_code
+        - mcc
+        - gui
+        - merchant_identifier
+        - currency
+        - initiation_method
+        - metadata
+      properties:
+        merchant_name:
+          type: string
+          maxLength: 25
+        merchant_city:
+          type: string
+          maxLength: 15
+        country_code:
+          type: string
+          maxLength: 2
+        mcc:
+          type: string
+        gui:
+          type: string
+          maxLength: 32
+        merchant_identifier:
+          type: string
+          maxLength: 32
+        currency:
+          type: string
+        initiation_method:
+          type: string
+        bank_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    UpdateEmvQrConfigRequest:
+      type: object
+      required:
+        - merchant_name
+        - merchant_city
+        - country_code
+        - mcc
+        - gui
+        - merchant_identifier
+        - currency
+        - initiation_method
+        - metadata
+      properties:
+        merchant_name:
+          type: string
+          maxLength: 25
+        merchant_city:
+          type: string
+          maxLength: 15
+        country_code:
+          type: string
+          maxLength: 2
+        mcc:
+          type: string
+        gui:
+          type: string
+          maxLength: 32
+        merchant_identifier:
+          type: string
+          maxLength: 32
+        currency:
+          type: string
+        initiation_method:
+          type: string
+        bank_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PatchEmvQrConfigRequest:
+      type: object
+      properties:
+        merchant_name:
+          type: string
+          maxLength: 25
+        merchant_city:
+          type: string
+          maxLength: 15
+        country_code:
+          type: string
+          maxLength: 2
+        mcc:
+          type: string
+        gui:
+          type: string
+          maxLength: 32
+        merchant_identifier:
+          type: string
+          maxLength: 32
+        currency:
+          type: string
+        initiation_method:
+          type: string
+        bank_account_id:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    EmvQrConfigList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmvQrConfig'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    BankCheckSequence:
+      type: object
+      required:
+        - id
+        - bank_account_id
+        - numbering_mode
+        - next_number
+        - created_at
+        - updated_at
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        bank_account_id:
+          type: string
+          format: uuid
+        numbering_mode:
+          type: string
+        next_number:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    BankCheckSequenceBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankCheckSequence'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateBankCheckSequenceRequest:
+      type: object
+      required:
+        - bank_account_id
+        - numbering_mode
+        - next_number
+        - metadata
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        numbering_mode:
+          type: string
+        next_number:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+
+    UpdateBankCheckSequenceRequest:
+      type: object
+      required:
+        - bank_account_id
+        - numbering_mode
+        - next_number
+        - metadata
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        numbering_mode:
+          type: string
+        next_number:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+
+    PatchBankCheckSequenceRequest:
+      type: object
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        numbering_mode:
+          type: string
+        next_number:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+
+    BankCheckSequenceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankCheckSequence'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PrintedCheck:
+      type: object
+      required:
+        - id
+        - bank_account_id
+        - payment_id
+        - check_number
+        - amount
+        - status
+        - printed_at
+        - created_at
+        - updated_at
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        bank_account_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        payment_number:
+          nullable: true
+          type: string
+          maxLength: 50
+        check_number:
+          type: string
+          maxLength: 20
+        amount:
+          type: string
+        payee_name:
+          nullable: true
+          type: string
+          maxLength: 100
+        status:
+          type: string
+        printed_at:
+          type: string
+          format: date-time
+        printed_by:
+          nullable: true
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    PrintedCheckBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrintedCheck'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreatePrintedCheckRequest:
+      type: object
+      required:
+        - bank_account_id
+        - payment_id
+        - check_number
+        - amount
+        - status
+        - printed_at
+        - metadata
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        payment_number:
+          nullable: true
+          type: string
+          maxLength: 50
+        check_number:
+          type: string
+          maxLength: 20
+        amount:
+          type: string
+        payee_name:
+          nullable: true
+          type: string
+          maxLength: 100
+        status:
+          type: string
+        printed_at:
+          type: string
+          format: date-time
+        printed_by:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    UpdatePrintedCheckRequest:
+      type: object
+      required:
+        - bank_account_id
+        - payment_id
+        - check_number
+        - amount
+        - status
+        - printed_at
+        - metadata
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        payment_number:
+          nullable: true
+          type: string
+          maxLength: 50
+        check_number:
+          type: string
+          maxLength: 20
+        amount:
+          type: string
+        payee_name:
+          nullable: true
+          type: string
+          maxLength: 100
+        status:
+          type: string
+        printed_at:
+          type: string
+          format: date-time
+        printed_by:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PatchPrintedCheckRequest:
+      type: object
+      properties:
+        bank_account_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        payment_number:
+          nullable: true
+          type: string
+          maxLength: 50
+        check_number:
+          type: string
+          maxLength: 20
+        amount:
+          type: string
+        payee_name:
+          nullable: true
+          type: string
+          maxLength: 100
+        status:
+          type: string
+        printed_at:
+          type: string
+          format: date-time
+        printed_by:
+          nullable: true
+          type: string
+          format: uuid
+        metadata:
+          type: object
+
+    PrintedCheckList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrintedCheck'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    TaxTagRepairRun:
+      type: object
+      required:
+        - id
+        - date_from
+        - date_to
+        - rules
+        - lines_examined
+        - lines_retagged
+        - dry_run
+        - closed_periods_overridden
+        - reason
+        - ran_at
+        - created_at
+        - updated_at
+        - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        rules:
+          type: object
+        lines_examined:
+          type: integer
+          format: int64
+        lines_retagged:
+          type: integer
+          format: int64
+        dry_run:
+          type: boolean
+        closed_periods_overridden:
+          type: object
+        actor:
+          nullable: true
+          type: string
+          format: uuid
+        reason:
+          type: string
+        ran_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    TaxTagRepairRunBulkResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxTagRepairRun'
+        total: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+
+    CreateTaxTagRepairRunRequest:
+      type: object
+      required:
+        - date_from
+        - date_to
+        - rules
+        - lines_examined
+        - lines_retagged
+        - dry_run
+        - closed_periods_overridden
+        - reason
+        - ran_at
+        - metadata
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        rules:
+          type: object
+        lines_examined:
+          type: integer
+          format: int64
+        lines_retagged:
+          type: integer
+          format: int64
+        dry_run:
+          type: boolean
+        closed_periods_overridden:
+          type: object
+        actor:
+          nullable: true
+          type: string
+          format: uuid
+        reason:
+          type: string
+        ran_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    UpdateTaxTagRepairRunRequest:
+      type: object
+      required:
+        - date_from
+        - date_to
+        - rules
+        - lines_examined
+        - lines_retagged
+        - dry_run
+        - closed_periods_overridden
+        - reason
+        - ran_at
+        - metadata
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        rules:
+          type: object
+        lines_examined:
+          type: integer
+          format: int64
+        lines_retagged:
+          type: integer
+          format: int64
+        dry_run:
+          type: boolean
+        closed_periods_overridden:
+          type: object
+        actor:
+          nullable: true
+          type: string
+          format: uuid
+        reason:
+          type: string
+        ran_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    PatchTaxTagRepairRunRequest:
+      type: object
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        rules:
+          type: object
+        lines_examined:
+          type: integer
+          format: int64
+        lines_retagged:
+          type: integer
+          format: int64
+        dry_run:
+          type: boolean
+        closed_periods_overridden:
+          type: object
+        actor:
+          nullable: true
+          type: string
+          format: uuid
+        reason:
+          type: string
+        ran_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    TaxTagRepairRunList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxTagRepairRun'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
 

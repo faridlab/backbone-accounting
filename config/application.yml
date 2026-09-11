@@ -112,3 +112,31 @@ entities:
     pagination:
       default_limit: 20
       max_limit: 100
+  emv_qr_config:
+    collection: emv_qr_configs
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  bank_check_sequence:
+    collection: bank_check_sequences
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  printed_check:
+    collection: printed_checks
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100
+  tax_tag_repair_run:
+    collection: tax_tag_repair_runs
+    enabled: true
+    cache_ttl: 300
+    pagination:
+      default_limit: 20
+      max_limit: 100

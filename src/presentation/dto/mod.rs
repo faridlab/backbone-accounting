@@ -8,6 +8,10 @@
 pub mod account_dto;
 pub mod accounting_post_dto;
 pub mod cost_center_dto;
+pub mod emv_qr_config_dto;
+pub mod bank_check_sequence_dto;
+pub mod printed_check_dto;
+pub mod tax_tag_repair_run_dto;
 pub mod financial_statement_dto;
 pub mod fiscal_period_dto;
 pub mod journal_dto;
@@ -42,6 +46,38 @@ pub use cost_center_dto::{
     CostCenterResponseDto,
     CostCenterListResponseDto,
     CostCenterSummaryDto,
+};
+pub use emv_qr_config_dto::{
+    CreateEmvQrConfigDto,
+    UpdateEmvQrConfigDto,
+    PatchEmvQrConfigDto,
+    EmvQrConfigResponseDto,
+    EmvQrConfigListResponseDto,
+    EmvQrConfigSummaryDto,
+};
+pub use bank_check_sequence_dto::{
+    CreateBankCheckSequenceDto,
+    UpdateBankCheckSequenceDto,
+    PatchBankCheckSequenceDto,
+    BankCheckSequenceResponseDto,
+    BankCheckSequenceListResponseDto,
+    BankCheckSequenceSummaryDto,
+};
+pub use printed_check_dto::{
+    CreatePrintedCheckDto,
+    UpdatePrintedCheckDto,
+    PatchPrintedCheckDto,
+    PrintedCheckResponseDto,
+    PrintedCheckListResponseDto,
+    PrintedCheckSummaryDto,
+};
+pub use tax_tag_repair_run_dto::{
+    CreateTaxTagRepairRunDto,
+    UpdateTaxTagRepairRunDto,
+    PatchTaxTagRepairRunDto,
+    TaxTagRepairRunResponseDto,
+    TaxTagRepairRunListResponseDto,
+    TaxTagRepairRunSummaryDto,
 };
 pub use financial_statement_dto::{
     CreateFinancialStatementDto,

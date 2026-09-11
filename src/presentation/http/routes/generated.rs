@@ -12,6 +12,10 @@ use super::{
     account_handler::create_account_routes,
     accounting_post_handler::create_accounting_post_routes,
     cost_center_handler::create_cost_center_routes,
+    emv_qr_config_handler::create_emv_qr_config_routes,
+    bank_check_sequence_handler::create_bank_check_sequence_routes,
+    printed_check_handler::create_printed_check_routes,
+    tax_tag_repair_run_handler::create_tax_tag_repair_run_routes,
     financial_statement_handler::create_financial_statement_routes,
     fiscal_period_handler::create_fiscal_period_routes,
     journal_handler::create_journal_routes,
@@ -27,6 +31,10 @@ use crate::application::service::{
     AccountService,
     AccountingPostService,
     CostCenterService,
+    EmvQrConfigService,
+    BankCheckSequenceService,
+    PrintedCheckService,
+    TaxTagRepairRunService,
     FinancialStatementService,
     FiscalPeriodService,
     JournalService,
@@ -43,6 +51,10 @@ pub struct HttpServices {
     pub account: Arc<AccountService>,
     pub accounting_post: Arc<AccountingPostService>,
     pub cost_center: Arc<CostCenterService>,
+    pub emv_qr_config: Arc<EmvQrConfigService>,
+    pub bank_check_sequence: Arc<BankCheckSequenceService>,
+    pub printed_check: Arc<PrintedCheckService>,
+    pub tax_tag_repair_run: Arc<TaxTagRepairRunService>,
     pub financial_statement: Arc<FinancialStatementService>,
     pub fiscal_period: Arc<FiscalPeriodService>,
     pub journal: Arc<JournalService>,
@@ -77,6 +89,14 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_accounting_post_routes(services.accounting_post))
         // CostCenter routes (12 Backbone endpoints)
         .merge(create_cost_center_routes(services.cost_center))
+        // EmvQrConfig routes (12 Backbone endpoints)
+        .merge(create_emv_qr_config_routes(services.emv_qr_config))
+        // BankCheckSequence routes (12 Backbone endpoints)
+        .merge(create_bank_check_sequence_routes(services.bank_check_sequence))
+        // PrintedCheck routes (12 Backbone endpoints)
+        .merge(create_printed_check_routes(services.printed_check))
+        // TaxTagRepairRun routes (12 Backbone endpoints)
+        .merge(create_tax_tag_repair_run_routes(services.tax_tag_repair_run))
         // FinancialStatement routes (12 Backbone endpoints)
         .merge(create_financial_statement_routes(services.financial_statement))
         // FiscalPeriod routes (12 Backbone endpoints)
@@ -111,6 +131,22 @@ pub mod individual {
 
     pub fn cost_center_routes(service: Arc<CostCenterService>) -> Router {
         create_cost_center_routes(service)
+    }
+
+    pub fn emv_qr_config_routes(service: Arc<EmvQrConfigService>) -> Router {
+        create_emv_qr_config_routes(service)
+    }
+
+    pub fn bank_check_sequence_routes(service: Arc<BankCheckSequenceService>) -> Router {
+        create_bank_check_sequence_routes(service)
+    }
+
+    pub fn printed_check_routes(service: Arc<PrintedCheckService>) -> Router {
+        create_printed_check_routes(service)
+    }
+
+    pub fn tax_tag_repair_run_routes(service: Arc<TaxTagRepairRunService>) -> Router {
+        create_tax_tag_repair_run_routes(service)
     }
 
     pub fn financial_statement_routes(service: Arc<FinancialStatementService>) -> Router {

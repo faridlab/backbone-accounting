@@ -13,6 +13,8 @@ models:
   # org-scoped posting idempotency uniques (source-tuple and key-based).
   - name: AccountingPost
     collection: accounting_posts
+    # Data-change audit capture (ADR-0025): per-row trigger → auditlog.capture_data_change.
+    audited: true
     description: "Bridge linking business transactions (orders, payments, settlements) to their journal entries"
 
     fields:

@@ -133,7 +133,7 @@ models:
         description: "'auto' allocates from next_number inside the verb transaction; 'manual' validates officer-supplied numbers"
 
       next_number:
-        type: bigint
+        type: int64
         attributes: ["@required", "@default(1)", "@positive"]
         description: "The NEXT number to allocate; capped at 2147483647 by the verb (typed refusal, transaction rolls back)"
 
@@ -264,12 +264,12 @@ models:
         description: "The assignment rules exactly as applied (selectors + tag sets), stored for later diffing"
 
       lines_examined:
-        type: bigint
+        type: int64
         attributes: ["@required", "@non_negative"]
         description: "Posted lines the selectors matched"
 
       lines_retagged:
-        type: bigint
+        type: int64
         attributes: ["@required", "@non_negative"]
         description: "Lines whose tag set actually changed"
 

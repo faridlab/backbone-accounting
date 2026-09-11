@@ -21,3 +21,9 @@
 # Newly added seeds (preserve manual order above):
 - partial_reconcile_seed
 - full_reconcile_seed
+
+# Newly added seeds (preserve manual order above):
+- emv_qr_config_seed
+- tax_tag_repair_run_seed
+- printed_check_seed
+- bank_check_sequence_seed

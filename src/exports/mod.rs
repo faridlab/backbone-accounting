@@ -36,6 +36,18 @@ pub use events::*;
 /// - `CostCenterDto` - Data transfer object for CostCenter
 /// - `CostCenterSummary` - Summary view of CostCenter
 /// - `CostCenterId` - Type-safe ID wrapper
+/// - `EmvQrConfigDto` - Data transfer object for EmvQrConfig
+/// - `EmvQrConfigSummary` - Summary view of EmvQrConfig
+/// - `EmvQrConfigId` - Type-safe ID wrapper
+/// - `BankCheckSequenceDto` - Data transfer object for BankCheckSequence
+/// - `BankCheckSequenceSummary` - Summary view of BankCheckSequence
+/// - `BankCheckSequenceId` - Type-safe ID wrapper
+/// - `PrintedCheckDto` - Data transfer object for PrintedCheck
+/// - `PrintedCheckSummary` - Summary view of PrintedCheck
+/// - `PrintedCheckId` - Type-safe ID wrapper
+/// - `TaxTagRepairRunDto` - Data transfer object for TaxTagRepairRun
+/// - `TaxTagRepairRunSummary` - Summary view of TaxTagRepairRun
+/// - `TaxTagRepairRunId` - Type-safe ID wrapper
 /// - `FinancialStatementDto` - Data transfer object for FinancialStatement
 /// - `FinancialStatementSummary` - Summary view of FinancialStatement
 /// - `FinancialStatementId` - Type-safe ID wrapper
@@ -74,6 +86,18 @@ pub use events::*;
 /// - `CostCenterCreatedEvent` - Published when CostCenter is created
 /// - `CostCenterUpdatedEvent` - Published when CostCenter is updated
 /// - `CostCenterDeletedEvent` - Published when CostCenter is deleted
+/// - `EmvQrConfigCreatedEvent` - Published when EmvQrConfig is created
+/// - `EmvQrConfigUpdatedEvent` - Published when EmvQrConfig is updated
+/// - `EmvQrConfigDeletedEvent` - Published when EmvQrConfig is deleted
+/// - `BankCheckSequenceCreatedEvent` - Published when BankCheckSequence is created
+/// - `BankCheckSequenceUpdatedEvent` - Published when BankCheckSequence is updated
+/// - `BankCheckSequenceDeletedEvent` - Published when BankCheckSequence is deleted
+/// - `PrintedCheckCreatedEvent` - Published when PrintedCheck is created
+/// - `PrintedCheckUpdatedEvent` - Published when PrintedCheck is updated
+/// - `PrintedCheckDeletedEvent` - Published when PrintedCheck is deleted
+/// - `TaxTagRepairRunCreatedEvent` - Published when TaxTagRepairRun is created
+/// - `TaxTagRepairRunUpdatedEvent` - Published when TaxTagRepairRun is updated
+/// - `TaxTagRepairRunDeletedEvent` - Published when TaxTagRepairRun is deleted
 /// - `FinancialStatementCreatedEvent` - Published when FinancialStatement is created
 /// - `FinancialStatementUpdatedEvent` - Published when FinancialStatement is updated
 /// - `FinancialStatementDeletedEvent` - Published when FinancialStatement is deleted

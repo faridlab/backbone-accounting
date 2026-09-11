@@ -9,6 +9,10 @@
 pub mod account_repository;
 pub mod accounting_post_repository;
 pub mod cost_center_repository;
+pub mod emv_qr_config_repository;
+pub mod bank_check_sequence_repository;
+pub mod printed_check_repository;
+pub mod tax_tag_repair_run_repository;
 pub mod financial_statement_repository;
 pub mod fiscal_period_repository;
 pub mod journal_repository;
@@ -37,6 +41,30 @@ pub use cost_center_repository::{
     CostCenterPaginationParams,
     CostCenterPaginatedResult,
     CostCenterFilter,
+};
+pub use emv_qr_config_repository::{
+    EmvQrConfigRepository,
+    EmvQrConfigPaginationParams,
+    EmvQrConfigPaginatedResult,
+    EmvQrConfigFilter,
+};
+pub use bank_check_sequence_repository::{
+    BankCheckSequenceRepository,
+    BankCheckSequencePaginationParams,
+    BankCheckSequencePaginatedResult,
+    BankCheckSequenceFilter,
+};
+pub use printed_check_repository::{
+    PrintedCheckRepository,
+    PrintedCheckPaginationParams,
+    PrintedCheckPaginatedResult,
+    PrintedCheckFilter,
+};
+pub use tax_tag_repair_run_repository::{
+    TaxTagRepairRunRepository,
+    TaxTagRepairRunPaginationParams,
+    TaxTagRepairRunPaginatedResult,
+    TaxTagRepairRunFilter,
 };
 pub use financial_statement_repository::{
     FinancialStatementRepository,

@@ -92,6 +92,114 @@ pub struct CostCenterDeletedEvent {
 }
 
 // ============================================================================
+// EMVQRCONFIG EVENTS
+// ============================================================================
+
+/// Event published when a EmvQrConfig is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigCreatedEvent {
+    pub id: EmvQrConfigId,
+    pub data: EmvQrConfigDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a EmvQrConfig is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigUpdatedEvent {
+    pub id: EmvQrConfigId,
+    pub data: EmvQrConfigDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a EmvQrConfig is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigDeletedEvent {
+    pub id: EmvQrConfigId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// BANKCHECKSEQUENCE EVENTS
+// ============================================================================
+
+/// Event published when a BankCheckSequence is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceCreatedEvent {
+    pub id: BankCheckSequenceId,
+    pub data: BankCheckSequenceDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BankCheckSequence is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceUpdatedEvent {
+    pub id: BankCheckSequenceId,
+    pub data: BankCheckSequenceDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a BankCheckSequence is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceDeletedEvent {
+    pub id: BankCheckSequenceId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// PRINTEDCHECK EVENTS
+// ============================================================================
+
+/// Event published when a PrintedCheck is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckCreatedEvent {
+    pub id: PrintedCheckId,
+    pub data: PrintedCheckDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a PrintedCheck is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckUpdatedEvent {
+    pub id: PrintedCheckId,
+    pub data: PrintedCheckDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a PrintedCheck is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckDeletedEvent {
+    pub id: PrintedCheckId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// TAXTAGREPAIRRUN EVENTS
+// ============================================================================
+
+/// Event published when a TaxTagRepairRun is created
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunCreatedEvent {
+    pub id: TaxTagRepairRunId,
+    pub data: TaxTagRepairRunDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a TaxTagRepairRun is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunUpdatedEvent {
+    pub id: TaxTagRepairRunId,
+    pub data: TaxTagRepairRunDto,
+    pub occurred_at: DateTime<Utc>,
+}
+
+/// Event published when a TaxTagRepairRun is deleted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunDeletedEvent {
+    pub id: TaxTagRepairRunId,
+    pub occurred_at: DateTime<Utc>,
+}
+
+// ============================================================================
 // FINANCIALSTATEMENT EVENTS
 // ============================================================================
 
@@ -351,6 +459,18 @@ pub enum AccountingEvent {
     CostCenterCreated(CostCenterCreatedEvent),
     CostCenterUpdated(CostCenterUpdatedEvent),
     CostCenterDeleted(CostCenterDeletedEvent),
+    EmvQrConfigCreated(EmvQrConfigCreatedEvent),
+    EmvQrConfigUpdated(EmvQrConfigUpdatedEvent),
+    EmvQrConfigDeleted(EmvQrConfigDeletedEvent),
+    BankCheckSequenceCreated(BankCheckSequenceCreatedEvent),
+    BankCheckSequenceUpdated(BankCheckSequenceUpdatedEvent),
+    BankCheckSequenceDeleted(BankCheckSequenceDeletedEvent),
+    PrintedCheckCreated(PrintedCheckCreatedEvent),
+    PrintedCheckUpdated(PrintedCheckUpdatedEvent),
+    PrintedCheckDeleted(PrintedCheckDeletedEvent),
+    TaxTagRepairRunCreated(TaxTagRepairRunCreatedEvent),
+    TaxTagRepairRunUpdated(TaxTagRepairRunUpdatedEvent),
+    TaxTagRepairRunDeleted(TaxTagRepairRunDeletedEvent),
     FinancialStatementCreated(FinancialStatementCreatedEvent),
     FinancialStatementUpdated(FinancialStatementUpdatedEvent),
     FinancialStatementDeleted(FinancialStatementDeletedEvent),

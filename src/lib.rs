@@ -35,6 +35,10 @@ pub use infrastructure::persistence::*;
 pub use application::service::AccountService;
 pub use application::service::AccountingPostService;
 pub use application::service::CostCenterService;
+pub use application::service::EmvQrConfigService;
+pub use application::service::BankCheckSequenceService;
+pub use application::service::PrintedCheckService;
+pub use application::service::TaxTagRepairRunService;
 pub use application::service::FinancialStatementService;
 pub use application::service::FiscalPeriodService;
 pub use application::service::JournalService;
@@ -68,6 +72,10 @@ pub struct AccountingModule {
     pub(crate) account_service: Arc<AccountService>,
     pub(crate) accounting_post_service: Arc<AccountingPostService>,
     pub(crate) cost_center_service: Arc<CostCenterService>,
+    pub(crate) emv_qr_config_service: Arc<EmvQrConfigService>,
+    pub(crate) bank_check_sequence_service: Arc<BankCheckSequenceService>,
+    pub(crate) printed_check_service: Arc<PrintedCheckService>,
+    pub(crate) tax_tag_repair_run_service: Arc<TaxTagRepairRunService>,
     pub(crate) financial_statement_service: Arc<FinancialStatementService>,
     pub(crate) fiscal_period_service: Arc<FiscalPeriodService>,
     pub(crate) journal_service: Arc<JournalService>,
@@ -124,6 +132,10 @@ impl AccountingModule {
             create_account_routes,
             create_accounting_post_routes,
             create_cost_center_routes,
+            create_emv_qr_config_routes,
+            create_bank_check_sequence_routes,
+            create_printed_check_routes,
+            create_tax_tag_repair_run_routes,
             create_financial_statement_routes,
             create_fiscal_period_routes,
             create_journal_routes,
@@ -139,6 +151,10 @@ impl AccountingModule {
             .merge(create_account_routes(self.account_service.clone()))
             .merge(create_accounting_post_routes(self.accounting_post_service.clone()))
             .merge(create_cost_center_routes(self.cost_center_service.clone()))
+            .merge(create_emv_qr_config_routes(self.emv_qr_config_service.clone()))
+            .merge(create_bank_check_sequence_routes(self.bank_check_sequence_service.clone()))
+            .merge(create_printed_check_routes(self.printed_check_service.clone()))
+            .merge(create_tax_tag_repair_run_routes(self.tax_tag_repair_run_service.clone()))
             .merge(create_financial_statement_routes(self.financial_statement_service.clone()))
             .merge(create_fiscal_period_routes(self.fiscal_period_service.clone()))
             .merge(create_journal_routes(self.journal_service.clone()))
@@ -170,6 +186,10 @@ impl AccountingModule {
             create_account_read_routes,
             create_accounting_post_read_routes,
             create_cost_center_read_routes,
+            create_emv_qr_config_read_routes,
+            create_bank_check_sequence_read_routes,
+            create_printed_check_read_routes,
+            create_tax_tag_repair_run_read_routes,
             create_financial_statement_read_routes,
             create_fiscal_period_read_routes,
             create_journal_read_routes,
@@ -185,6 +205,10 @@ impl AccountingModule {
             .merge(create_account_read_routes(self.account_service.clone()))
             .merge(create_accounting_post_read_routes(self.accounting_post_service.clone()))
             .merge(create_cost_center_read_routes(self.cost_center_service.clone()))
+            .merge(create_emv_qr_config_read_routes(self.emv_qr_config_service.clone()))
+            .merge(create_bank_check_sequence_read_routes(self.bank_check_sequence_service.clone()))
+            .merge(create_printed_check_read_routes(self.printed_check_service.clone()))
+            .merge(create_tax_tag_repair_run_read_routes(self.tax_tag_repair_run_service.clone()))
             .merge(create_financial_statement_read_routes(self.financial_statement_service.clone()))
             .merge(create_fiscal_period_read_routes(self.fiscal_period_service.clone()))
             .merge(create_journal_read_routes(self.journal_service.clone()))
@@ -379,6 +403,22 @@ impl AccountingModuleBuilder {
         let cost_center_repository = Arc::new(CostCenterRepository::new(db_pool.clone()));
         let cost_center_service = Arc::new(CostCenterService::with_repository(cost_center_repository.clone()));
 
+        // EmvQrConfig service
+        let emv_qr_config_repository = Arc::new(EmvQrConfigRepository::new(db_pool.clone()));
+        let emv_qr_config_service = Arc::new(EmvQrConfigService::with_repository(emv_qr_config_repository.clone()));
+
+        // BankCheckSequence service
+        let bank_check_sequence_repository = Arc::new(BankCheckSequenceRepository::new(db_pool.clone()));
+        let bank_check_sequence_service = Arc::new(BankCheckSequenceService::with_repository(bank_check_sequence_repository.clone()));
+
+        // PrintedCheck service
+        let printed_check_repository = Arc::new(PrintedCheckRepository::new(db_pool.clone()));
+        let printed_check_service = Arc::new(PrintedCheckService::with_repository(printed_check_repository.clone()));
+
+        // TaxTagRepairRun service
+        let tax_tag_repair_run_repository = Arc::new(TaxTagRepairRunRepository::new(db_pool.clone()));
+        let tax_tag_repair_run_service = Arc::new(TaxTagRepairRunService::with_repository(tax_tag_repair_run_repository.clone()));
+
         // FinancialStatement service
         let financial_statement_repository = Arc::new(FinancialStatementRepository::new(db_pool.clone()));
         let financial_statement_service = Arc::new(FinancialStatementService::with_repository(financial_statement_repository.clone()));
@@ -479,6 +519,10 @@ impl AccountingModuleBuilder {
             account_service,
             accounting_post_service,
             cost_center_service,
+            emv_qr_config_service,
+            bank_check_sequence_service,
+            printed_check_service,
+            tax_tag_repair_run_service,
             financial_statement_service,
             fiscal_period_service,
             journal_service,

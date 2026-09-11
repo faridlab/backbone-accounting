@@ -234,6 +234,264 @@ pub struct CostCenterRef {
 }
 
 // ============================================================================
+// EMVQRCONFIG TYPES
+// ============================================================================
+
+/// Type-safe ID for EmvQrConfig
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EmvQrConfigId(pub Uuid);
+
+impl EmvQrConfigId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for EmvQrConfigId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<EmvQrConfigId> for Uuid {
+    fn from(id: EmvQrConfigId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for EmvQrConfig
+///
+/// This is the public representation of EmvQrConfig for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigDto {
+    pub id: EmvQrConfigId,
+    pub merchant_name: String,
+    pub merchant_city: String,
+    pub country_code: String,
+    pub mcc: String,
+    pub gui: String,
+    pub merchant_identifier: String,
+    pub currency: String,
+    pub initiation_method: String,
+    pub bank_account_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of EmvQrConfig for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigSummary {
+    pub id: EmvQrConfigId,
+    pub merchant_name: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to EmvQrConfig for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmvQrConfigRef {
+    pub id: EmvQrConfigId,
+}
+
+// ============================================================================
+// BANKCHECKSEQUENCE TYPES
+// ============================================================================
+
+/// Type-safe ID for BankCheckSequence
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BankCheckSequenceId(pub Uuid);
+
+impl BankCheckSequenceId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for BankCheckSequenceId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<BankCheckSequenceId> for Uuid {
+    fn from(id: BankCheckSequenceId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for BankCheckSequence
+///
+/// This is the public representation of BankCheckSequence for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceDto {
+    pub id: BankCheckSequenceId,
+    pub bank_account_id: Uuid,
+    pub numbering_mode: String,
+    pub next_number: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of BankCheckSequence for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceSummary {
+    pub id: BankCheckSequenceId,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to BankCheckSequence for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankCheckSequenceRef {
+    pub id: BankCheckSequenceId,
+}
+
+// ============================================================================
+// PRINTEDCHECK TYPES
+// ============================================================================
+
+/// Type-safe ID for PrintedCheck
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PrintedCheckId(pub Uuid);
+
+impl PrintedCheckId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for PrintedCheckId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<PrintedCheckId> for Uuid {
+    fn from(id: PrintedCheckId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for PrintedCheck
+///
+/// This is the public representation of PrintedCheck for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckDto {
+    pub id: PrintedCheckId,
+    pub bank_account_id: Uuid,
+    pub payment_id: Uuid,
+    pub payment_number: Option<String>,
+    pub check_number: String,
+    pub amount: Decimal,
+    pub payee_name: Option<String>,
+    pub status: String,
+    pub printed_at: DateTime<Utc>,
+    pub printed_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of PrintedCheck for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckSummary {
+    pub id: PrintedCheckId,
+    pub payee_name: Option<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to PrintedCheck for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintedCheckRef {
+    pub id: PrintedCheckId,
+}
+
+// ============================================================================
+// TAXTAGREPAIRRUN TYPES
+// ============================================================================
+
+/// Type-safe ID for TaxTagRepairRun
+///
+/// Use this instead of raw Uuid for type safety across modules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TaxTagRepairRunId(pub Uuid);
+
+impl TaxTagRepairRunId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    pub fn into_inner(self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for TaxTagRepairRunId {
+    fn from(id: Uuid) -> Self {
+        Self(id)
+    }
+}
+
+impl From<TaxTagRepairRunId> for Uuid {
+    fn from(id: TaxTagRepairRunId) -> Self {
+        id.0
+    }
+}
+
+/// Data transfer object for TaxTagRepairRun
+///
+/// This is the public representation of TaxTagRepairRun for other modules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunDto {
+    pub id: TaxTagRepairRunId,
+    pub date_from: NaiveDate,
+    pub date_to: NaiveDate,
+    pub rules: serde_json::Value,
+    pub lines_examined: i64,
+    pub lines_retagged: i64,
+    pub dry_run: bool,
+    pub closed_periods_overridden: serde_json::Value,
+    pub actor: Option<Uuid>,
+    pub reason: String,
+    pub ran_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
+/// Summary view of TaxTagRepairRun for list displays
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunSummary {
+    pub id: TaxTagRepairRunId,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Reference to TaxTagRepairRun for foreign key relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxTagRepairRunRef {
+    pub id: TaxTagRepairRunId,
+}
+
+// ============================================================================
 // FINANCIALSTATEMENT TYPES
 // ============================================================================
 
