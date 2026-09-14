@@ -36,7 +36,6 @@ use crate::application::service::emv_qr_service::{
 
 #[derive(Debug, Deserialize)]
 pub struct EmvQrConfigBody {
-    pub company_id: Uuid,
     #[serde(default)]
     pub bank_account_id: Option<Uuid>,
     pub merchant_name: String,
@@ -68,7 +67,6 @@ fn default_initiation() -> String {
 
 #[derive(Debug, Deserialize)]
 pub struct EmvQrPayloadQuery {
-    pub company_id: Uuid,
     #[serde(default)]
     pub bank_account_id: Option<Uuid>,
     /// Invoice residual amount; omit for a static QR without tag 54.
@@ -104,15 +102,6 @@ fn error_response(e: &EmvQrServiceError) -> axum::response::Response {
 // company lane for unstripped hosts. Neither bound — e.g. an undecorated
 // deployment — means nothing to compare against, so no refusal.
 
-fn tenant_mismatch(req_company: Uuid) -> bool {
-    let authenticated = backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .or_else(|| backbone_orm::current_company());
-    match authenticated {
-        Some(authenticated) => authenticated != req_company,
-        None => false,
-    }
-}
 
 fn forbidden_tenant() -> axum::response::Response {
     (
@@ -129,11 +118,7 @@ async fn upsert_config(
     State(service): State<Arc<EmvQrService>>,
     Json(body): Json<EmvQrConfigBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     let input = EmvQrConfigInput {
-        company_id: body.company_id,
         bank_account_id: body.bank_account_id,
         merchant_name: body.merchant_name,
         merchant_city: body.merchant_city,
@@ -149,7 +134,6 @@ async fn upsert_config(
             StatusCode::OK,
             Json(EmvQrConfigAck {
                 config_id: ack.config_id,
-                company_id: ack.company_id,
                 bank_account_id: ack.bank_account_id,
             }),
         )
@@ -162,12 +146,8 @@ async fn payload(
     State(service): State<Arc<EmvQrService>>,
     Query(q): Query<EmvQrPayloadQuery>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(q.company_id) {
-        return forbidden_tenant();
-    }
     match service
         .invoice_payload(
-            q.company_id,
             q.bank_account_id,
             q.amount,
             q.currency,

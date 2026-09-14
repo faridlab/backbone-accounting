@@ -37,9 +37,8 @@ async fn shed_config(pool: &PgPool, config_id: Uuid) {
         .unwrap();
 }
 
-fn input(company: Uuid) -> EmvQrConfigInput {
+fn input() -> EmvQrConfigInput {
     EmvQrConfigInput {
-        company_id: company,
         bank_account_id: None,
         merchant_name: "LAOPAY STORE".into(),
         merchant_city: "JAKARTA".into(),
@@ -61,13 +60,11 @@ async fn payload_renders_from_saved_config() {
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
-    let ack = svc.upsert_config(input(company)).await.unwrap();
-    assert_eq!(ack.company_id, company);
+    let ack = svc.upsert_config(input()).await.unwrap();
     assert!(ack.bank_account_id.is_none());
 
     let payload = svc
         .invoice_payload(
-            company,
             None,
             Some(Decimal::new(150000_00, 2)),
             None,
@@ -132,9 +129,9 @@ async fn payload_without_amount_omits_tags_54_and_62() {
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
-    let ack = svc.upsert_config(input(company)).await.unwrap();
+    let ack = svc.upsert_config(input()).await.unwrap();
 
-    let payload = svc.invoice_payload(company, None, None, None, None).await.unwrap();
+    let payload = svc.invoice_payload(None, None, None, None).await.unwrap();
     assert!(payload.payload.starts_with("000201010211"));
 
     // Walk the full payload (the CRC value is tag 63's four chars) and check
@@ -156,8 +153,8 @@ async fn upsert_is_idempotent_per_slot() {
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
-    let first = svc.upsert_config(input(company)).await.unwrap();
-    let mut second = input(company);
+    let first = svc.upsert_config(input()).await.unwrap();
+    let mut second = input();
     second.merchant_name = "LAOPAY STORE 2".into();
     let second = svc.upsert_config(second).await.unwrap();
 
@@ -184,16 +181,16 @@ async fn slot_resolution_prefers_bank_specific_config() {
     let bank = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
-    let default_cfg = svc.upsert_config(input(company)).await.unwrap();
-    let mut bank_cfg = input(company);
+    let default_cfg = svc.upsert_config(input()).await.unwrap();
+    let mut bank_cfg = input();
     bank_cfg.bank_account_id = Some(bank);
     bank_cfg.merchant_name = "BANK SLOT SHOP".into();
     svc.upsert_config(bank_cfg).await.unwrap();
 
-    let specific = svc.invoice_payload(company, Some(bank), None, None, None).await.unwrap();
+    let specific = svc.invoice_payload(Some(bank), None, None, None).await.unwrap();
     assert!(specific.payload.contains("BANK SLOT SHOP"));
 
-    let fallback = svc.invoice_payload(company, Some(Uuid::new_v4()), None, None, None)
+    let fallback = svc.invoice_payload(Some(Uuid::new_v4()), None, None, None)
         .await
         .unwrap();
     assert!(fallback.payload.contains("LAOPAY STORE"));
@@ -209,7 +206,7 @@ async fn missing_config_refuses_fail_closed() {
     let svc = EmvQrService::new(pool.clone());
 
     let err = svc
-        .invoice_payload(Uuid::new_v4(), None, Some(Decimal::ONE), None, Some("R".to_string()))
+        .invoice_payload(None, Some(Decimal::ONE), None, Some("R".to_string()))
         .await
         .unwrap_err();
     assert_eq!(err.code(), "qr_config_missing");
@@ -232,13 +229,13 @@ async fn invalid_config_refuses_before_write() {
             .await
             .unwrap();
 
-    let mut bad_currency = input(company);
+    let mut bad_currency = input();
     bad_currency.currency = "XYZ".into();
     let err = svc.upsert_config(bad_currency).await.unwrap_err();
     assert_eq!(err.code(), "currency_not_supported");
     assert_eq!(err.http_status(), 422);
 
-    let mut bad_name = input(company);
+    let mut bad_name = input();
     bad_name.merchant_name = "THIS MERCHANT NAME IS FAR TOO LONG FOR EMV".into();
     let err = svc.upsert_config(bad_name).await.unwrap_err();
     assert_eq!(err.code(), "merchant_name_too_long");
@@ -260,10 +257,10 @@ async fn render_time_currency_override_is_validated() {
     let pool = pool().await;
     let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
-    let ack = svc.upsert_config(input(company)).await.unwrap();
+    let ack = svc.upsert_config(input()).await.unwrap();
 
     let err = svc
-        .invoice_payload(company, None, Some(Decimal::ONE), Some("XYZ".into()), None)
+        .invoice_payload(None, Some(Decimal::ONE), Some("XYZ".into()), None)
         .await
         .unwrap_err();
     assert_eq!(err.code(), "currency_not_supported");

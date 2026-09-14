@@ -36,9 +36,6 @@ use crate::domain::emv_qr::{
 /// (`bank_account_id = None`) or one bank account's override.
 #[derive(Debug, Clone)]
 pub struct EmvQrConfigInput {
-    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
-    /// run unchanged; no statement keys on it.
-    pub company_id: Uuid,
     pub bank_account_id: Option<Uuid>,
     pub merchant_name: String,
     pub merchant_city: String,
@@ -53,8 +50,6 @@ pub struct EmvQrConfigInput {
 #[derive(Debug, Clone, Serialize)]
 pub struct EmvQrConfigAck {
     pub config_id: Uuid,
-    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
-    pub company_id: Uuid,
     pub bank_account_id: Option<Uuid>,
 }
 
@@ -121,6 +116,16 @@ fn internal(e: impl std::fmt::Display) -> EmvQrServiceError {
 #[derive(Clone)]
 pub struct EmvQrService {
     pool: PgPool,
+}
+
+/// The tenant the EMV config belongs to, taken from the request's own scope.
+///
+/// The config is per-company and the lookup still needs one, but the caller no longer supplies
+/// it: a value that must equal the session's is better read from the session.
+fn ambient_company() -> Uuid {
+    backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .unwrap_or_default()
 }
 
 impl EmvQrService {
@@ -209,7 +214,6 @@ impl EmvQrService {
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(EmvQrConfigAck {
             config_id,
-            company_id: input.company_id,
             bank_account_id: input.bank_account_id,
         })
     }
@@ -230,7 +234,6 @@ impl EmvQrService {
     /// deployment.
     pub async fn invoice_payload(
         &self,
-        company_id: Uuid,
         bank_account_id: Option<Uuid>,
         amount: Option<Decimal>,
         currency: Option<String>,
@@ -261,7 +264,7 @@ impl EmvQrService {
         tx.commit().await.map_err(|e| internal(e))?;
 
         let Some(cfg) = row else {
-            return Err(EmvQrServiceError::ConfigMissing(company_id));
+            return Err(EmvQrServiceError::ConfigMissing(ambient_company()));
         };
 
         let profile = EmvMerchantProfile {
