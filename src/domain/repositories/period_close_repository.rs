@@ -32,13 +32,11 @@ pub trait PeriodCloseRepository: Send + Sync {
     async fn find_period(
         &self,
         period_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<PeriodRow>>;
 
     /// Per-account P&L (revenue/expense/cogs/other) balances within `[start, end]`.
     async fn sum_pl_balances(
         &self,
-        company_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> anyhow::Result<Vec<PlBalanceRow>>;

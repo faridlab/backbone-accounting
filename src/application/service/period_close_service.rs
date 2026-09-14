@@ -89,13 +89,12 @@ impl PeriodCloseService {
     /// `retained_earnings_account_id`, then mark the period closed.
     pub async fn close_period(
         &self,
-        company_id: Uuid,
         period_id: Uuid,
         retained_earnings_account_id: Uuid,
     ) -> Result<PeriodCloseResult, PeriodCloseError> {
         let Some(period) = self
             .repo
-            .find_period(period_id, company_id)
+            .find_period(period_id)
             .await
             .map_err(internal)?
         else {
@@ -107,7 +106,7 @@ impl PeriodCloseService {
 
         let rows = self
             .repo
-            .sum_pl_balances(company_id, period.start_date, period.end_date)
+            .sum_pl_balances(period.start_date, period.end_date)
             .await
             .map_err(internal)?;
 
@@ -162,6 +161,12 @@ impl PeriodCloseService {
         }
 
         // Post the closing entry (period still open) through the GL-posting contract.
+        // The close posts through the shared posting request, which still carries the legacy
+        // company twin for unstripped consumers. Read it from the ambient org scope — the same
+        // source the module's repositories echo — rather than taking it from the caller.
+        let company_id = backbone_orm::org_scope::current_org_scope()
+            .and_then(|s| s.legacy_company_id())
+            .unwrap_or_default();
         let mut req = PostingRequest::original(company_id, "manual", period_id, period.end_date);
         req.description = Some("Period close".to_string());
         req.lines = lines;

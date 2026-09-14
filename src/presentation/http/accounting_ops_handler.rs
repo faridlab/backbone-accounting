@@ -2,11 +2,12 @@
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`).
 //!   POST /accounting/reconcile                         (body = ReconcileRequest)
-//!   POST /accounting/periods/{period_id}/close         (body = { company_id, retained_earnings_account_id })
+//!   POST /accounting/periods/{period_id}/close         (body = { retained_earnings_account_id })
 //!
-//! Tenancy (ADR-0029): the `company_id` fields in the wire bodies are the legacy twin — kept
-//! so unstripped callers compile and run unchanged; the module keys no statement on them and
-//! the composing service's tenancy decorator scopes the underlying reads/writes.
+//! Tenancy (ADR-0029): the wire bodies carry no tenant field. The composing service's tenancy
+//! decorator scopes every read and write from the request's own scope, so a tenant sent in the
+//! body could only ever agree with it or contradict it — and a field that cannot change the
+//! answer is a field that invites someone to think it can.
 
 use std::sync::Arc;
 
@@ -48,7 +49,6 @@ pub fn create_bank_reconciliation_routes(service: Arc<BankReconciliationService>
 // ── Period close ──────────────────────────────────────────────────────────────
 #[derive(Debug, Deserialize)]
 pub struct ClosePeriodBody {
-    pub company_id: Uuid,
     pub retained_earnings_account_id: Uuid,
 }
 
@@ -58,11 +58,7 @@ async fn close_period(
     Json(body): Json<ClosePeriodBody>,
 ) -> impl IntoResponse {
     match svc
-        .close_period(
-            body.company_id,
-            period_id,
-            body.retained_earnings_account_id,
-        )
+        .close_period(period_id, body.retained_earnings_account_id)
         .await
     {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),

@@ -37,7 +37,6 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
     async fn find_period(
         &self,
         period_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<PeriodRow>> {
         let row = org_scope::fetch_optional_row_scoped(
             &self.pool,
@@ -56,7 +55,6 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
 
     async fn sum_pl_balances(
         &self,
-        _company_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> anyhow::Result<Vec<PlBalanceRow>> {

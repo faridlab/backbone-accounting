@@ -217,7 +217,7 @@ async fn pcg1_close_rolls_net_income() {
     .await;
 
     let res = closer
-        .close_period(s.company, s.period, s.retained)
+        .close_period(s.period, s.retained)
         .await
         .unwrap();
 
@@ -267,10 +267,10 @@ async fn pcg2_double_close_rejected() {
     .await;
 
     closer
-        .close_period(s.company, s.period, s.retained)
+        .close_period(s.period, s.retained)
         .await
         .unwrap();
-    let again = closer.close_period(s.company, s.period, s.retained).await;
+    let again = closer.close_period(s.period, s.retained).await;
     assert!(matches!(again, Err(PeriodCloseError::AlreadyClosed)));
 
     shed_period_surface(&pool, s.period).await;
