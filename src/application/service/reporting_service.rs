@@ -55,7 +55,6 @@ pub struct TrialBalanceNode {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TrialBalance {
-    pub company_id: Uuid,
     pub as_of: NaiveDate,
     pub lines: Vec<TrialBalanceLine>,
     pub tree: Vec<TrialBalanceNode>,
@@ -66,7 +65,6 @@ pub struct TrialBalance {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BalanceSheet {
-    pub company_id: Uuid,
     pub as_of: NaiveDate,
     pub assets: Decimal,
     pub liabilities: Decimal,
@@ -78,7 +76,6 @@ pub struct BalanceSheet {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct IncomeStatement {
-    pub company_id: Uuid,
     pub period_start: NaiveDate,
     pub period_end: NaiveDate,
     pub revenue: Decimal,
@@ -123,7 +120,6 @@ pub struct GeneralLedgerSection {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct GeneralLedger {
-    pub company_id: Uuid,
     pub from_date: Option<NaiveDate>,
     pub to_date: NaiveDate,
     pub limit: i64,
@@ -148,7 +144,6 @@ pub struct PartnerLedgerLine {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PartnerLedger {
-    pub company_id: Uuid,
     pub party_type: String,
     pub party_id: Uuid,
     pub as_of: NaiveDate,
@@ -173,7 +168,6 @@ pub struct AgedPartyRow {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AgedReport {
-    pub company_id: Uuid,
     pub as_of: NaiveDate,
     pub account_subtype: String,
     pub parties: Vec<AgedPartyRow>,
@@ -294,12 +288,11 @@ impl ReportingService {
 
     pub async fn trial_balance(
         &self,
-        company_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<TrialBalance> {
         let (sums, directory) = tokio::join!(
-            self.repo.account_sums(company_id, None, as_of),
-            self.repo.account_directory(company_id)
+            self.repo.account_sums(None, as_of),
+            self.repo.account_directory()
         );
         let sums = sums?;
         let directory = directory?;
@@ -330,7 +323,6 @@ impl ReportingService {
         }
         let tree = Self::trial_balance_tree(&directory, &detail_net);
         Ok(TrialBalance {
-            company_id,
             as_of,
             lines,
             tree,
@@ -342,10 +334,9 @@ impl ReportingService {
 
     pub async fn balance_sheet(
         &self,
-        company_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<BalanceSheet> {
-        let sums = self.repo.account_sums(company_id, None, as_of).await?;
+        let sums = self.repo.account_sums(None, as_of).await?;
         let mut assets = Decimal::ZERO;
         let mut liabilities = Decimal::ZERO;
         let mut equity = Decimal::ZERO;
@@ -363,7 +354,6 @@ impl ReportingService {
         }
         let total_liabilities_and_equity = liabilities + equity + current_earnings;
         Ok(BalanceSheet {
-            company_id,
             as_of,
             assets,
             liabilities,
@@ -376,13 +366,12 @@ impl ReportingService {
 
     pub async fn income_statement(
         &self,
-        company_id: Uuid,
         period_start: NaiveDate,
         period_end: NaiveDate,
     ) -> anyhow::Result<IncomeStatement> {
         let sums = self
             .repo
-            .account_sums(company_id, Some(period_start), period_end)
+            .account_sums(Some(period_start), period_end)
             .await?;
         let mut revenue = Decimal::ZERO;
         let mut other_income = Decimal::ZERO;
@@ -402,7 +391,6 @@ impl ReportingService {
         }
         let net_income = revenue + other_income - cogs - expenses - other_expense;
         Ok(IncomeStatement {
-            company_id,
             period_start,
             period_end,
             revenue,
@@ -418,7 +406,6 @@ impl ReportingService {
     /// `limit` is clamped to 1..=1000 (default 200); `offset` pages within the same window.
     pub async fn general_ledger(
         &self,
-        company_id: Uuid,
         account_id: Option<Uuid>,
         from_date: Option<NaiveDate>,
         to_date: NaiveDate,
@@ -429,7 +416,7 @@ impl ReportingService {
         let offset = offset.max(0);
         let rows = self
             .repo
-            .gl_lines(company_id, account_id, from_date, to_date, limit, offset)
+            .gl_lines(account_id, from_date, to_date, limit, offset)
             .await?;
 
         // Group consecutive rows by account (the read is ordered by account number).
@@ -475,7 +462,6 @@ impl ReportingService {
             section.closing_balance = r.balance_after;
         }
         Ok(GeneralLedger {
-            company_id,
             from_date,
             to_date,
             limit,
@@ -488,14 +474,13 @@ impl ReportingService {
     /// that date. `open_residual` is the party's still-open position.
     pub async fn partner_ledger(
         &self,
-        company_id: Uuid,
         party_type: &str,
         party_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<PartnerLedger> {
         let rows = self
             .repo
-            .party_ledger_lines(company_id, party_type, party_id, as_of)
+            .party_ledger_lines(party_type, party_id, as_of)
             .await?;
         let mut total_debit = Decimal::ZERO;
         let mut total_credit = Decimal::ZERO;
@@ -521,7 +506,6 @@ impl ReportingService {
             })
             .collect();
         Ok(PartnerLedger {
-            company_id,
             party_type: party_type.to_string(),
             party_id,
             as_of,
@@ -537,13 +521,12 @@ impl ReportingService {
     /// (`accounts_receivable` / `accounts_payable`).
     pub async fn aged_report(
         &self,
-        company_id: Uuid,
         account_subtype: &str,
         as_of: NaiveDate,
     ) -> anyhow::Result<AgedReport> {
         let items = self
             .repo
-            .aged_open_items(company_id, account_subtype, as_of)
+            .aged_open_items(account_subtype, as_of)
             .await?;
         let mut parties: BTreeMap<(String, Uuid), AgedPartyRow> = BTreeMap::new();
         let mut totals = AgedPartyRow::default();
@@ -560,7 +543,6 @@ impl ReportingService {
             Self::bucket(&mut totals, days, it.residual);
         }
         Ok(AgedReport {
-            company_id,
             as_of,
             account_subtype: account_subtype.to_string(),
             parties: parties.into_values().collect(),
@@ -570,19 +552,17 @@ impl ReportingService {
 
     pub async fn aged_receivables(
         &self,
-        company_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<AgedReport> {
-        self.aged_report(company_id, "accounts_receivable", as_of)
+        self.aged_report("accounts_receivable", as_of)
             .await
     }
 
     pub async fn aged_payables(
         &self,
-        company_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<AgedReport> {
-        self.aged_report(company_id, "accounts_payable", as_of)
+        self.aged_report("accounts_payable", as_of)
             .await
     }
 

@@ -210,7 +210,7 @@ async fn rgc1_after_sales_invoice() {
     let as_of = NaiveDate::from_ymd_opt(2026, 6, 30).unwrap();
 
     // Trial balance foots at 1,110,000.
-    let tb = reports.trial_balance(company, as_of).await.unwrap();
+    let tb = reports.trial_balance(as_of).await.unwrap();
     assert!(tb.balanced);
     assert_eq!(tb.total_debit, dec("1110000.00"));
     assert_eq!(tb.total_credit, dec("1110000.00"));
@@ -218,7 +218,7 @@ async fn rgc1_after_sales_invoice() {
 
     // Income statement: revenue 1,000,000, net income 1,000,000.
     let is = reports
-        .income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
+        .income_statement(NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
         .await
         .unwrap();
     assert_eq!(is.revenue, dec("1000000.00"));
@@ -226,7 +226,7 @@ async fn rgc1_after_sales_invoice() {
     assert_eq!(is.net_income, dec("1000000.00"));
 
     // Balance sheet: Assets 1,110,000 = Liabilities 110,000 + Equity 0 + Current earnings 1,000,000.
-    let bs = reports.balance_sheet(company, as_of).await.unwrap();
+    let bs = reports.balance_sheet(as_of).await.unwrap();
     assert_eq!(bs.assets, dec("1110000.00"));
     assert_eq!(bs.liabilities, dec("110000.00"));
     assert_eq!(bs.equity, dec("0"));
@@ -254,19 +254,19 @@ async fn rgc2_after_sales_and_purchase() {
 
     let as_of = NaiveDate::from_ymd_opt(2026, 6, 30).unwrap();
 
-    let tb = reports.trial_balance(company, as_of).await.unwrap();
+    let tb = reports.trial_balance(as_of).await.unwrap();
     assert!(tb.balanced);
     assert_eq!(tb.total_debit, dec("1665000.00")); // AR 1.11M + Expense 500k + PPN In 55k
 
     let is = reports
-        .income_statement(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
+        .income_statement(NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(), as_of)
         .await
         .unwrap();
     assert_eq!(is.revenue, dec("1000000.00"));
     assert_eq!(is.expenses, dec("500000.00"));
     assert_eq!(is.net_income, dec("500000.00"));
 
-    let bs = reports.balance_sheet(company, as_of).await.unwrap();
+    let bs = reports.balance_sheet(as_of).await.unwrap();
     assert_eq!(bs.assets, dec("1165000.00")); // AR 1,110,000 + PPN Input 55,000
     assert_eq!(bs.liabilities, dec("665000.00")); // PPN Out 110k + AP 545k + PPh 10k
     assert_eq!(bs.current_earnings, dec("500000.00"));
@@ -294,7 +294,6 @@ async fn rgc3_period_filter() {
     // A July period contains no activity → revenue 0.
     let is = reports
         .income_statement(
-            company,
             NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
             NaiveDate::from_ymd_opt(2026, 7, 31).unwrap(),
         )
@@ -305,7 +304,7 @@ async fn rgc3_period_filter() {
 
     // A balance sheet as-of before the posting date shows nothing.
     let bs = reports
-        .balance_sheet(company, NaiveDate::from_ymd_opt(2026, 6, 1).unwrap())
+        .balance_sheet(NaiveDate::from_ymd_opt(2026, 6, 1).unwrap())
         .await
         .unwrap();
     assert_eq!(bs.assets, dec("0"));
@@ -369,7 +368,6 @@ async fn rgc4_general_ledger() {
     // Whole-June window, no account filter: one section per touched account (7 lines total).
     let gl = reports
         .general_ledger(
-            company,
             None,
             Some(NaiveDate::from_ymd_opt(2026, 6, 1).unwrap()),
             NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
@@ -385,7 +383,6 @@ async fn rgc4_general_ledger() {
     // Single-account window: the AR account opens at 0 and closes at its face.
     let ar = reports
         .general_ledger(
-            company,
             Some(a["1200"]),
             None,
             NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
@@ -408,7 +405,6 @@ async fn rgc4_general_ledger() {
     // A window before any activity shows no sections.
     let empty = reports
         .general_ledger(
-            company,
             None,
             None,
             NaiveDate::from_ymd_opt(2026, 5, 31).unwrap(),
@@ -471,7 +467,7 @@ async fn rgc5_partner_ledger_and_aging() {
 
     // Partner ledger for the customer: one open AR line at face.
     let pl = reports
-        .partner_ledger(company, "customer", cust, d15())
+        .partner_ledger("customer", cust, d15())
         .await
         .unwrap();
     assert_eq!(pl.lines.len(), 1);
@@ -482,14 +478,14 @@ async fn rgc5_partner_ledger_and_aging() {
 
     // An unknown party has no lines.
     let none = reports
-        .partner_ledger(company, "customer", Uuid::new_v4(), d15())
+        .partner_ledger("customer", Uuid::new_v4(), d15())
         .await
         .unwrap();
     assert!(none.lines.is_empty());
     assert_eq!(none.open_residual, dec("0"));
 
     // Aging on the invoice date: everything current.
-    let ar0 = reports.aged_receivables(company, d15()).await.unwrap();
+    let ar0 = reports.aged_receivables(d15()).await.unwrap();
     assert_eq!(ar0.parties.len(), 1);
     assert_eq!(ar0.parties[0].party_id, cust);
     assert_eq!(ar0.parties[0].bucket_0_30, dec("1110000.00"));
@@ -499,20 +495,20 @@ async fn rgc5_partner_ledger_and_aging() {
 
     // 75 days later: 61–90 bucket. 91+ days later: the oldest bucket.
     let d75 = d15() + chrono::Duration::days(75);
-    let ar75 = reports.aged_receivables(company, d75).await.unwrap();
+    let ar75 = reports.aged_receivables(d75).await.unwrap();
     assert_eq!(ar75.parties[0].bucket_61_90, dec("1110000.00"));
     let d91 = d15() + chrono::Duration::days(91);
-    let ar91 = reports.aged_receivables(company, d91).await.unwrap();
+    let ar91 = reports.aged_receivables(d91).await.unwrap();
     assert_eq!(ar91.parties[0].bucket_91_plus, dec("1110000.00"));
 
     // The day before the invoice: nothing is open yet.
     let dprev = d15() - chrono::Duration::days(1);
-    let arprev = reports.aged_receivables(company, dprev).await.unwrap();
+    let arprev = reports.aged_receivables(dprev).await.unwrap();
     assert!(arprev.parties.is_empty());
     assert_eq!(arprev.totals.total, dec("0"));
 
     // Payables age on the supplier side.
-    let ap = reports.aged_payables(company, d15()).await.unwrap();
+    let ap = reports.aged_payables(d15()).await.unwrap();
     assert_eq!(ap.parties.len(), 1);
     assert_eq!(ap.parties[0].party_id, supp);
     assert_eq!(ap.parties[0].bucket_0_30, dec("545000.00"));
@@ -612,7 +608,7 @@ async fn rgc6_trial_balance_tree() {
         .unwrap();
 
     let tb = reports
-        .trial_balance(company, NaiveDate::from_ymd_opt(2026, 6, 30).unwrap())
+        .trial_balance(NaiveDate::from_ymd_opt(2026, 6, 30).unwrap())
         .await
         .unwrap();
     assert!(tb.balanced);
@@ -682,7 +678,6 @@ async fn rgc7_backdated_posting_gl_consistency() {
     // date-ordered running balance (300,000 → 800,000), not the insertion-ordered one.
     let gl = reports
         .general_ledger(
-            company,
             Some(a["1100"]),
             None,
             NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
@@ -712,7 +707,6 @@ async fn rgc7_backdated_posting_gl_consistency() {
     // under the materialized columns it would open at 0 (the 06-15 row's balance_before).
     let later = reports
         .general_ledger(
-            company,
             Some(a["1100"]),
             Some(NaiveDate::from_ymd_opt(2026, 6, 12).unwrap()),
             NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
@@ -728,7 +722,7 @@ async fn rgc7_backdated_posting_gl_consistency() {
 
     // The GL closing must tie to the trial balance's net debit on the same account.
     let tb = reports
-        .trial_balance(company, NaiveDate::from_ymd_opt(2026, 6, 30).unwrap())
+        .trial_balance(NaiveDate::from_ymd_opt(2026, 6, 30).unwrap())
         .await
         .unwrap();
     let tb_bank = tb
@@ -738,86 +732,7 @@ async fn rgc7_backdated_posting_gl_consistency() {
         .expect("bank on TB");
     assert_eq!(tb_bank.debit - tb_bank.credit, s.closing_balance);
 }
-
-// The reporting reads take `company_id` from the query string; when a host has
-// mounted an ambient company scope (company_auth's `with_company_scope`
-// task-local), the query's company must agree with it — a mismatched request
-// answers 403 company_mismatch instead of a misleading empty-but-balanced
-// report branded with the foreign id (the database fence returns no rows either
-// way; this pins the explicit contract on every route). Without an ambient
-// scope the reads keep their standalone (trusted-host) shape.
-#[tokio::test]
-async fn reporting_reads_refuse_company_mismatch_under_ambient_scope() {
-    use axum::body::Body;
-    use axum::http::{Request, StatusCode};
-    use http_body_util::BodyExt;
-    use tower::ServiceExt;
-
-    let _guard = DB_LOCK.lock().await;
-    let pool = pool().await;
-    wipe(&pool).await;
-    let (company, _a) = seed_coa(&pool).await;
-    let other = Uuid::new_v4();
-    let app =
-        backbone_accounting::presentation::http::reporting_handler::create_reporting_routes(
-            std::sync::Arc::new(ReportingService::new(std::sync::Arc::new(
-                backbone_accounting::infrastructure::persistence::SqlxReportingRepository::new(
-                    pool.clone(),
-                ),
-            ))),
-        );
-
-    let as_of = "2026-06-30";
-    let paths = [
-        format!("/accounting/reports/trial-balance?company_id={company}&as_of={as_of}"),
-        format!("/accounting/reports/balance-sheet?company_id={company}&as_of={as_of}"),
-        format!(
-            "/accounting/reports/income-statement?company_id={company}&period_start=2026-06-01&period_end={as_of}"
-        ),
-        format!("/accounting/reports/general-ledger?company_id={company}&to_date={as_of}"),
-        format!(
-            "/accounting/reports/partner-ledger?company_id={company}&party_type=customer&party_id={}&as_of={as_of}",
-            Uuid::new_v4()
-        ),
-        format!("/accounting/reports/aged-receivables?company_id={company}&as_of={as_of}"),
-        format!("/accounting/reports/aged-payables?company_id={company}&as_of={as_of}"),
-    ];
-    for path in paths {
-        let resp = backbone_orm::with_company_scope(Some(other), async {
-            app.clone()
-                .oneshot(
-                    Request::builder()
-                        .method("GET")
-                        .uri(&path)
-                        .body(Body::empty())
-                        .unwrap(),
-                )
-                .await
-                .unwrap()
-        })
-        .await;
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "path: {path}");
-        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
-        let text = String::from_utf8_lossy(&bytes).to_string();
-        assert!(text.contains("company_mismatch"), "path: {path}, got: {text}");
-    }
-
-    // Matching ambient scope passes the tenant gate and answers 200 (the fresh
-    // company has no postings, so an empty balanced report is the real answer).
-    let resp = backbone_orm::with_company_scope(Some(company), async {
-        app.clone()
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri(format!(
-                        "/accounting/reports/trial-balance?company_id={company}&as_of={as_of}"
-                    ))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap()
-    })
-    .await;
-    assert_eq!(resp.status(), StatusCode::OK);
-}
+// The reporting reads carry no tenant in the wire shape any more, so there is nothing for a
+// caller to name that could disagree with the session. The route that used to answer 403
+// company_mismatch is gone with the field it guarded: the decorator scopes every read from the
+// request's own scope, and a query string cannot widen it.

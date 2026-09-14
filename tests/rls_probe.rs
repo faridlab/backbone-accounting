@@ -369,7 +369,7 @@ async fn ambient_org_scope_drives_module_reads() {
         let scope = backbone_orm::org_scope::current_org_scope()
             .expect("the ambient scope must be bound inside");
         let rows = repo
-            .account_directory(company)
+            .account_directory()
             .await
             .expect("account directory read completes under the ambient scope");
         (scope.legacy_company_id(), rows)
@@ -419,7 +419,7 @@ async fn restricted_pool_with_ambient_scope_completes_default_denied() {
     .unwrap();
 
     let repo = SqlxReportingRepository::new(restricted.clone());
-    let rows = scoped(&restricted, company, repo.account_directory(company))
+    let rows = scoped(&restricted, company, repo.account_directory())
         .await
         .expect("read completes under the ambient scope");
     assert!(

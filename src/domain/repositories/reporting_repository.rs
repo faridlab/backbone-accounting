@@ -99,19 +99,17 @@ pub trait ReportingRepository: Send + Sync {
     /// `<= hi` always.
     async fn account_sums(
         &self,
-        company_id: Uuid,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
     ) -> anyhow::Result<Vec<AccountSumRow>>;
 
     /// The full chart of accounts (headers + details) for tree rollups.
-    async fn account_directory(&self, company_id: Uuid) -> anyhow::Result<Vec<AccountNodeRow>>;
+    async fn account_directory(&self) -> anyhow::Result<Vec<AccountNodeRow>>;
 
     /// Chronological ledger lines within `[lo, hi]` (lo = None → since inception), optionally
     /// narrowed to one account. Ordered by account number, then posting date, then sequence.
     async fn gl_lines(
         &self,
-        company_id: Uuid,
         account_id: Option<Uuid>,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
@@ -123,7 +121,6 @@ pub trait ReportingRepository: Send + Sync {
     /// that date (partials dated after `as_of` don't count yet).
     async fn party_ledger_lines(
         &self,
-        company_id: Uuid,
         party_type: &str,
         party_id: Uuid,
         as_of: NaiveDate,
@@ -133,7 +130,6 @@ pub trait ReportingRepository: Send + Sync {
     /// (`accounts_receivable` / `accounts_payable`). Residual as of `as_of`.
     async fn aged_open_items(
         &self,
-        company_id: Uuid,
         account_subtype: &str,
         as_of: NaiveDate,
     ) -> anyhow::Result<Vec<AgedItemRow>>;

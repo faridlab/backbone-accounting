@@ -52,7 +52,6 @@ impl SqlxReportingRepository {
 impl ReportingRepository for SqlxReportingRepository {
     async fn account_sums(
         &self,
-        _company_id: Uuid,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
     ) -> anyhow::Result<Vec<AccountSumRow>> {
@@ -90,7 +89,7 @@ impl ReportingRepository for SqlxReportingRepository {
             .collect())
     }
 
-    async fn account_directory(&self, _company_id: Uuid) -> anyhow::Result<Vec<AccountNodeRow>> {
+    async fn account_directory(&self) -> anyhow::Result<Vec<AccountNodeRow>> {
         let rows = fetch_all_rows_scoped(
             &self.pool,
             sqlx::query(
@@ -120,7 +119,6 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn gl_lines(
         &self,
-        _company_id: Uuid,
         account_id: Option<Uuid>,
         lo: Option<NaiveDate>,
         hi: NaiveDate,
@@ -210,7 +208,6 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn party_ledger_lines(
         &self,
-        _company_id: Uuid,
         party_type: &str,
         party_id: Uuid,
         as_of: NaiveDate,
@@ -260,7 +257,6 @@ impl ReportingRepository for SqlxReportingRepository {
 
     async fn aged_open_items(
         &self,
-        _company_id: Uuid,
         account_subtype: &str,
         as_of: NaiveDate,
     ) -> anyhow::Result<Vec<AgedItemRow>> {

@@ -1,15 +1,15 @@
 //! Non-CRUD HTTP surface for financial reports (read-only, computed on the fly).
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Wraps `ReportingService`.
-//!   GET /accounting/reports/trial-balance?company_id=..&as_of=YYYY-MM-DD
-//!   GET /accounting/reports/balance-sheet?company_id=..&as_of=YYYY-MM-DD
-//!   GET /accounting/reports/income-statement?company_id=..&period_start=..&period_end=..
-//!   GET /accounting/reports/general-ledger?company_id=..&to_date=..&from_date=..&account_id=..&limit=..&offset=..
-//!   GET /accounting/reports/partner-ledger?company_id=..&party_type=customer|supplier&party_id=..&as_of=..
-//!   GET /accounting/reports/aged-receivables?company_id=..&as_of=..
-//!   GET /accounting/reports/aged-payables?company_id=..&as_of=..
+//!   GET /accounting/reports/trial-balance?as_of=YYYY-MM-DD
+//!   GET /accounting/reports/balance-sheet?as_of=YYYY-MM-DD
+//!   GET /accounting/reports/income-statement?period_start=..&period_end=..
+//!   GET /accounting/reports/general-ledger?to_date=..&from_date=..&account_id=..&limit=..&offset=..
+//!   GET /accounting/reports/partner-ledger?party_type=customer|supplier&party_id=..&as_of=..
+//!   GET /accounting/reports/aged-receivables?as_of=..
+//!   GET /accounting/reports/aged-payables?as_of=..
 //!
-//! Tenancy (ADR-0029): the `company_id` query parameter is the legacy twin — the wire shapes
+//! Tenancy (ADR-0029): the wire carries no tenant parameter — the wire shapes
 //! keep it so unstripped callers compile and run unchanged; the module keys no statement on it
 //! and the composing service's tenancy decorator scopes every read.
 
@@ -30,20 +30,17 @@ use crate::application::service::reporting_service::ReportingService;
 
 #[derive(Debug, Deserialize)]
 pub struct AsOfQuery {
-    pub company_id: Uuid,
     pub as_of: NaiveDate,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct PeriodQuery {
-    pub company_id: Uuid,
     pub period_start: NaiveDate,
     pub period_end: NaiveDate,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GeneralLedgerQuery {
-    pub company_id: Uuid,
     pub to_date: NaiveDate,
     pub from_date: Option<NaiveDate>,
     pub account_id: Option<Uuid>,
@@ -53,7 +50,6 @@ pub struct GeneralLedgerQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct PartnerLedgerQuery {
-    pub company_id: Uuid,
     pub party_type: String,
     pub party_id: Uuid,
     pub as_of: NaiveDate,
@@ -66,45 +62,11 @@ fn err(e: anyhow::Error) -> (StatusCode, Json<serde_json::Value>) {
     )
 }
 
-// ── Tenant consistency ────────────────────────────────────────────────────────
-//
-// The reads take `company_id` from the query string so standalone callers can
-// name their scope; it is the legacy twin (ADR-0029) — the module keys no statement on it and
-// cross-tenant isolation is the composing service's tenancy decorator. The query's company
-// must still agree with the caller's authenticated identity when one is established: either
-// the legacy request company scope (backbone-auth's `company_auth` wraps every request in
-// `with_company_scope`) or the ambient org scope's legacy company id — otherwise an
-// authenticated tenant could name any company and receive a misleading empty-but-balanced
-// report branded with the foreign id. With no scope at all (unit tests, trusted internal
-// hosts) the check is skipped — the module keeps its standalone shape.
-
-const COMPANY_MISMATCH: &str = "company_mismatch";
-
-fn company_forbidden(q_company: Uuid) -> Option<(StatusCode, Json<serde_json::Value>)> {
-    let authenticated = backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .or_else(|| backbone_orm::current_company());
-    match authenticated {
-        Some(authenticated) if authenticated != q_company => Some((
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({
-                "success": false,
-                "error": COMPANY_MISMATCH,
-                "message": "the request's company_id does not match the authenticated company",
-            })),
-        )),
-        _ => None,
-    }
-}
-
 async fn trial_balance(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
-    match svc.trial_balance(q.company_id, q.as_of).await {
+    match svc.trial_balance(q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
     }
@@ -114,10 +76,7 @@ async fn balance_sheet(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
-    match svc.balance_sheet(q.company_id, q.as_of).await {
+    match svc.balance_sheet(q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
     }
@@ -127,11 +86,8 @@ async fn income_statement(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<PeriodQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
     match svc
-        .income_statement(q.company_id, q.period_start, q.period_end)
+        .income_statement(q.period_start, q.period_end)
         .await
     {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
@@ -143,12 +99,8 @@ async fn general_ledger(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<GeneralLedgerQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
     match svc
         .general_ledger(
-            q.company_id,
             q.account_id,
             q.from_date,
             q.to_date,
@@ -166,9 +118,6 @@ async fn partner_ledger(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<PartnerLedgerQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
     // Validate up front: an unknown party_type would otherwise surface as a 500
     // carrying the raw database cast error (the swallowed-enum-detail failure class).
     if !matches!(q.party_type.as_str(), "customer" | "supplier") {
@@ -184,7 +133,7 @@ async fn partner_ledger(
         );
     }
     match svc
-        .partner_ledger(q.company_id, &q.party_type, q.party_id, q.as_of)
+        .partner_ledger(&q.party_type, q.party_id, q.as_of)
         .await
     {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
@@ -196,10 +145,7 @@ async fn aged_receivables(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
-    match svc.aged_receivables(q.company_id, q.as_of).await {
+    match svc.aged_receivables(q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
     }
@@ -209,10 +155,7 @@ async fn aged_payables(
     State(svc): State<Arc<ReportingService>>,
     Query(q): Query<AsOfQuery>,
 ) -> impl IntoResponse {
-    if let Some(forbidden) = company_forbidden(q.company_id) {
-        return forbidden;
-    }
-    match svc.aged_payables(q.company_id, q.as_of).await {
+    match svc.aged_payables(q.as_of).await {
         Ok(r) => (StatusCode::OK, Json(serde_json::to_value(r).unwrap())),
         Err(e) => err(e),
     }
