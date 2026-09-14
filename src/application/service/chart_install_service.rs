@@ -53,8 +53,6 @@ pub struct ChartInfo {
 pub struct InstallReport {
     pub chart_code: String,
     pub chart_version: String,
-    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
-    pub company_id: Uuid,
     /// Rows freshly inserted.
     pub accounts_installed: usize,
     /// Own rows updated in place (re-install / version bump).
@@ -186,9 +184,12 @@ impl ChartInstallService {
     /// as the app role (ADR-0029 — no relay on an undecorated deployment).
     pub async fn install(
         &self,
-        company_id: Uuid,
         chart_code: &str,
     ) -> Result<InstallReport, ChartInstallError> {
+        // The chart is installed for the request's own tenant. The derivation below still needs
+        // the value — deterministic account ids are keyed on it — so it is read once here rather
+        // than taken from a caller who could name a different company than the session.
+        let company_id = ambient_company();
         let ds = self
             .datasets
             .iter()
@@ -275,7 +276,6 @@ impl ChartInstallService {
         Ok(InstallReport {
             chart_code: ds.code.clone(),
             chart_version: ds.version.clone(),
-            company_id,
             accounts_installed: installed,
             accounts_updated: updated,
             accounts_resurrected: resurrected,

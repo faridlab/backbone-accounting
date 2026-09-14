@@ -207,7 +207,7 @@ async fn install_on_fresh_company_creates_full_tree() {
     let company = Uuid::new_v4();
     let tag = &company.simple().to_string()[..8];
     let code = format!("TEST_CHART_{tag}");
-    let report = service(&pool, tag).install(company, &code).await.unwrap();
+    let report = service(&pool, tag).install(&code).await.unwrap();
 
     assert_eq!(report.accounts_installed, 7);
     assert_eq!(report.accounts_updated, 0);
@@ -250,8 +250,8 @@ async fn reinstall_updates_not_duplicates() {
     let tag = &company.simple().to_string()[..8];
     let code = format!("TEST_CHART_{tag}");
     let svc = service(&pool, tag);
-    svc.install(company, &code).await.unwrap();
-    let second = svc.install(company, &code).await.unwrap();
+    svc.install(&code).await.unwrap();
+    let second = svc.install(&code).await.unwrap();
 
     assert_eq!(second.accounts_installed, 0);
     assert_eq!(second.accounts_updated, 7);
@@ -268,7 +268,7 @@ async fn manager_rename_survives_reinstall_and_reparent_reverts() {
     let code = format!("TEST_CHART_{tag}");
     let kas = format!("{tag}1100");
     let svc = service(&pool, tag);
-    let first = svc.install(company, &code).await.unwrap();
+    let first = svc.install(&code).await.unwrap();
 
     // Manager edits post-install: a rename (user-owned) and a re-parent (engine-owned).
     sqlx::query("UPDATE accounting.accounts SET name = 'Kas Kecil' WHERE chart_code = $1 AND account_number = $2")
@@ -286,7 +286,7 @@ async fn manager_rename_survives_reinstall_and_reparent_reverts() {
         .await
         .unwrap();
 
-    svc.install(company, &code).await.unwrap();
+    svc.install(&code).await.unwrap();
 
     let row = one(&pool, &code, &kas).await;
     // rename kept
@@ -311,7 +311,7 @@ async fn reinstall_resurrects_soft_deleted() {
     let tag = &company.simple().to_string()[..8];
     let code = format!("TEST_CHART_{tag}");
     let svc = service(&pool, tag);
-    svc.install(company, &code).await.unwrap();
+    svc.install(&code).await.unwrap();
 
     sqlx::query(
         "UPDATE accounting.accounts \
@@ -324,7 +324,7 @@ async fn reinstall_resurrects_soft_deleted() {
     .await
     .unwrap();
 
-    let third = svc.install(company, &code).await.unwrap();
+    let third = svc.install(&code).await.unwrap();
     assert_eq!(third.accounts_resurrected, 1);
     assert_eq!(third.accounts_updated, 6);
 
@@ -341,7 +341,7 @@ async fn refuses_when_journal_lines_exist() {
     let tag = &company.simple().to_string()[..8];
     let code = format!("TEST_CHART_{tag}");
     let svc = service(&pool, tag);
-    let report = svc.install(company, &code).await.unwrap();
+    let report = svc.install(&code).await.unwrap();
 
     // One posted line is enough to lock the books (the postings gate reads the
     // whole table; the decorator's fence scopes it per unit in production).
@@ -366,11 +366,12 @@ async fn refuses_when_journal_lines_exist() {
     .await
     .unwrap();
 
-    let err = svc.install(company, &code).await.unwrap_err();
+    let err = svc.install(&code).await.unwrap_err();
     match err {
-        ChartInstallError::ChartHasPostings(code_name, c) => {
+        ChartInstallError::ChartHasPostings(code_name, _c) => {
+            // The refusal names the tenant it looked under, which now comes from the ambient
+            // scope rather than the caller. This test runs undecorated, so there is none.
             assert_eq!(code_name, code);
-            assert_eq!(c, company);
         }
         other => panic!("expected ChartHasPostings, got: {other}"),
     }
@@ -409,7 +410,7 @@ async fn refuses_overlap_with_manual_account() {
     .unwrap();
 
     let err = service(&pool, tag)
-        .install(company, &code)
+        .install(&code)
         .await
         .unwrap_err();
     match err {
@@ -440,8 +441,8 @@ async fn deterministic_ids_stable_across_runs_and_scoped_per_company() {
     let code = format!("TEST_CHART_{tag}");
     let svc = service(&pool, tag);
 
-    let first = svc.install(company, &code).await.unwrap();
-    let second = svc.install(company, &code).await.unwrap();
+    let first = svc.install(&code).await.unwrap();
+    let second = svc.install(&code).await.unwrap();
     assert_eq!(first.account_ids, second.account_ids);
 
     // The id derivation mixes the caller's legacy company twin into the hash, so
@@ -463,7 +464,7 @@ async fn unknown_chart_is_named() {
     let pool = pool().await;
     wipe(&pool).await;
     let err = service(&pool, "zz")
-        .install(Uuid::new_v4(), "NOPE")
+        .install("NOPE")
         .await
         .unwrap_err();
     match err {
@@ -528,7 +529,7 @@ async fn renumber_installs_new_identity_and_dropped_codes_linger() {
     let tag = &company.simple().to_string()[..8];
     let code = format!("TEST_CHART_{tag}");
     let svc = service(&pool, tag);
-    let first = svc.install(company, &code).await.unwrap();
+    let first = svc.install(&code).await.unwrap();
 
     // v2: renumber tagged-1100 Kas -> 1150 (new identity), drop 2110 PPN Keluaran entirely.
     let mut v2 = chart(tag);
@@ -546,7 +547,7 @@ async fn renumber_installs_new_identity_and_dropped_codes_linger() {
         pool.clone(),
         vec![Arc::new(v2)],
     );
-    let second = svc2.install(company, &code).await.unwrap();
+    let second = svc2.install(&code).await.unwrap();
 
     // v2 installs one new row (1150); the five surviving codes update in place.
     assert_eq!(second.accounts_installed, 1);
