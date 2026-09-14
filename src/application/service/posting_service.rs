@@ -109,7 +109,6 @@ impl PostingService {
         if let Some((post_id, journal_id)) = self
             .repo
             .find_existing_post(
-                req.company_id,
                 &req.source_type,
                 req.source_id,
                 &req.posting_type,
@@ -142,7 +141,7 @@ impl PostingService {
         let now = Utc::now();
         let fiscal_period_id = self
             .repo
-            .find_period_id(req.company_id, req.posting_date)
+            .find_period_id(req.posting_date)
             .await
             .map_err(internal)?;
 
@@ -188,7 +187,7 @@ impl PostingService {
     ) -> Result<PostingResult, PostingError> {
         let Some(ctx) = self
             .repo
-            .find_manual_journal_for_post(journal_id, company_id)
+            .find_manual_journal_for_post(journal_id)
             .await
             .map_err(internal)?
         else {
@@ -200,7 +199,7 @@ impl PostingService {
         if ctx.status == "posted" {
             let existing = self
                 .repo
-                .existing_post_for_journal(journal_id, company_id)
+                .existing_post_for_journal(journal_id)
                 .await
                 .map_err(internal)?;
             return Ok(PostingResult {
@@ -303,14 +302,14 @@ impl PostingService {
     ) -> Result<(), PostingError> {
         let rows = self
             .repo
-            .find_postable_accounts(req.company_id, ids)
+            .find_postable_accounts(ids)
             .await
             .map_err(internal)?;
         let accounts: std::collections::HashMap<uuid::Uuid, _> =
             rows.into_iter().map(|a| (a.id, a)).collect();
         let period_closed = self
             .repo
-            .is_period_closed(req.company_id, req.posting_date)
+            .is_period_closed(req.posting_date)
             .await
             .map_err(internal)?;
         posting_rules::validate(&req.lines, &accounts, period_closed)?;
@@ -323,7 +322,7 @@ impl PostingService {
         // budget module must not silently disable block enforcement.
         if let Some(port) = self.budget_control.as_ref() {
             let breaches = port
-                .evaluate_posting(req.company_id, req.posting_date, &req.lines)
+                .evaluate_posting(req.posting_date, &req.lines)
                 .await
                 .map_err(internal)?;
             match posting_rules::budget_outcome(&breaches) {
@@ -383,7 +382,7 @@ impl PostingService {
             .ok_or_else(|| PostingError::Conflict("reversal requires reverses_post_id".into()))?;
         let source = self
             .repo
-            .find_reversal_source(orig_post_id, req.company_id)
+            .find_reversal_source(orig_post_id)
             .await
             .map_err(internal)?
             .ok_or_else(|| {

@@ -171,7 +171,6 @@ impl StubBudgetControl {
 impl BudgetControlPort for StubBudgetControl {
     async fn evaluate_posting(
         &self,
-        _company_id: Uuid,
         _posting_date: NaiveDate,
         _lines: &[PostingLine],
     ) -> anyhow::Result<Vec<BudgetBreach>> {

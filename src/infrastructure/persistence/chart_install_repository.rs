@@ -32,7 +32,6 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
     async fn company_has_postings(
         &self,
         tx: &mut sqlx::PgConnection,
-        _company_id: Uuid,
     ) -> anyhow::Result<bool> {
         let has: bool = sqlx::query_scalar(
             "SELECT EXISTS (
@@ -47,7 +46,6 @@ impl ChartInstallRepository for SqlxChartInstallRepository {
     async fn overlapping_accounts(
         &self,
         tx: &mut sqlx::PgConnection,
-        _company_id: Uuid,
         dataset: &ChartDataset,
     ) -> anyhow::Result<Vec<OverlappingAccount>> {
         let numbers: Vec<String> = dataset.accounts.iter().map(|a| a.number.clone()).collect();

@@ -85,7 +85,6 @@ impl SqlxPostingRepository {
 impl PostingRepository for SqlxPostingRepository {
     async fn find_existing_post(
         &self,
-        _company_id: Uuid,
         source_type: &str,
         source_id: Uuid,
         posting_type: &str,
@@ -128,7 +127,6 @@ impl PostingRepository for SqlxPostingRepository {
 
     async fn find_postable_accounts(
         &self,
-        _company_id: Uuid,
         ids: &[Uuid],
     ) -> anyhow::Result<Vec<PostableAccount>> {
         let rows = fetch_all_rows_scoped(
@@ -150,7 +148,7 @@ impl PostingRepository for SqlxPostingRepository {
             .collect())
     }
 
-    async fn is_period_closed(&self, _company_id: Uuid, date: NaiveDate) -> anyhow::Result<bool> {
+    async fn is_period_closed(&self, date: NaiveDate) -> anyhow::Result<bool> {
         let blocked: Option<bool> = fetch_one_scalar_scoped(
             &self.pool,
             sqlx::query_scalar(
@@ -167,7 +165,6 @@ impl PostingRepository for SqlxPostingRepository {
 
     async fn find_period_id(
         &self,
-        _company_id: Uuid,
         date: NaiveDate,
     ) -> anyhow::Result<Option<Uuid>> {
         let id: Option<Uuid> = fetch_optional_scalar_scoped(
@@ -187,7 +184,6 @@ impl PostingRepository for SqlxPostingRepository {
     async fn find_reversal_source(
         &self,
         orig_post_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<ReversalSource>> {
         let orig_journal_id: Option<Uuid> = fetch_optional_scalar_scoped(
             &self.pool,
@@ -254,7 +250,6 @@ impl PostingRepository for SqlxPostingRepository {
                 drop(tx);
                 if let Some((existing_post, existing_journal)) = self
                     .find_existing_post(
-                        write.company_id,
                         &write.source_type,
                         write.source_id,
                         &write.posting_type,
@@ -480,7 +475,6 @@ impl PostingRepository for SqlxPostingRepository {
     async fn find_manual_journal_for_post(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<ManualJournalForPost>> {
         let journal = org_scope::fetch_optional_row_scoped(
             &self.pool,
@@ -551,7 +545,6 @@ impl PostingRepository for SqlxPostingRepository {
     async fn existing_post_for_journal(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>> {
         let id: Option<Uuid> = fetch_optional_scalar_scoped(
             &self.pool,

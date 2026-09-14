@@ -80,7 +80,6 @@ pub trait BudgetControlPort: Send + Sync {
     /// achieved/pending/planned amounts that drove the breach.
     async fn evaluate_posting(
         &self,
-        company_id: Uuid,
         posting_date: NaiveDate,
         lines: &[PostingLine],
     ) -> anyhow::Result<Vec<BudgetBreach>>;

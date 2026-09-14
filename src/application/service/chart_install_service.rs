@@ -92,6 +92,15 @@ pub struct ChartInstallService {
     datasets: Vec<Arc<ChartDataset>>,
 }
 
+/// The company the chart's deterministic account ids are derived from, taken from the request's
+/// own scope. The derivation must stay stable per tenant, so the value is still needed — it just
+/// no longer arrives as an argument a caller could get wrong.
+fn ambient_company() -> Uuid {
+    backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .unwrap_or_default()
+}
+
 impl ChartInstallService {
     pub fn new(
         repo: Arc<dyn ChartInstallRepository>,
@@ -194,7 +203,7 @@ impl ChartInstallService {
 
         validate_dataset(&ds).map_err(|e| ChartInstallError::InvalidDataset(ds.code.clone(), e))?;
 
-        let rows = self.derive_rows(company_id, &ds);
+        let rows = self.derive_rows(ambient_company(), &ds);
 
         let mut tx = self.pool.begin().await?;
         // Tenancy posture (ADR-0029): the module owns no scoping column — the composing
@@ -208,7 +217,7 @@ impl ChartInstallService {
                 .map_err(anyhow::Error::from)?;
         }
 
-        if self.repo.company_has_postings(&mut tx, company_id).await? {
+        if self.repo.company_has_postings(&mut tx).await? {
             return Err(ChartInstallError::ChartHasPostings(
                 ds.code.clone(),
                 company_id,
@@ -221,7 +230,7 @@ impl ChartInstallService {
         // chart's rows) is a named conflict, never absorbed.
         let overlaps = self
             .repo
-            .overlapping_accounts(&mut tx, company_id, &ds)
+            .overlapping_accounts(&mut tx, &ds)
             .await?;
         let conflicts: Vec<(String, String)> = overlaps
             .into_iter()

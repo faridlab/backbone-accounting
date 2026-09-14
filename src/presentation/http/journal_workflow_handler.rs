@@ -209,7 +209,7 @@ async fn approve_protected(
     Path(id): Path<Uuid>,
     Json(body): Json<ApproveBody>,
 ) -> impl IntoResponse {
-    run_approve(svc, id, body.company_id, principal(&auth)).await
+    run_approve(svc, id, principal(&auth)).await
 }
 
 #[cfg(feature = "auth")]
@@ -219,7 +219,7 @@ async fn reject_protected(
     Path(id): Path<Uuid>,
     Json(body): Json<RejectBody>,
 ) -> impl IntoResponse {
-    run_reject(svc, id, body.company_id, body.reason, principal(&auth)).await
+    run_reject(svc, id, body.reason, principal(&auth)).await
 }
 
 #[cfg(feature = "auth")]
@@ -229,7 +229,7 @@ async fn void_protected(
     Path(id): Path<Uuid>,
     Json(body): Json<VoidBody>,
 ) -> impl IntoResponse {
-    run_void(svc, id, body.company_id, principal(&auth), body.reason).await
+    run_void(svc, id, principal(&auth), body.reason).await
 }
 
 #[cfg(feature = "auth")]

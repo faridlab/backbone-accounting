@@ -153,7 +153,6 @@ pub trait PostingRepository: Send + Sync {
     /// Idempotency lookup: the existing posted entry for this source identity, if any.
     async fn find_existing_post(
         &self,
-        company_id: Uuid,
         source_type: &str,
         source_id: Uuid,
         posting_type: &str,
@@ -163,17 +162,15 @@ pub trait PostingRepository: Send + Sync {
     /// Load postable accounts by id (for validation). Not locked.
     async fn find_postable_accounts(
         &self,
-        company_id: Uuid,
         ids: &[Uuid],
     ) -> anyhow::Result<Vec<PostableAccount>>;
 
     /// True if any fiscal period covering `date` is closed/locked.
-    async fn is_period_closed(&self, company_id: Uuid, date: NaiveDate) -> anyhow::Result<bool>;
+    async fn is_period_closed(&self, date: NaiveDate) -> anyhow::Result<bool>;
 
     /// The narrowest open fiscal period id covering `date`, if any.
     async fn find_period_id(
         &self,
-        company_id: Uuid,
         date: NaiveDate,
     ) -> anyhow::Result<Option<Uuid>>;
 
@@ -181,7 +178,6 @@ pub trait PostingRepository: Send + Sync {
     async fn find_reversal_source(
         &self,
         orig_post_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<ReversalSource>>;
 
     /// Atomically commit a fresh posting (journal + lines + ledger + balances + accounting_post +
@@ -206,14 +202,12 @@ pub trait PostingRepository: Send + Sync {
     async fn find_manual_journal_for_post(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<ManualJournalForPost>>;
 
     /// The existing posted accounting_post for a journal, if already posted (idempotency).
     async fn existing_post_for_journal(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>>;
 
     /// Atomically post an approved manual journal (ledger rows + flip to posted + accounting_post).

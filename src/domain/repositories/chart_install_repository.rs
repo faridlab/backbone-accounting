@@ -53,7 +53,6 @@ pub trait ChartInstallRepository: Send + Sync {
     async fn company_has_postings(
         &self,
         tx: &mut sqlx::PgConnection,
-        company_id: Uuid,
     ) -> anyhow::Result<bool>;
 
     /// Non-deleted accounts whose number or code collides with a dataset row.
@@ -61,7 +60,6 @@ pub trait ChartInstallRepository: Send + Sync {
     async fn overlapping_accounts(
         &self,
         tx: &mut sqlx::PgConnection,
-        company_id: Uuid,
         dataset: &ChartDataset,
     ) -> anyhow::Result<Vec<OverlappingAccount>>;
 

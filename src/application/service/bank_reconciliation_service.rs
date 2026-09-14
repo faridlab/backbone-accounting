@@ -96,7 +96,7 @@ impl BankReconciliationService {
     ) -> Result<ReconcileResult, ReconcileError> {
         let Some((account_number, account_name)) = self
             .repo
-            .find_bank_account(req.account_id, req.company_id)
+            .find_bank_account(req.account_id)
             .await
             .map_err(internal)?
         else {
@@ -106,7 +106,6 @@ impl BankReconciliationService {
         let rows = self
             .repo
             .find_unreconciled_book(
-                req.company_id,
                 req.account_id,
                 req.period_start,
                 req.statement_date,
@@ -155,7 +154,7 @@ impl BankReconciliationService {
 
         let closing_book_balance = self
             .repo
-            .closing_book_balance(req.company_id, req.account_id, req.statement_date)
+            .closing_book_balance(req.account_id, req.statement_date)
             .await
             .map_err(internal)?;
         let closing_statement_balance: Decimal = req.statement_lines.iter().map(|l| l.amount).sum();

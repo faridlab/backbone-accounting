@@ -72,12 +72,10 @@ pub trait BankReconciliationRepository: Send + Sync {
     async fn find_bank_account(
         &self,
         account_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<(String, String)>>; // (account_number, account_name)
 
     async fn find_unreconciled_book(
         &self,
-        company_id: Uuid,
         account_id: Uuid,
         period_start: NaiveDate,
         statement_date: NaiveDate,
@@ -85,7 +83,6 @@ pub trait BankReconciliationRepository: Send + Sync {
 
     async fn closing_book_balance(
         &self,
-        company_id: Uuid,
         account_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<Decimal>;

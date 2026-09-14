@@ -40,7 +40,6 @@ impl BankReconciliationRepository for SqlxBankReconciliationRepository {
     async fn find_bank_account(
         &self,
         account_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<(String, String)>> {
         let row = org_scope::fetch_optional_row_scoped(
             &self.pool,
@@ -53,7 +52,6 @@ impl BankReconciliationRepository for SqlxBankReconciliationRepository {
 
     async fn find_unreconciled_book(
         &self,
-        _company_id: Uuid,
         account_id: Uuid,
         period_start: NaiveDate,
         statement_date: NaiveDate,
@@ -88,7 +86,6 @@ impl BankReconciliationRepository for SqlxBankReconciliationRepository {
 
     async fn closing_book_balance(
         &self,
-        _company_id: Uuid,
         account_id: Uuid,
         as_of: NaiveDate,
     ) -> anyhow::Result<Decimal> {
