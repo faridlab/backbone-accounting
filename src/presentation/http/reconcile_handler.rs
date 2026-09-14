@@ -54,7 +54,6 @@ pub struct ReconcileLineDto {
 
 #[derive(Debug, Deserialize)]
 pub struct ReconcilePairRequestDto {
-    pub company_id: Uuid,
     pub debit: ReconcileLineDto,
     pub credit: ReconcileLineDto,
     /// Company-currency amount requested; clamped to the smaller residual.
@@ -78,12 +77,10 @@ pub struct ReconcileEdgeAckDto {
 
 #[derive(Debug, Deserialize)]
 pub struct UnreconcileBody {
-    pub company_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CompanyQuery {
-    pub company_id: Uuid,
 }
 
 #[derive(Debug, Serialize)]
@@ -151,28 +148,8 @@ fn error_response(e: &ReconcileError) -> axum::response::Response {
 // its books through the legacy seams. With no scope at all (unit tests, trusted internal
 // hosts) the check is skipped — the module keeps its standalone shape.
 
-const COMPANY_MISMATCH: &str = "company_mismatch";
 
-fn tenant_mismatch(req_company: Uuid) -> bool {
-    let authenticated = backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .or_else(|| backbone_orm::current_company());
-    match authenticated {
-        Some(authenticated) => authenticated != req_company,
-        None => false,
-    }
-}
 
-fn forbidden_tenant() -> axum::response::Response {
-    (
-        StatusCode::FORBIDDEN,
-        Json(ReconcileErrorDto {
-            code: COMPANY_MISMATCH.to_string(),
-            message: "the request's company_id does not match the authenticated company".into(),
-        }),
-    )
-        .into_response()
-}
 
 // =============================================================================
 // Handlers
@@ -182,11 +159,7 @@ async fn reconcile_handler(
     State(service): State<Arc<ReconcileWriteService>>,
     Json(dto): Json<ReconcilePairRequestDto>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(dto.company_id) {
-        return forbidden_tenant();
-    }
     let req = PairRequest {
-        company_id: dto.company_id,
         debit: locator_from_dto(dto.debit),
         credit: locator_from_dto(dto.credit),
         amount: dto.amount,
@@ -204,10 +177,7 @@ async fn unreconcile_handler(
     Path(partial_id): Path<Uuid>,
     Json(body): Json<UnreconcileBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
-    match service.unreconcile(body.company_id, partial_id, None).await {
+    match service.unreconcile(partial_id, None).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => error_response(&e),
     }
@@ -218,10 +188,7 @@ async fn matching_group_handler(
     Path(line_id): Path<Uuid>,
     Query(q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(q.company_id) {
-        return forbidden_tenant();
-    }
-    match service.matching_group(q.company_id, line_id).await {
+    match service.matching_group(line_id).await {
         Ok(g) => (
             StatusCode::OK,
             Json(MatchingGroupDto {

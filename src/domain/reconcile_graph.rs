@@ -244,9 +244,6 @@ pub struct EdgeOutcome {
 /// Request shape for the pair verbs (application layer).
 #[derive(Debug, Clone)]
 pub struct PairRequest {
-    /// The legacy tenancy twin (ADR-0029) — kept so unstripped producers compile and run
-    /// unchanged; nothing keys a statement on it.
-    pub company_id: Uuid,
     pub debit: LineLocator,
     pub credit: LineLocator,
     pub amount: Decimal,

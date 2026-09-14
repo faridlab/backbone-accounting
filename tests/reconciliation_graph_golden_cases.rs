@@ -219,7 +219,6 @@ async fn residual(pool: &PgPool, line: Uuid) -> Decimal {
 
 fn pair(company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
     PairRequest {
-        company_id: company,
         debit: d,
         credit: c,
         amount: dec(amount),
@@ -322,7 +321,7 @@ async fn clamps_to_the_smaller_residual_and_keeps_chain_partial() {
     .unwrap();
     assert!(!flags.0 && flags.1.is_none());
     // The matching label is partial-shaped: P-<uuid8>.
-    let g = svc.matching_group(company, inv_line).await.unwrap();
+    let g = svc.matching_group(inv_line).await.unwrap();
     assert!(g.label.starts_with("P-"), "label was {}", g.label);
     assert!(g.full_reconcile_id.is_none());
 }
@@ -530,7 +529,7 @@ async fn partial_then_full_group_sets_flags_and_label() {
         assert_eq!(row.1, Some(group));
         assert!(row.2.is_some());
     }
-    let g = svc.matching_group(company, inv_line).await.unwrap();
+    let g = svc.matching_group(inv_line).await.unwrap();
     assert!(g.label.starts_with("F-"), "label was {}", g.label);
     assert_eq!(g.full_reconcile_id, Some(group));
     assert_eq!(g.line_ids.len(), 3);
@@ -574,7 +573,7 @@ async fn matching_group_reads_a_multi_payment_chain() {
 
     // Any line in the 5-line component sees the same group: 4 partials, all zero residual.
     let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
-    let g = svc.matching_group(company, inv_line).await.unwrap();
+    let g = svc.matching_group(inv_line).await.unwrap();
     assert!(g.label.starts_with("F-"));
     assert_eq!(g.line_ids.len(), 5);
     assert_eq!(g.partial_ids.len(), 4);
@@ -582,7 +581,7 @@ async fn matching_group_reads_a_multi_payment_chain() {
 
     // From a payment line too — union-find over the same component.
     let pay_line = line_id(&pool, "payment", payments[2], coa["1200"]).await;
-    let g2 = svc.matching_group(company, pay_line).await.unwrap();
+    let g2 = svc.matching_group(pay_line).await.unwrap();
     assert_eq!(g2.label, g.label);
     assert_eq!(g2.full_reconcile_id, g.full_reconcile_id);
 }
@@ -671,7 +670,6 @@ async fn unreconcile_restores_outstanding_and_repairs_the_group() {
     // The accountant verb: origin manual (vs the settlement seam's origin elsewhere).
     let out = svc
         .reconcile_pair(&PairRequest {
-            company_id: company,
             debit: loc("order", invoice, coa["1200"]),
             credit: loc("payment", payment, coa["1200"]),
             amount: dec("100"),
@@ -683,7 +681,7 @@ async fn unreconcile_restores_outstanding_and_repairs_the_group() {
     let group = out.full_reconcile_id.expect("group");
     let partial = out.partial_id.unwrap();
 
-    svc.unreconcile(company, partial, None).await.unwrap();
+    svc.unreconcile(partial, None).await.unwrap();
 
     let inv_line = line_id(&pool, "order", invoice, coa["1200"]).await;
     let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
@@ -791,7 +789,7 @@ async fn exchange_difference_arises_and_unlink_nets_zero() {
     assert_eq!(fx_leg.1, dec("10"), "FX takes the debit");
 
     // --- Unlink: the generated move must be REVERSED (never a bare delete). ---
-    svc.unreconcile(company, partial, None).await.unwrap();
+    svc.unreconcile(partial, None).await.unwrap();
 
     // The exchange journal AND its unlink reversal both exist, canceling each other.
     let unlink_rev: Uuid = sqlx::query_scalar(
@@ -883,13 +881,13 @@ async fn reverse_then_reconcile_pairs_a_reversed_payment_automatically() {
     posting.post(rev_req, None).await.expect("reversal posts");
 
     // Unlink the settlement edge — the ordering hazard the rule removes.
-    svc.unreconcile(company, out.partial_id.unwrap(), None)
+    svc.unreconcile(out.partial_id.unwrap(), None)
         .await
         .unwrap();
 
     // The payment AR line + reversal AR line now form their own FULL group.
     let pay_line = line_id(&pool, "payment", payment, coa["1200"]).await;
-    let g = svc.matching_group(company, pay_line).await.unwrap();
+    let g = svc.matching_group(pay_line).await.unwrap();
     assert!(g.label.starts_with("F-"), "label was {}", g.label);
     assert_eq!(g.line_ids.len(), 2);
     assert!(g.residuals.iter().all(|(_, r)| *r == Decimal::ZERO));
@@ -1019,115 +1017,6 @@ async fn concurrent_completions_stamp_one_group() {
     assert_eq!(orphans, 0, "the group keeps its partials");
 }
 
-// ── Tenant consistency on the verb routes ─────────────────────────────────────
-//
-// The verb services bind RLS from the REQUEST's company_id; when a host has an
-// ambient company scope (company_auth's `with_company_scope` task-local), the
-// request's company must agree with it — otherwise an authenticated tenant
-// could name any company in the body and read or reshape its books. Without an
-// ambient scope the verbs keep their standalone (trusted-host) shape.
-#[tokio::test]
-async fn reconcile_verbs_refuse_company_mismatch_under_ambient_scope() {
-    use axum::body::Body;
-    use axum::http::{Request, StatusCode};
-    use http_body_util::BodyExt;
-    use tower::ServiceExt;
-
-    let _guard = DB_LOCK.lock().await;
-    let pool = pool().await;
-    wipe(&pool).await;
-    let (company, coa) = seed(&pool).await;
-    let other = Uuid::new_v4();
-    let app =
-        backbone_accounting::presentation::http::reconcile_handler::create_reconcile_verb_routes(
-            Arc::new(reconcile_svc(&pool)),
-        );
-
-    let pair_body = serde_json::json!({
-        "company_id": company,
-        "debit": {"source_type": "order", "source_id": Uuid::new_v4(), "account_id": coa["1200"]},
-        "credit": {"source_type": "payment", "source_id": Uuid::new_v4(), "account_id": coa["1200"]},
-        "amount": "1",
-        "origin": "manual",
-    })
-    .to_string();
-
-    // POST /accounting/reconcile naming another company → 403 company_mismatch,
-    // before any DB work (the locators above are random uuids; reaching the
-    // service would answer 404 line_not_found instead).
-    let resp = backbone_orm::with_company_scope(Some(other), async {
-        app.clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/accounting/reconcile")
-                    .header("content-type", "application/json")
-                    .body(Body::from(pair_body.clone()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap()
-    })
-    .await;
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-    let bytes = resp.into_body().collect().await.unwrap().to_bytes();
-    let text = String::from_utf8_lossy(&bytes).to_string();
-    assert!(text.contains("company_mismatch"), "got: {text}");
-
-    // Matching ambient scope passes the tenant gate (and then fails on the
-    // random locators — proving the gate, not the guard, answered).
-    let resp = backbone_orm::with_company_scope(Some(company), async {
-        app.clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/accounting/reconcile")
-                    .header("content-type", "application/json")
-                    .body(Body::from(pair_body.clone()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap()
-    })
-    .await;
-    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
-
-    // GET /accounting/reconciliation-groups naming another company → 403.
-    let resp = backbone_orm::with_company_scope(Some(other), async {
-        app.clone()
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri(format!(
-                        "/accounting/reconciliation-groups/{}?company_id={}",
-                        Uuid::new_v4(),
-                        company
-                    ))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap()
-    })
-    .await;
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-
-    // POST /accounting/unreconcile naming another company → 403.
-    let resp = backbone_orm::with_company_scope(Some(other), async {
-        app.clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri(format!("/accounting/unreconcile/{}", Uuid::new_v4()))
-                    .header("content-type", "application/json")
-                    .body(Body::from(
-                        serde_json::json!({"company_id": company}).to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap()
-    })
-    .await;
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-}
+// The verb routes carry no tenant in their wire shape any more, so a caller has nothing to name
+// that could disagree with the session. The case that pinned the 403 refusal retires with the
+// field it guarded: the decorator scopes every verb from the request's own scope.

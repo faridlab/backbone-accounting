@@ -245,7 +245,6 @@ async fn flip_journal_count(pool: &PgPool) -> i64 {
 
 fn pair(company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
     PairRequest {
-        company_id: company,
         debit: d,
         credit: c,
         amount: dec(amount),
@@ -434,7 +433,7 @@ async fn caba3_unreconcile_reverses_and_restores_transition() {
     .await
     .unwrap();
 
-    svc.unreconcile(company, partial, None).await.unwrap();
+    svc.unreconcile(partial, None).await.unwrap();
 
     // Reversal journal exists and both tax accounts are back to pre-payment.
     let _rev: Uuid = sqlx::query_scalar(
@@ -648,7 +647,7 @@ async fn caba7_flip_rides_unlink_closure_alongside_exchange() {
     assert_eq!(flip_journal_count(&pool).await, 1);
 
     // Unlink: both generated journals get their reversal.
-    svc.unreconcile(company, partial, None).await.unwrap();
+    svc.unreconcile(partial, None).await.unwrap();
     let flip_journal: Uuid = sqlx::query_scalar(
         "SELECT j.id FROM accounting.journals j \
          JOIN accounting.accounting_posts ap ON ap.journal_id = j.id \
@@ -860,7 +859,7 @@ async fn caba11_unlink_replace_converges() {
     assert_eq!(net(&pool, coa[&"2300"]).await, Decimal::ZERO);
 
     // The middle payment bounces and is replaced by an identical receipt.
-    svc.unreconcile(company, middle_partial.unwrap(), None)
+    svc.unreconcile(middle_partial.unwrap(), None)
         .await
         .unwrap();
     let replacement = post_receipt(
