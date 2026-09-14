@@ -37,7 +37,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn find_status(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<JournalStatusRow>> {
         let row = org_scope::fetch_optional_row_scoped(
             &self.pool,
@@ -57,7 +56,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn current_status(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<String>> {
         let s: Option<String> = fetch_optional_scalar_scoped(
             &self.pool,
@@ -71,7 +69,7 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
         Ok(s)
     }
 
-    async fn submit(&self, journal_id: Uuid, _company_id: Uuid) -> anyhow::Result<bool> {
+    async fn submit(&self, journal_id: Uuid,) -> anyhow::Result<bool> {
         let res = org_scope::execute_scoped(
             &self.pool,
             sqlx::query(
@@ -88,7 +86,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn approve(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
         approved_by: Option<Uuid>,
         at: DateTime<Utc>,
     ) -> anyhow::Result<bool> {
@@ -110,7 +107,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn reject(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
         reason: &str,
         rejected_by: Option<Uuid>,
         at: DateTime<Utc>,
@@ -135,7 +131,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn mark_voided(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
         voided_by: Option<Uuid>,
         reason: &str,
         at: DateTime<Utc>,
@@ -158,7 +153,6 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
     async fn original_post(
         &self,
         journal_id: Uuid,
-        _company_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>> {
         let id: Option<Uuid> = fetch_optional_scalar_scoped(
             &self.pool,

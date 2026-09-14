@@ -1,18 +1,16 @@
 //! Non-CRUD HTTP surface for the manual-journal approval workflow.
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Wraps `JournalWorkflowService`:
-//!   POST /journals/:id/submit?company_id=..                        (no body)
-//!   POST /journals/:id/approve   body { company_id, approved_by }
-//!   POST /journals/:id/reject    body { company_id, reason, rejected_by? }
-//!   POST /journals/:id/void      body { company_id, voided_by?, reason }
+//!   POST /journals/:id/submit                                      (no body)
+//!   POST /journals/:id/approve   body { approved_by }
+//!   POST /journals/:id/reject    body { reason, rejected_by? }
+//!   POST /journals/:id/void      body { voided_by?, reason }
 //!
 //! `approve` posts the journal to the ledger; `void` posts a reversal. Both flow through the
 //! audited `PostingService` core (FOR UPDATE per-account lock, idempotency, immutable ledger).
 //!
-//! Tenancy (ADR-0029): the `company_id` each request carries is the legacy twin — the wire
-//! shapes keep it so unstripped callers compile and run unchanged, but the module keys no
-//! statement on it; the composing service's tenancy decorator scopes every statement through
-//! the ambient org scope.
+//! Tenancy (ADR-0029): the wire carries no tenant. The composing service's decorator scopes
+//! every read and write from the request's own scope.
 
 use std::sync::Arc;
 
@@ -29,25 +27,21 @@ use crate::application::service::journal_workflow_service::{
 
 #[derive(Debug, Deserialize)]
 pub struct CompanyQuery {
-    pub company_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ApproveBody {
-    pub company_id: Uuid,
     pub approved_by: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RejectBody {
-    pub company_id: Uuid,
     pub reason: String,
     pub rejected_by: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct VoidBody {
-    pub company_id: Uuid,
     pub voided_by: Option<Uuid>,
     pub reason: String,
 }
@@ -81,7 +75,7 @@ async fn submit(
     Path(id): Path<Uuid>,
     Query(q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
-    match svc.submit(id, q.company_id).await {
+    match svc.submit(id).await {
         Ok(()) => Json(WorkflowResponse {
             success: true,
             journal_id: id,
@@ -99,7 +93,7 @@ async fn approve(
     Path(id): Path<Uuid>,
     Json(body): Json<ApproveBody>,
 ) -> impl IntoResponse {
-    run_approve(svc, id, body.company_id, body.approved_by).await
+    run_approve(svc, id, body.approved_by).await
 }
 
 async fn reject(
@@ -107,7 +101,7 @@ async fn reject(
     Path(id): Path<Uuid>,
     Json(body): Json<RejectBody>,
 ) -> impl IntoResponse {
-    run_reject(svc, id, body.company_id, body.reason, body.rejected_by).await
+    run_reject(svc, id, body.reason, body.rejected_by).await
 }
 
 async fn void(
@@ -115,17 +109,16 @@ async fn void(
     Path(id): Path<Uuid>,
     Json(body): Json<VoidBody>,
 ) -> impl IntoResponse {
-    run_void(svc, id, body.company_id, body.voided_by, body.reason).await
+    run_void(svc, id, body.voided_by, body.reason).await
 }
 
 /// Shared execution for approve (open + protected variants).
 async fn run_approve(
     svc: Arc<JournalWorkflowService>,
     id: Uuid,
-    company_id: Uuid,
     approved_by: Option<Uuid>,
 ) -> axum::response::Response {
-    match svc.approve(id, company_id, approved_by).await {
+    match svc.approve(id, approved_by).await {
         Ok(r) => Json(WorkflowResponse {
             success: true,
             journal_id: r.journal_id,
@@ -142,11 +135,10 @@ async fn run_approve(
 async fn run_reject(
     svc: Arc<JournalWorkflowService>,
     id: Uuid,
-    company_id: Uuid,
     reason: String,
     rejected_by: Option<Uuid>,
 ) -> axum::response::Response {
-    match svc.reject(id, company_id, reason, rejected_by).await {
+    match svc.reject(id, reason, rejected_by).await {
         Ok(()) => Json(WorkflowResponse {
             success: true,
             journal_id: id,
@@ -163,11 +155,10 @@ async fn run_reject(
 async fn run_void(
     svc: Arc<JournalWorkflowService>,
     id: Uuid,
-    company_id: Uuid,
     voided_by: Option<Uuid>,
     reason: String,
 ) -> axum::response::Response {
-    match svc.void(id, company_id, voided_by, reason).await {
+    match svc.void(id, voided_by, reason).await {
         Ok(r) => Json(WorkflowResponse {
             success: true,
             journal_id: id,

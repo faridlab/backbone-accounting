@@ -385,9 +385,9 @@ async fn block_breach_refuses_manual_journal_post() {
     )
     .with_budget_control_if_set(Some(stub));
 
-    svc.submit(j, company).await.unwrap();
+    svc.submit(j).await.unwrap();
     let err = svc
-        .approve(j, company, None)
+        .approve(j, None)
         .await
         .expect_err("block breach must refuse the journal post");
 

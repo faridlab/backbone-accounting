@@ -173,8 +173,8 @@ async fn approve_posts_draft_journal() {
         ),
     );
 
-    svc.submit(j, company).await.unwrap();
-    let result = svc.approve(j, company, None).await.unwrap();
+    svc.submit(j).await.unwrap();
+    let result = svc.approve(j, None).await.unwrap();
 
     // No idempotent reuse on first post; a real post_id was minted.
     assert_ne!(result.post_id, Uuid::nil());
@@ -224,8 +224,8 @@ async fn reject_keeps_ledger_empty() {
         ),
     );
 
-    svc.submit(j, company).await.unwrap();
-    svc.reject(j, company, "does not look right".into(), None)
+    svc.submit(j).await.unwrap();
+    svc.reject(j, "does not look right".into(), None)
         .await
         .unwrap();
 
@@ -260,11 +260,11 @@ async fn void_reverses_to_zero() {
         ),
     );
 
-    svc.submit(j, company).await.unwrap();
-    svc.approve(j, company, None).await.unwrap();
+    svc.submit(j).await.unwrap();
+    svc.approve(j, None).await.unwrap();
     assert_eq!(current_balance(&pool, bank).await, dec("100000"));
 
-    svc.void(j, company, None, "posted in error".into())
+    svc.void(j, None, "posted in error".into())
         .await
         .unwrap();
 
@@ -320,8 +320,8 @@ async fn submit_rejects_non_draft() {
         ),
     );
 
-    svc.submit(j, company).await.unwrap(); // draft → pending_approval
+    svc.submit(j).await.unwrap(); // draft → pending_approval
                                            // A second submit must fail (now pending_approval, not draft).
-    let err = svc.submit(j, company).await.unwrap_err();
+    let err = svc.submit(j).await.unwrap_err();
     assert_eq!(err.code(), "invalid_journal_state");
 }

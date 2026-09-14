@@ -26,24 +26,21 @@ pub trait JournalWorkflowRepository: Send + Sync {
     async fn find_status(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<JournalStatusRow>>;
 
     /// Current status only (for precise not-found vs wrong-state errors). None if not found.
     async fn current_status(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<String>>;
 
     /// `draft → pending_approval`. Returns false if the journal wasn't `draft` (or not found).
-    async fn submit(&self, journal_id: Uuid, company_id: Uuid) -> anyhow::Result<bool>;
+    async fn submit(&self, journal_id: Uuid,) -> anyhow::Result<bool>;
 
     /// `pending_approval → approved`, stamping approver/at. Returns false if not pending.
     async fn approve(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         approved_by: Option<Uuid>,
         at: DateTime<Utc>,
     ) -> anyhow::Result<bool>;
@@ -52,7 +49,6 @@ pub trait JournalWorkflowRepository: Send + Sync {
     async fn reject(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         reason: &str,
         rejected_by: Option<Uuid>,
         at: DateTime<Utc>,
@@ -62,7 +58,6 @@ pub trait JournalWorkflowRepository: Send + Sync {
     async fn mark_voided(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         voided_by: Option<Uuid>,
         reason: &str,
         at: DateTime<Utc>,
@@ -72,6 +67,5 @@ pub trait JournalWorkflowRepository: Send + Sync {
     async fn original_post(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>>;
 }

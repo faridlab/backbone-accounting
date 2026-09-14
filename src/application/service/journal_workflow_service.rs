@@ -6,9 +6,8 @@
 //!
 //! See `docs/business-flows/gl-posting.md` (manual-journal flow) and BRD §3.
 //!
-//! Tenancy (ADR-0029): the `company_id` threaded through every call here is the legacy
-//! twin — the module keys no statement on it. The persistence adapter scopes by the ambient
-//! org scope; the parameter rides along so unstripped callers compile and run unchanged.
+//! Tenancy (ADR-0029): no call here threads a tenant. The composing service's decorator
+//! scopes every read and write from the request's own scope.
 
 use std::sync::Arc;
 
@@ -118,15 +117,14 @@ impl JournalWorkflowService {
     pub async fn submit(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
     ) -> Result<(), JournalWorkflowError> {
         let ok = self
             .workflow
-            .submit(journal_id, company_id)
+            .submit(journal_id)
             .await
             .map_err(internal)?;
         if !ok {
-            return Err(self.state_error(journal_id, company_id, "draft").await);
+            return Err(self.state_error(journal_id, "draft").await);
         }
         Ok(())
     }
@@ -136,23 +134,28 @@ impl JournalWorkflowService {
     pub async fn approve(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         approved_by: Option<Uuid>,
     ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
         let now = Utc::now();
         let ok = self
             .workflow
-            .approve(journal_id, company_id, approved_by, now)
+            .approve(journal_id, approved_by, now)
             .await
             .map_err(internal)?;
         if !ok {
             return Err(self
-                .state_error(journal_id, company_id, "pending_approval")
+                .state_error(journal_id, "pending_approval")
                 .await);
         }
         Ok(self
             .posting
-            .post_journal(journal_id, company_id, approved_by)
+            .post_journal(
+                journal_id,
+                backbone_orm::org_scope::current_org_scope()
+                    .and_then(|sc| sc.legacy_company_id())
+                    .unwrap_or_default(),
+                approved_by,
+            )
             .await?)
     }
 
@@ -160,19 +163,18 @@ impl JournalWorkflowService {
     pub async fn reject(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         reason: String,
         rejected_by: Option<Uuid>,
     ) -> Result<(), JournalWorkflowError> {
         let now = Utc::now();
         let ok = self
             .workflow
-            .reject(journal_id, company_id, &reason, rejected_by, now)
+            .reject(journal_id, &reason, rejected_by, now)
             .await
             .map_err(internal)?;
         if !ok {
             return Err(self
-                .state_error(journal_id, company_id, "draft or pending_approval")
+                .state_error(journal_id, "draft or pending_approval")
                 .await);
         }
         Ok(())
@@ -182,13 +184,12 @@ impl JournalWorkflowService {
     pub async fn void(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         voided_by: Option<Uuid>,
         reason: String,
     ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
         let Some(status) = self
             .workflow
-            .find_status(journal_id, company_id)
+            .find_status(journal_id)
             .await
             .map_err(internal)?
         else {
@@ -204,15 +205,19 @@ impl JournalWorkflowService {
 
         let Some(orig_post_id) = self
             .workflow
-            .original_post(journal_id, company_id)
+            .original_post(journal_id)
             .await
             .map_err(internal)?
         else {
             return Err(JournalWorkflowError::NotPosted(journal_id));
         };
 
+        // The posting request still carries the legacy company twin for unstripped consumers;
+        // read it from the ambient org scope rather than taking it from the caller.
         let req = PostingRequest {
-            company_id,
+            company_id: backbone_orm::org_scope::current_org_scope()
+                .and_then(|sc| sc.legacy_company_id())
+                .unwrap_or_default(),
             branch_id: None,
             source_type: "manual".to_string(),
             source_id: journal_id,
@@ -229,7 +234,7 @@ impl JournalWorkflowService {
 
         let now = Utc::now();
         self.workflow
-            .mark_voided(journal_id, company_id, voided_by, &reason, now)
+            .mark_voided(journal_id, voided_by, &reason, now)
             .await
             .map_err(internal)?;
         Ok(result)
@@ -239,10 +244,9 @@ impl JournalWorkflowService {
     async fn state_error(
         &self,
         journal_id: Uuid,
-        company_id: Uuid,
         expected: &'static str,
     ) -> JournalWorkflowError {
-        match self.workflow.current_status(journal_id, company_id).await {
+        match self.workflow.current_status(journal_id).await {
             Ok(None) => JournalWorkflowError::NotFound(journal_id),
             Ok(Some(current)) => JournalWorkflowError::InvalidState {
                 id: journal_id,
