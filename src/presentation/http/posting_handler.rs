@@ -37,7 +37,6 @@ pub struct PostingLineDto {
 
 #[derive(Debug, Deserialize)]
 pub struct PostingRequestDto {
-    pub company_id: Uuid,
     pub branch_id: Option<Uuid>,
     pub source_type: String,
     pub source_id: Uuid,
@@ -82,7 +81,11 @@ async fn post_handler(
 /// Map the wire DTO to the domain `PostingRequest`.
 fn posting_request_from_dto(dto: PostingRequestDto) -> PostingRequest {
     PostingRequest {
-        company_id: dto.company_id,
+        // The wire no longer names a tenant; the posting request still carries the legacy
+        // company twin for unstripped consumers, so it comes from the ambient org scope.
+        company_id: backbone_orm::org_scope::current_org_scope()
+            .and_then(|s| s.legacy_company_id())
+            .unwrap_or_default(),
         branch_id: dto.branch_id,
         source_type: dto.source_type,
         source_id: dto.source_id,
