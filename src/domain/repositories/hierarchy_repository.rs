@@ -57,7 +57,6 @@ pub trait HierarchyRepository: Send + Sync {
     async fn ancestors(
         &self,
         table: HierarchyTable,
-        company_id: Uuid,
         id: Uuid,
     ) -> anyhow::Result<Vec<HierarchyNode>>;
 }

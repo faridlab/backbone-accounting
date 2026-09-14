@@ -38,7 +38,6 @@ impl HierarchyRepository for SqlxHierarchyRepository {
     async fn ancestors(
         &self,
         table: HierarchyTable,
-        _company_id: Uuid,
         id: Uuid,
     ) -> anyhow::Result<Vec<HierarchyNode>> {
         // Recursive walk up parent_id from the node to the root. `depth` counts hops from the

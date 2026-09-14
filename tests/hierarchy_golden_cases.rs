@@ -131,7 +131,7 @@ async fn account_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_accounts(&pool).await;
     let chain = svc(&pool)
-        .ancestors(HierarchyTable::Account, company, leaf)
+        .ancestors(HierarchyTable::Account, leaf)
         .await
         .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();
@@ -139,13 +139,13 @@ async fn account_ancestors_root_first() {
     assert_eq!(chain[2].parent_id, Some(mid));
     // Leaf's own lookup returns just itself.
     let only_root = svc(&pool)
-        .ancestors(HierarchyTable::Account, company, root)
+        .ancestors(HierarchyTable::Account, root)
         .await
         .unwrap();
     assert_eq!(only_root.len(), 1);
     // Unknown id → empty.
     let missing = svc(&pool)
-        .ancestors(HierarchyTable::Account, company, Uuid::new_v4())
+        .ancestors(HierarchyTable::Account, Uuid::new_v4())
         .await
         .unwrap();
     assert!(missing.is_empty());
@@ -156,7 +156,7 @@ async fn cost_center_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_cost_centers(&pool).await;
     let chain = svc(&pool)
-        .ancestors(HierarchyTable::CostCenter, company, leaf)
+        .ancestors(HierarchyTable::CostCenter, leaf)
         .await
         .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();
@@ -168,7 +168,7 @@ async fn fiscal_period_ancestors_root_first() {
     let pool = pool().await;
     let (company, root, mid, leaf) = seed_fiscal_periods(&pool).await;
     let chain = svc(&pool)
-        .ancestors(HierarchyTable::FiscalPeriod, company, leaf)
+        .ancestors(HierarchyTable::FiscalPeriod, leaf)
         .await
         .unwrap();
     let ids: Vec<Uuid> = chain.iter().map(|n| n.id).collect();

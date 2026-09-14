@@ -30,9 +30,8 @@ impl HierarchyService {
     pub async fn ancestors(
         &self,
         table: HierarchyTable,
-        company_id: Uuid,
         id: Uuid,
     ) -> anyhow::Result<Vec<HierarchyNode>> {
-        self.repo.ancestors(table, company_id, id).await
+        self.repo.ancestors(table, id).await
     }
 }
