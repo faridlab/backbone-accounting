@@ -194,7 +194,7 @@ impl ReconcileWriteService {
         for locator in [&req.debit, &req.credit] {
             match self
                 .repo
-                .lock_line_by_locator(conn, ambient_company(), locator)
+                .lock_line_by_locator(conn, locator)
                 .await
                 .map_err(|e| internal(e.into()))?
             {
@@ -208,13 +208,13 @@ impl ReconcileWriteService {
         // Guards + clamp.
         let flags = self
             .repo
-            .account_flags(conn, ambient_company(), debit.account_id)
+            .account_flags(conn, debit.account_id)
             .await
             .map_err(|e| internal(e.into()))?
             .ok_or_else(|| ReconcileError::Conflict("account not found".into()))?;
         let residuals = self
             .repo
-            .residuals_of(conn, ambient_company(), &[debit.id, credit.id])
+            .residuals_of(conn, &[debit.id, credit.id])
             .await
             .map_err(|e| internal(e.into()))?;
         let applied = reconcile_rules::validate_pair(
@@ -269,7 +269,7 @@ impl ReconcileWriteService {
         if debit.exchange_rate != credit.exchange_rate {
             let after = self
                 .repo
-                .residuals_of(conn, ambient_company(), &[debit.id, credit.id])
+                .residuals_of(conn, &[debit.id, credit.id])
                 .await
                 .map_err(|e| internal(e.into()))?;
             let res_d = res_of(&after, debit.id);
@@ -301,7 +301,7 @@ impl ReconcileWriteService {
                     .post_exchange_move(conn, req, &debit, partial_id, diff, max_date)
                     .await?;
                 self.repo
-                    .set_exchange_move(conn, ambient_company(), partial_id, journal_id)
+                    .set_exchange_move(conn, partial_id, journal_id)
                     .await
                     .map_err(|e| internal(e.into()))?;
                 // The derived second edge: pair the exchange journal's reconcilable line
@@ -309,7 +309,7 @@ impl ReconcileWriteService {
                 // reaches zero residual together.
                 let exch_line = self
                     .repo
-                    .journal_lines_with_ids(conn, ambient_company(), journal_id)
+                    .journal_lines_with_ids(conn, journal_id)
                     .await
                     .map_err(|e| internal(e.into()))?
                     .into_iter()
@@ -379,14 +379,13 @@ impl ReconcileWriteService {
         let full = self
             .complete_group_for(
                 conn,
-                ambient_company(),
                 &[debit.id, credit.id],
                 exchange_total,
                 now,
             )
             .await
             .map_err(|e| internal(e.into()))?;
-        self.pair_reversal_counterparts(conn, ambient_company(), &[debit.id, credit.id])
+        self.pair_reversal_counterparts(conn, &[debit.id, credit.id])
             .await
             .map_err(|e| internal(e.into()))?;
 
@@ -416,7 +415,7 @@ impl ReconcileWriteService {
         // G8 — the exchange-move date must fall in an open period.
         if self
             .repo
-            .period_closed(conn, ambient_company(), posting_date)
+            .period_closed(conn, posting_date)
             .await
             .map_err(|e| internal(e.into()))?
         {
@@ -502,7 +501,6 @@ impl ReconcileWriteService {
         let deferred = port
             .deferred_lines_on(
                 conn,
-                ambient_company(),
                 side.journal_id,
                 side.source_type.as_deref(),
                 side.source_id,
@@ -528,7 +526,6 @@ impl ReconcileWriteService {
             .repo
             .residuals_of(
                 conn,
-                ambient_company(),
                 &deferred
                     .iter()
                     .map(|d| d.source_line_id)
@@ -556,7 +553,7 @@ impl ReconcileWriteService {
         // G8 — the flip date must fall in an open period.
         if self
             .repo
-            .period_closed(conn, ambient_company(), max_date)
+            .period_closed(conn, max_date)
             .await
             .map_err(|e| internal(e.into()))?
         {
@@ -632,7 +629,7 @@ impl ReconcileWriteService {
         // immaterial to the residuals).
         let legs = self
             .repo
-            .journal_lines_with_ids(conn, ambient_company(), journal_id)
+            .journal_lines_with_ids(conn, journal_id)
             .await
             .map_err(|e| internal(e.into()))?;
         let mut used = std::collections::HashSet::new();
@@ -693,24 +690,23 @@ impl ReconcileWriteService {
     async fn complete_group_for(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         seeds: &[Uuid],
         exchange_total: Decimal,
         now: chrono::DateTime<Utc>,
     ) -> anyhow::Result<Option<Uuid>> {
         let comp_lines = self
             .repo
-            .component_line_ids(conn, ambient_company(), seeds)
+            .component_line_ids(conn, seeds)
             .await?;
         if comp_lines.is_empty() {
             return Ok(None);
         }
         // Lock the component in id order before deciding (two verbs completing
         // overlapping components must serialize).
-        self.repo.lock_lines(conn, ambient_company(), &comp_lines).await?;
+        self.repo.lock_lines(conn, &comp_lines).await?;
         let residuals = self
             .repo
-            .residuals_of(conn, ambient_company(), &comp_lines)
+            .residuals_of(conn, &comp_lines)
             .await?;
         if residuals.iter().any(|(_, r)| *r != Decimal::ZERO) {
             return Ok(None);
@@ -724,12 +720,12 @@ impl ReconcileWriteService {
         // stamps are unreachable by construction and left untouched.
         let stamps = self
             .repo
-            .distinct_group_stamps(conn, ambient_company(), &comp_lines)
+            .distinct_group_stamps(conn, &comp_lines)
             .await?;
         let group = match stamps.as_slice() {
             [] => {
                 self.repo
-                    .create_full_group(conn, ambient_company(), exchange_total, now)
+                    .create_full_group(conn, exchange_total, now)
                     .await?
             }
             [existing] => *existing,
@@ -737,10 +733,10 @@ impl ReconcileWriteService {
         };
         let comp_partials = self
             .repo
-            .component_partial_ids(conn, ambient_company(), &comp_lines)
+            .component_partial_ids(conn, &comp_lines)
             .await?;
         self.repo
-            .attach_group(conn, ambient_company(), group, &comp_lines, &comp_partials, now)
+            .attach_group(conn, group, &comp_lines, &comp_partials, now)
             .await?;
         Ok(Some(group))
     }
@@ -751,17 +747,16 @@ impl ReconcileWriteService {
     async fn pair_reversal_counterparts(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<()> {
         for id in line_ids {
-            let line = self.repo.lock_line(conn, ambient_company(), *id).await?;
+            let line = self.repo.lock_line(conn, *id).await?;
             let Some(line) = line else { continue };
             if line.source_type.as_deref() == Some("reconciliation") {
                 continue;
             }
             let residual = res_of(
-                &self.repo.residuals_of(conn, ambient_company(), &[line.id]).await?,
+                &self.repo.residuals_of(conn, &[line.id]).await?,
                 line.id,
             );
             if !reconcile_rules::fully_unapplied(&line, residual) {
@@ -769,13 +764,13 @@ impl ReconcileWriteService {
             }
             if let Some(counterpart) = self
                 .repo
-                .reversal_counterpart(conn, ambient_company(), &line)
+                .reversal_counterpart(conn, &line)
                 .await?
             {
                 let c_residual = res_of(
                     &self
                         .repo
-                        .residuals_of(conn, ambient_company(), &[counterpart.id])
+                        .residuals_of(conn, &[counterpart.id])
                         .await?,
                     counterpart.id,
                 );
@@ -804,7 +799,7 @@ impl ReconcileWriteService {
                         },
                     )
                     .await?;
-                self.complete_group_for(conn, ambient_company(), &[d.id, c.id], Decimal::ZERO, Utc::now())
+                self.complete_group_for(conn, &[d.id, c.id], Decimal::ZERO, Utc::now())
                     .await?;
             }
         }
@@ -821,7 +816,6 @@ impl ReconcileWriteService {
     pub async fn unreconcile_pair_on(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         debit: &LineLocator,
         credit: &LineLocator,
     ) -> Result<(), ReconcileError> {
@@ -829,7 +823,7 @@ impl ReconcileWriteService {
         for locator in [debit, credit] {
             match self
                 .repo
-                .lock_line_by_locator(conn, ambient_company(), locator)
+                .lock_line_by_locator(conn, locator)
                 .await
                 .map_err(|e| internal(e.into()))?
             {
@@ -840,7 +834,7 @@ impl ReconcileWriteService {
         }
         let mut closure = self
             .repo
-            .partials_between(conn, ambient_company(), lines[0].id, lines[1].id)
+            .partials_between(conn, lines[0].id, lines[1].id)
             .await
             .map_err(|e| internal(e.into()))?;
         if closure.is_empty() {
@@ -851,7 +845,7 @@ impl ReconcileWriteService {
         for p in closure.clone() {
             for d in self
                 .repo
-                .derived_partials(conn, ambient_company(), p.id)
+                .derived_partials(conn, p.id)
                 .await
                 .map_err(|e| internal(e.into()))?
             {
@@ -861,20 +855,19 @@ impl ReconcileWriteService {
                 }
             }
         }
-        self.unlink_partials(conn, ambient_company(), &closure).await
+        self.unlink_partials(conn, &closure).await
     }
 
     /// Unlink one partial by id (the HTTP verb). Fail-closed on a foreign partial.
     pub async fn unreconcile_on(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         partial_id: Uuid,
         actor: Option<Uuid>,
     ) -> Result<(), ReconcileError> {
         let partial = self
             .repo
-            .load_partial(conn, ambient_company(), partial_id)
+            .load_partial(conn, partial_id)
             .await
             .map_err(|e| internal(e.into()))?
             .ok_or(ReconcileError::LineNotFound)?;
@@ -882,7 +875,6 @@ impl ReconcileWriteService {
         self.repo
             .lock_lines(
                 conn,
-                ambient_company(),
                 &[partial.debit_move_id, partial.credit_move_id],
             )
             .await
@@ -890,7 +882,7 @@ impl ReconcileWriteService {
         let mut closure = vec![partial.clone()];
         for d in self
             .repo
-            .derived_partials(conn, ambient_company(), partial.id)
+            .derived_partials(conn, partial.id)
             .await
             .map_err(|e| internal(e.into()))?
         {
@@ -898,7 +890,7 @@ impl ReconcileWriteService {
                 closure.push(d);
             }
         }
-        self.unlink_partials_with_actor(conn, ambient_company(), &closure, actor)
+        self.unlink_partials_with_actor(conn, &closure, actor)
             .await
     }
 
@@ -906,10 +898,9 @@ impl ReconcileWriteService {
     async fn unlink_partials(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         closure: &[PartialRow],
     ) -> Result<(), ReconcileError> {
-        self.unlink_partials_with_actor(conn, ambient_company(), closure, None)
+        self.unlink_partials_with_actor(conn, closure, None)
             .await
     }
 
@@ -918,7 +909,6 @@ impl ReconcileWriteService {
     async fn unlink_partials_with_actor(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         closure: &[PartialRow],
         actor: Option<Uuid>,
     ) -> Result<(), ReconcileError> {
@@ -928,11 +918,11 @@ impl ReconcileWriteService {
         //    Idempotency-keyed per journal, so a retried unlink redelivers nothing.
         let journal_ids = self
             .repo
-            .generated_journal_ids(conn, ambient_company(), &ids)
+            .generated_journal_ids(conn, &ids)
             .await
             .map_err(|e| internal(e.into()))?;
         for jid in journal_ids {
-            self.reverse_generated_journal(conn, ambient_company(), jid, actor)
+            self.reverse_generated_journal(conn, jid, actor)
                 .await?;
         }
 
@@ -949,7 +939,7 @@ impl ReconcileWriteService {
         affected_lines.dedup();
 
         self.repo
-            .delete_partials(conn, ambient_company(), &ids)
+            .delete_partials(conn, &ids)
             .await
             .map_err(|e| internal(e.into()))?;
 
@@ -958,18 +948,18 @@ impl ReconcileWriteService {
         //    re-flagged onto a fresh group in step 4 — the observable Odoo outcome (fully
         //    reconciled lines carry a group) is preserved; only the group id is new.
         self.repo
-            .clear_line_flags(conn, ambient_company(), &affected_lines)
+            .clear_line_flags(conn, &affected_lines)
             .await
             .map_err(|e| internal(e.into()))?;
         for group in &affected_groups {
             let survivors = self
                 .repo
-                .group_partial_ids(conn, ambient_company(), *group)
+                .group_partial_ids(conn, *group)
                 .await
                 .map_err(|e| internal(e.into()))?;
             if survivors.is_empty() {
                 self.repo
-                    .dissolve_group(conn, ambient_company(), *group)
+                    .dissolve_group(conn, *group)
                     .await
                     .map_err(|e| internal(e.into()))?;
             }
@@ -977,12 +967,12 @@ impl ReconcileWriteService {
 
         // 4) Re-group any component whose lines all reached zero residual through OTHER
         //    edges (the deleted ones were not the whole story).
-        self.complete_group_for(conn, ambient_company(), &affected_lines, Decimal::ZERO, Utc::now())
+        self.complete_group_for(conn, &affected_lines, Decimal::ZERO, Utc::now())
             .await
             .map_err(|e| internal(e.into()))?;
 
         // 5) Reverse-then-reconcile for every affected line.
-        self.pair_reversal_counterparts(conn, ambient_company(), &affected_lines)
+        self.pair_reversal_counterparts(conn, &affected_lines)
             .await
             .map_err(|e| internal(e.into()))?;
         Ok(())
@@ -994,13 +984,12 @@ impl ReconcileWriteService {
     async fn reverse_generated_journal(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         journal_id: Uuid,
         actor: Option<Uuid>,
     ) -> Result<(), ReconcileError> {
         let Some(meta) = self
             .repo
-            .journal_reversal_meta(conn, ambient_company(), journal_id)
+            .journal_reversal_meta(conn, journal_id)
             .await
             .map_err(|e| internal(e.into()))?
         else {
@@ -1008,7 +997,7 @@ impl ReconcileWriteService {
         };
         let lines = self
             .repo
-            .journal_lines_with_ids(conn, ambient_company(), journal_id)
+            .journal_lines_with_ids(conn, journal_id)
             .await
             .map_err(|e| internal(e.into()))?;
         if lines.is_empty() {
@@ -1067,11 +1056,10 @@ impl ReconcileWriteService {
     pub async fn matching_group_on(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_id: Uuid,
     ) -> Result<MatchingGroup, ReconcileError> {
         self.repo
-            .matching_group(conn, ambient_company(), line_id)
+            .matching_group(conn, line_id)
             .await
             .map_err(internal)
     }
@@ -1080,13 +1068,12 @@ impl ReconcileWriteService {
     pub async fn residuals_for_party_on(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         account_id: Uuid,
         party_type: &str,
         party_id: Uuid,
     ) -> Result<Vec<PartyResidual>, ReconcileError> {
         self.repo
-            .residuals_for_party(conn, ambient_company(), account_id, party_type, party_id)
+            .residuals_for_party(conn, account_id, party_type, party_id)
             .await
             .map_err(internal)
     }
@@ -1125,7 +1112,7 @@ impl ReconcileWriteService {
                 .await
                 .map_err(|e| internal(e.into()))?;
         }
-        self.unreconcile_on(&mut tx, ambient_company(), partial_id, actor)
+        self.unreconcile_on(&mut tx, partial_id, actor)
             .await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
         Ok(())
@@ -1149,7 +1136,7 @@ impl ReconcileWriteService {
                 .await
                 .map_err(|e| internal(e.into()))?;
         }
-        let group = self.matching_group_on(&mut tx, ambient_company(), line_id).await?;
+        let group = self.matching_group_on(&mut tx, line_id).await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
         Ok(group)
     }
@@ -1158,7 +1145,6 @@ impl ReconcileWriteService {
     /// transaction-scoped relay discipline as [`Self::matching_group`].
     pub async fn residuals_for_party(
         &self,
-        company_id: Uuid,
         account_id: Uuid,
         party_type: &str,
         party_id: Uuid,
@@ -1170,7 +1156,7 @@ impl ReconcileWriteService {
                 .map_err(|e| internal(e.into()))?;
         }
         let rows = self
-            .residuals_for_party_on(&mut tx, ambient_company(), account_id, party_type, party_id)
+            .residuals_for_party_on(&mut tx, account_id, party_type, party_id)
             .await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
         Ok(rows)

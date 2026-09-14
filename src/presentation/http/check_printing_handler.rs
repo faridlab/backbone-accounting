@@ -103,16 +103,6 @@ fn error_response(e: &CheckPrintingError) -> axum::response::Response {
 }
 
 
-fn forbidden_tenant() -> axum::response::Response {
-    (
-        StatusCode::FORBIDDEN,
-        Json(ErrorBody {
-            error: "company_mismatch".into(),
-            message: "the request's company_id does not match the authenticated company".into(),
-        }),
-    )
-        .into_response()
-}
 
 async fn register_sequence(
     State(service): State<Arc<CheckPrintingService>>,

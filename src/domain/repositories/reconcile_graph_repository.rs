@@ -50,7 +50,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn lock_line_by_locator(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         locator: &LineLocator,
     ) -> anyhow::Result<LocatorResolution>;
 
@@ -58,7 +57,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn lock_line(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_id: Uuid,
     ) -> anyhow::Result<Option<ReconcileLineSnapshot>>;
 
@@ -66,7 +64,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn account_flags(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         account_id: Uuid,
     ) -> anyhow::Result<Option<AccountReconcileFlags>>;
 
@@ -75,7 +72,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn residuals_of(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<(Uuid, Decimal)>>;
 
@@ -84,7 +80,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn lock_lines(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<()>;
 
@@ -99,7 +94,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn set_exchange_move(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         partial_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<()>;
@@ -108,7 +102,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn component_line_ids(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         seeds: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>>;
 
@@ -116,7 +109,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn component_partial_ids(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>>;
 
@@ -127,7 +119,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn distinct_group_stamps(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>>;
 
@@ -135,7 +126,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn create_full_group(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         exchange_total: Decimal,
         now: DateTime<Utc>,
     ) -> anyhow::Result<Uuid>;
@@ -145,7 +135,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn attach_group(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         group_id: Uuid,
         line_ids: &[Uuid],
         partial_ids: &[Uuid],
@@ -156,7 +145,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn clear_line_flags(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<()>;
 
@@ -164,7 +152,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn load_partial(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         partial_id: Uuid,
     ) -> anyhow::Result<Option<PartialRow>>;
 
@@ -172,7 +159,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn partials_between(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         a_id: Uuid,
         b_id: Uuid,
     ) -> anyhow::Result<Vec<PartialRow>>;
@@ -182,7 +168,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn derived_partials(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         parent_partial_id: Uuid,
     ) -> anyhow::Result<Vec<PartialRow>>;
 
@@ -191,7 +176,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn generated_journal_ids(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         partial_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>>;
 
@@ -199,7 +183,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn journal_lines_with_ids(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<Vec<(Uuid, PostingLine)>>;
 
@@ -207,7 +190,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn journal_reversal_meta(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<Option<JournalReversalMeta>>;
 
@@ -215,7 +197,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn delete_partials(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         partial_ids: &[Uuid],
     ) -> anyhow::Result<()>;
 
@@ -223,7 +204,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn group_partial_ids(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         group_id: Uuid,
     ) -> anyhow::Result<Vec<Uuid>>;
 
@@ -231,7 +211,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn dissolve_group(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         group_id: Uuid,
     ) -> anyhow::Result<()>;
 
@@ -240,7 +219,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn reversal_counterpart(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line: &ReconcileLineSnapshot,
     ) -> anyhow::Result<Option<ReconcileLineSnapshot>>;
 
@@ -248,7 +226,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn residuals_for_party(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         account_id: Uuid,
         party_type: &str,
         party_id: Uuid,
@@ -258,7 +235,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn matching_group(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         line_id: Uuid,
     ) -> anyhow::Result<MatchingGroup>;
 
@@ -266,7 +242,6 @@ pub trait ReconcileGraphRepository: Send + Sync {
     async fn period_closed(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         date: NaiveDate,
     ) -> anyhow::Result<bool>;
 }

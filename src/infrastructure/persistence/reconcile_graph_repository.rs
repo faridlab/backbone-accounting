@@ -129,7 +129,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn lock_line_by_locator(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         locator: &LineLocator,
     ) -> anyhow::Result<LocatorResolution> {
         let echo = legacy_company_echo();
@@ -153,7 +152,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn lock_line(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_id: Uuid,
     ) -> anyhow::Result<Option<ReconcileLineSnapshot>> {
         let echo = legacy_company_echo();
@@ -169,7 +167,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn account_flags(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         account_id: Uuid,
     ) -> anyhow::Result<Option<AccountReconcileFlags>> {
         let row = sqlx::query(
@@ -189,7 +186,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn residuals_of(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<(Uuid, Decimal)>> {
         let rows = sqlx::query(&format!(
@@ -208,7 +204,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn lock_lines(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<()> {
         sqlx::query(
@@ -252,7 +247,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn set_exchange_move(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         partial_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<()> {
@@ -270,7 +264,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn component_line_ids(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         seeds: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(
@@ -293,7 +286,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn component_partial_ids(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(
@@ -310,7 +302,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn distinct_group_stamps(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>> {
         let mut distinct: Vec<Uuid> = sqlx::query_scalar(
@@ -327,7 +318,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn create_full_group(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         exchange_total: Decimal,
         now: DateTime<Utc>,
     ) -> anyhow::Result<Uuid> {
@@ -348,7 +338,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn attach_group(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         group_id: Uuid,
         line_ids: &[Uuid],
         partial_ids: &[Uuid],
@@ -381,7 +370,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn clear_line_flags(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line_ids: &[Uuid],
     ) -> anyhow::Result<()> {
         sqlx::query(
@@ -398,7 +386,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn load_partial(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         partial_id: Uuid,
     ) -> anyhow::Result<Option<PartialRow>> {
         let echo = legacy_company_echo();
@@ -412,7 +399,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn partials_between(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         a_id: Uuid,
         b_id: Uuid,
     ) -> anyhow::Result<Vec<PartialRow>> {
@@ -432,7 +418,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn derived_partials(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         parent_partial_id: Uuid,
     ) -> anyhow::Result<Vec<PartialRow>> {
         let echo = legacy_company_echo();
@@ -448,7 +433,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn generated_journal_ids(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         partial_ids: &[Uuid],
     ) -> anyhow::Result<Vec<Uuid>> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(
@@ -465,7 +449,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn journal_lines_with_ids(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<Vec<(Uuid, PostingLine)>> {
         let rows = sqlx::query(
@@ -501,7 +484,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn journal_reversal_meta(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         journal_id: Uuid,
     ) -> anyhow::Result<Option<JournalReversalMeta>> {
         let echo = legacy_company_echo();
@@ -534,7 +516,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn delete_partials(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         partial_ids: &[Uuid],
     ) -> anyhow::Result<()> {
         sqlx::query("DELETE FROM accounting.partial_reconciles WHERE id = ANY($1)")
@@ -547,7 +528,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn group_partial_ids(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         group_id: Uuid,
     ) -> anyhow::Result<Vec<Uuid>> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(
@@ -563,7 +543,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn dissolve_group(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         group_id: Uuid,
     ) -> anyhow::Result<()> {
         // Null any straggler references first (FK from partials; lines are cleared by the
@@ -585,7 +564,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn reversal_counterpart(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         line: &ReconcileLineSnapshot,
     ) -> anyhow::Result<Option<ReconcileLineSnapshot>> {
         let Some(src_type) = line.source_type.as_deref() else {
@@ -613,7 +591,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn residuals_for_party(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         account_id: Uuid,
         party_type: &str,
         party_id: Uuid,
@@ -656,16 +633,15 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn matching_group(
         &self,
         conn: &mut PgConnection,
-        company_id: Uuid,
         line_id: Uuid,
     ) -> anyhow::Result<MatchingGroup> {
         let line_ids = self
-            .component_line_ids(conn, company_id, &[line_id])
+            .component_line_ids(conn, &[line_id])
             .await?;
         let partial_ids = self
-            .component_partial_ids(conn, company_id, &line_ids)
+            .component_partial_ids(conn, &line_ids)
             .await?;
-        let residuals = self.residuals_of(conn, company_id, &line_ids).await?;
+        let residuals = self.residuals_of(conn, &line_ids).await?;
 
         // Label: a stored full-reconcile wins; otherwise derive from the minimum partial id.
         let seed = sqlx::query(
@@ -695,7 +671,6 @@ impl ReconcileGraphRepository for SqlxReconcileGraphRepository {
     async fn period_closed(
         &self,
         conn: &mut PgConnection,
-        _company_id: Uuid,
         date: NaiveDate,
     ) -> anyhow::Result<bool> {
         // bool_or over an empty match still yields one row with NULL — decode nullable.

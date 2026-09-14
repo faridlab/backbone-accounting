@@ -159,7 +159,6 @@ impl DeferredTaxLookup for OrderDeferredTax {
     async fn deferred_lines_on(
         &self,
         _conn: &mut sqlx::PgConnection,
-        _company_id: Uuid,
         _journal_id: Uuid,
         source_type: Option<&str>,
         _source_id: Option<Uuid>,

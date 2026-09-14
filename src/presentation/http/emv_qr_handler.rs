@@ -103,16 +103,6 @@ fn error_response(e: &EmvQrServiceError) -> axum::response::Response {
 // deployment — means nothing to compare against, so no refusal.
 
 
-fn forbidden_tenant() -> axum::response::Response {
-    (
-        StatusCode::FORBIDDEN,
-        Json(ErrorBody {
-            error: "company_mismatch".into(),
-            message: "the request's company_id does not match the authenticated company".into(),
-        }),
-    )
-        .into_response()
-}
 
 async fn upsert_config(
     State(service): State<Arc<EmvQrService>>,

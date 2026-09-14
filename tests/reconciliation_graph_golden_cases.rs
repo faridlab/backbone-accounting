@@ -608,7 +608,7 @@ async fn residuals_for_party_lists_only_open_lines() {
     .unwrap();
 
     let open = svc
-        .residuals_for_party(company, coa["1200"], "customer", party)
+        .residuals_for_party(coa["1200"], "customer", party)
         .await
         .unwrap();
     // Only invoice 2's line remains open — the settled one and the receipt are gone.
@@ -619,7 +619,7 @@ async fn residuals_for_party_lists_only_open_lines() {
 
     // A different party sees nothing.
     let none = svc
-        .residuals_for_party(company, coa["1200"], "customer", Uuid::new_v4())
+        .residuals_for_party(coa["1200"], "customer", Uuid::new_v4())
         .await
         .unwrap();
     assert!(none.is_empty());

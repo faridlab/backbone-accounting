@@ -57,7 +57,6 @@ pub trait DeferredTaxLookup: Send + Sync {
     async fn deferred_lines_on(
         &self,
         conn: &mut sqlx::PgConnection,
-        company_id: Uuid,
         journal_id: Uuid,
         source_type: Option<&str>,
         source_id: Option<Uuid>,
