@@ -23,7 +23,6 @@ async fn pool() -> PgPool {
 
 fn register(company: Uuid, bank: Uuid, mode: &str, next: i64) -> RegisterSequence {
     RegisterSequence {
-        company_id: company,
         bank_account_id: bank,
         numbering_mode: mode.into(),
         next_number: next,
@@ -32,7 +31,6 @@ fn register(company: Uuid, bank: Uuid, mode: &str, next: i64) -> RegisterSequenc
 
 fn record(company: Uuid, bank: Uuid, number: Option<String>) -> RecordCheck {
     RecordCheck {
-        company_id: company,
         bank_account_id: bank,
         payment_id: Uuid::new_v4(),
         payment_number: Some("PAY-1".into()),
@@ -60,7 +58,7 @@ async fn auto_sequence_allocates_and_records() {
     assert_eq!(seq.next_number, 1);
 
     let alloc: AllocationAck = svc
-        .allocate_check_numbers(company, bank, 5)
+        .allocate_check_numbers(bank, 5)
         .await
         .unwrap();
     assert_eq!(alloc.numbers, vec![1, 2, 3, 4, 5]);
@@ -91,9 +89,9 @@ async fn concurrent_allocations_get_distinct_numbers() {
         .unwrap();
 
     let (a, b, c) = tokio::join!(
-        svc.allocate_check_numbers(company, bank, 3),
-        svc.allocate_check_numbers(company, bank, 3),
-        svc.allocate_check_numbers(company, bank, 3),
+        svc.allocate_check_numbers(bank, 3),
+        svc.allocate_check_numbers(bank, 3),
+        svc.allocate_check_numbers(bank, 3),
     );
 
     let mut all: Vec<i64> = [a.unwrap().numbers, b.unwrap().numbers, c.unwrap().numbers]
@@ -162,7 +160,7 @@ async fn manual_sequence_validates_and_refuses_duplicates() {
     svc.register_sequence(register(company, bank, "manual", 1))
         .await
         .unwrap();
-    let err = svc.allocate_check_numbers(company, bank, 1).await.unwrap_err();
+    let err = svc.allocate_check_numbers(bank, 1).await.unwrap_err();
     assert_eq!(err.code(), "numbering_mode_conflict");
 }
 
@@ -181,7 +179,7 @@ async fn overflow_refuses_without_consuming_a_number() {
         .await
         .unwrap();
 
-    let err = svc.allocate_check_numbers(company, bank, 3).await.unwrap_err();
+    let err = svc.allocate_check_numbers(bank, 3).await.unwrap_err();
     assert_eq!(err.code(), "check_number_overflow");
     assert!(matches!(err, CheckPrintingError::CheckNumberOverflow));
 
@@ -197,11 +195,11 @@ async fn overflow_refuses_without_consuming_a_number() {
 
     // The numbers that would have crossed are still allocatable — exactly the
     // two that fit.
-    let ok = svc.allocate_check_numbers(company, bank, 2).await.unwrap();
+    let ok = svc.allocate_check_numbers(bank, 2).await.unwrap();
     assert_eq!(ok.numbers, vec![MAX_CHECK_NUMBER - 1, MAX_CHECK_NUMBER]);
 
     // Past the cap the sequence is exhausted; even one more refuses.
-    let err = svc.allocate_check_numbers(company, bank, 1).await.unwrap_err();
+    let err = svc.allocate_check_numbers(bank, 1).await.unwrap_err();
     assert_eq!(err.code(), "check_number_overflow");
 }
 
@@ -213,7 +211,7 @@ async fn unregistered_and_unknown_refuse_typed() {
     let bank = Uuid::new_v4();
     let svc = CheckPrintingService::new(pool.clone());
 
-    let err = svc.allocate_check_numbers(company, bank, 1).await.unwrap_err();
+    let err = svc.allocate_check_numbers(bank, 1).await.unwrap_err();
     assert_eq!(err.code(), "sequence_not_registered");
     assert_eq!(err.http_status(), 404);
 
@@ -224,7 +222,7 @@ async fn unregistered_and_unknown_refuse_typed() {
     assert_eq!(err.code(), "sequence_not_registered");
 
     let err = svc
-        .void_printed_check(company, Uuid::new_v4(), None)
+        .void_printed_check(Uuid::new_v4(), None)
         .await
         .unwrap_err();
     assert_eq!(err.code(), "check_not_found");
@@ -248,7 +246,7 @@ async fn void_flips_once_and_keeps_the_number_consumed() {
         .unwrap();
 
     let voided = svc
-        .void_printed_check(company, ack.printed_check_id, Some(Uuid::new_v4()))
+        .void_printed_check(ack.printed_check_id, Some(Uuid::new_v4()))
         .await
         .unwrap();
     assert_eq!(voided.status, "voided");
@@ -256,7 +254,7 @@ async fn void_flips_once_and_keeps_the_number_consumed() {
 
     // Second void → typed refusal.
     let err = svc
-        .void_printed_check(company, ack.printed_check_id, None)
+        .void_printed_check(ack.printed_check_id, None)
         .await
         .unwrap_err();
     assert_eq!(err.code(), "check_already_voided");

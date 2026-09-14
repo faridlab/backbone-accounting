@@ -39,9 +39,6 @@ pub const MAX_CHECK_NUMBER: i64 = 2_147_483_647;
 
 #[derive(Debug, Clone)]
 pub struct RegisterSequence {
-    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
-    /// run unchanged; no statement keys on it.
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     /// "auto" or "manual".
     pub numbering_mode: String,
@@ -51,9 +48,6 @@ pub struct RegisterSequence {
 
 #[derive(Debug, Clone)]
 pub struct RecordCheck {
-    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
-    /// run unchanged; no statement keys on it.
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub payment_id: Uuid,
     pub payment_number: Option<String>,
@@ -68,8 +62,6 @@ pub struct RecordCheck {
 #[derive(Debug, Clone, Serialize)]
 pub struct SequenceAck {
     pub sequence_id: Uuid,
-    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub numbering_mode: String,
     pub next_number: i64,
@@ -85,8 +77,6 @@ pub struct AllocationAck {
 #[derive(Debug, Clone, Serialize)]
 pub struct PrintedCheckAck {
     pub printed_check_id: Uuid,
-    /// The legacy tenancy twin (ADR-0029) — echoed verbatim for unstripped callers.
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub payment_id: Uuid,
     pub check_number: String,
@@ -210,6 +200,13 @@ struct SequenceRow {
     next_number: i64,
 }
 
+/// The tenant a check sequence belongs to, taken from the request's own scope.
+fn ambient_company() -> Uuid {
+    backbone_orm::org_scope::current_org_scope()
+        .and_then(|s| s.legacy_company_id())
+        .unwrap_or_default()
+}
+
 impl CheckPrintingService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -262,7 +259,6 @@ impl CheckPrintingService {
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(SequenceAck {
             sequence_id: row.id,
-            company_id: req.company_id,
             bank_account_id: req.bank_account_id,
             numbering_mode: row.numbering_mode,
             next_number: row.next_number,
@@ -278,7 +274,6 @@ impl CheckPrintingService {
     /// and the transaction rolls back, leaving the cursor untouched.
     pub async fn allocate_check_numbers(
         &self,
-        company_id: Uuid,
         bank_account_id: Uuid,
         count: i64,
     ) -> Result<AllocationAck, CheckPrintingError> {
@@ -289,7 +284,7 @@ impl CheckPrintingService {
         }
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
         let ack = self
-            .allocate_check_numbers_on(&mut tx, company_id, bank_account_id, count)
+            .allocate_check_numbers_on(&mut tx, bank_account_id, count)
             .await?;
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(ack)
@@ -302,7 +297,6 @@ impl CheckPrintingService {
     async fn allocate_check_numbers_on(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-        _company_id: Uuid,
         bank_account_id: Uuid,
         count: i64,
     ) -> Result<AllocationAck, CheckPrintingError> {
@@ -403,7 +397,6 @@ impl CheckPrintingService {
                     // same transaction as the registry insert.
                     self.allocate_check_numbers_on(
                         &mut tx,
-                        req.company_id,
                         req.bank_account_id,
                         1,
                     )
@@ -456,7 +449,6 @@ impl CheckPrintingService {
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(PrintedCheckAck {
             printed_check_id: id,
-            company_id: req.company_id,
             bank_account_id: req.bank_account_id,
             payment_id: req.payment_id,
             check_number,
@@ -471,7 +463,6 @@ impl CheckPrintingService {
     /// echoed into the ack; no statement keys on it.
     pub async fn void_printed_check(
         &self,
-        company_id: Uuid,
         printed_check_id: Uuid,
         actor: Option<Uuid>,
     ) -> Result<PrintedCheckAck, CheckPrintingError> {
@@ -522,7 +513,6 @@ impl CheckPrintingService {
         tx.commit().await.map_err(|e| internal(e))?;
         Ok(PrintedCheckAck {
             printed_check_id: row.id,
-            company_id,
             bank_account_id: row.bank_account_id,
             payment_id: row.payment_id,
             check_number: row.check_number,

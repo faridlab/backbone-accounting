@@ -40,7 +40,6 @@ use crate::application::service::check_printing_service::{
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterSequenceBody {
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     /// "auto" | "manual".
     pub numbering_mode: String,
@@ -54,7 +53,6 @@ fn default_next() -> i64 {
 
 #[derive(Debug, Deserialize)]
 pub struct AllocateBody {
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     #[serde(default = "default_count")]
     pub count: i64,
@@ -66,7 +64,6 @@ fn default_count() -> i64 {
 
 #[derive(Debug, Deserialize)]
 pub struct RecordCheckBody {
-    pub company_id: Uuid,
     pub bank_account_id: Uuid,
     pub payment_id: Uuid,
     #[serde(default)]
@@ -83,7 +80,6 @@ pub struct RecordCheckBody {
 
 #[derive(Debug, Deserialize)]
 pub struct VoidBody {
-    pub company_id: Uuid,
     #[serde(default)]
     pub actor: Option<Uuid>,
 }
@@ -106,19 +102,6 @@ fn error_response(e: &CheckPrintingError) -> axum::response::Response {
         .into_response()
 }
 
-fn tenant_mismatch(req_company: Uuid) -> bool {
-    // Scope-aware (ADR-0029): prefer the ambient org scope's legacy company id;
-    // fall back to the legacy company lane for unstripped hosts. Neither bound —
-    // e.g. an undecorated deployment — means nothing to compare against, so no
-    // refusal.
-    let authenticated = backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .or_else(|| backbone_orm::current_company());
-    match authenticated {
-        Some(authenticated) => authenticated != req_company,
-        None => false,
-    }
-}
 
 fn forbidden_tenant() -> axum::response::Response {
     (
@@ -135,11 +118,7 @@ async fn register_sequence(
     State(service): State<Arc<CheckPrintingService>>,
     Json(body): Json<RegisterSequenceBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     let req = RegisterSequence {
-        company_id: body.company_id,
         bank_account_id: body.bank_account_id,
         numbering_mode: body.numbering_mode,
         next_number: body.next_number,
@@ -147,7 +126,6 @@ async fn register_sequence(
     match service.register_sequence(req).await {
         Ok(ack) => (StatusCode::OK, Json(SequenceAck {
             sequence_id: ack.sequence_id,
-            company_id: ack.company_id,
             bank_account_id: ack.bank_account_id,
             numbering_mode: ack.numbering_mode,
             next_number: ack.next_number,
@@ -161,11 +139,8 @@ async fn allocate(
     State(service): State<Arc<CheckPrintingService>>,
     Json(body): Json<AllocateBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     match service
-        .allocate_check_numbers(body.company_id, body.bank_account_id, body.count)
+        .allocate_check_numbers(body.bank_account_id, body.count)
         .await
     {
         Ok(ack) => (StatusCode::OK, Json(AllocationAck {
@@ -182,11 +157,7 @@ async fn record_check(
     State(service): State<Arc<CheckPrintingService>>,
     Json(body): Json<RecordCheckBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     let req = RecordCheck {
-        company_id: body.company_id,
         bank_account_id: body.bank_account_id,
         payment_id: body.payment_id,
         payment_number: body.payment_number,
@@ -198,7 +169,6 @@ async fn record_check(
     match service.record_printed_check(req).await {
         Ok(ack) => (StatusCode::CREATED, Json(PrintedCheckAck {
             printed_check_id: ack.printed_check_id,
-            company_id: ack.company_id,
             bank_account_id: ack.bank_account_id,
             payment_id: ack.payment_id,
             check_number: ack.check_number,
@@ -214,16 +184,12 @@ async fn void_check(
     Path(printed_check_id): Path<Uuid>,
     Json(body): Json<VoidBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     match service
-        .void_printed_check(body.company_id, printed_check_id, body.actor)
+        .void_printed_check(printed_check_id, body.actor)
         .await
     {
         Ok(ack) => (StatusCode::OK, Json(PrintedCheckAck {
             printed_check_id: ack.printed_check_id,
-            company_id: ack.company_id,
             bank_account_id: ack.bank_account_id,
             payment_id: ack.payment_id,
             check_number: ack.check_number,
