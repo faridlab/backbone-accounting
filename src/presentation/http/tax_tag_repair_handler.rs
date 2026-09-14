@@ -46,7 +46,6 @@ pub struct TaxTagRuleBody {
 
 #[derive(Debug, Deserialize)]
 pub struct RepairBody {
-    pub company_id: Uuid,
     pub date_from: NaiveDate,
     pub date_to: NaiveDate,
     pub rules: Vec<TaxTagRuleBody>,
@@ -62,7 +61,6 @@ pub struct RepairBody {
 
 #[derive(Debug, Deserialize)]
 pub struct ListRunsQuery {
-    pub company_id: Uuid,
     #[serde(default = "default_limit")]
     pub limit: i64,
 }
@@ -89,19 +87,6 @@ fn error_response(e: &TaxTagRepairError) -> axum::response::Response {
         .into_response()
 }
 
-fn tenant_mismatch(req_company: Uuid) -> bool {
-    // Scope-aware (ADR-0029): prefer the ambient org scope's legacy company id;
-    // fall back to the legacy company lane for unstripped hosts. Neither bound —
-    // e.g. an undecorated deployment — means nothing to compare against, so no
-    // refusal.
-    let authenticated = backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .or_else(|| backbone_orm::current_company());
-    match authenticated {
-        Some(authenticated) => authenticated != req_company,
-        None => false,
-    }
-}
 
 fn forbidden_tenant() -> axum::response::Response {
     (
@@ -118,11 +103,7 @@ async fn run_repair(
     State(service): State<Arc<TaxTagRepairService>>,
     Json(body): Json<RepairBody>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(body.company_id) {
-        return forbidden_tenant();
-    }
     let req = RepairRequest {
-        company_id: body.company_id,
         date_from: body.date_from,
         date_to: body.date_to,
         rules: body
@@ -157,10 +138,7 @@ async fn list_runs(
     State(service): State<Arc<TaxTagRepairService>>,
     Query(q): Query<ListRunsQuery>,
 ) -> impl IntoResponse {
-    if tenant_mismatch(q.company_id) {
-        return forbidden_tenant();
-    }
-    match service.list_runs(q.company_id, q.limit).await {
+    match service.list_runs(q.limit).await {
         Ok(rows) => {
             let body: Vec<RepairRunRow> = rows;
             (StatusCode::OK, Json(body)).into_response()

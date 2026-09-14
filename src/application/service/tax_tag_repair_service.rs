@@ -55,9 +55,6 @@ pub struct TaxTagRule {
 
 #[derive(Debug, Clone)]
 pub struct RepairRequest {
-    /// The legacy tenancy twin (ADR-0029) — kept so unstripped callers compile and
-    /// run unchanged; no statement keys on it.
-    pub company_id: Uuid,
     pub date_from: NaiveDate,
     pub date_to: NaiveDate,
     pub rules: Vec<TaxTagRule>,
@@ -185,7 +182,6 @@ impl TaxTagRepairService {
     /// for unstripped callers, unused here.
     pub async fn list_runs(
         &self,
-        _company_id: Uuid,
         limit: i64,
     ) -> Result<Vec<RepairRunRow>, TaxTagRepairError> {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;

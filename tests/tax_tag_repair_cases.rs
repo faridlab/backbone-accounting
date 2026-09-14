@@ -160,7 +160,6 @@ fn request(
 ) -> RepairRequest {
     let (from, to) = window(company);
     RepairRequest {
-        company_id: company,
         date_from: from,
         date_to: to,
         rules,
@@ -225,7 +224,7 @@ async fn apply_retags_selected_lines_and_stamps_audit() {
     assert_eq!(base_tags, serde_json::json!(["vat-out-old"]));
 
     // The audit ledger read returns the run with everything stamped.
-    let runs = svc.list_runs(company, 10).await.unwrap();
+    let runs = svc.list_runs(10).await.unwrap();
     let run = runs.iter().find(|r| r.id == report.run_id).expect("the new run listed");
     assert!(!run.dry_run);
     assert_eq!(run.lines_examined, 1);
@@ -280,7 +279,7 @@ async fn dry_run_counts_without_writing() {
     assert_eq!(tags, serde_json::json!(["vat-out-old"]));
 
     // The preview is still audited.
-    let runs = svc.list_runs(company, 10).await.unwrap();
+    let runs = svc.list_runs(10).await.unwrap();
     let run = runs.iter().find(|r| r.id == report.run_id).expect("the new run listed");
     assert!(run.dry_run);
 
@@ -406,7 +405,7 @@ async fn closed_period_requires_explicit_override() {
     assert_eq!(report.lines_retagged, 1);
     assert_eq!(report.closed_periods_overridden, vec![code.clone()]);
 
-    let runs = svc.list_runs(company, 10).await.unwrap();
+    let runs = svc.list_runs(10).await.unwrap();
     let run = runs.iter().find(|r| r.id == report.run_id).expect("the new run listed");
     assert_eq!(run.overridden_closed_periods, serde_json::json!([code]));
 
