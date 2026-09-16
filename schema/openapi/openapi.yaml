@@ -7,7 +7,7 @@ info:
     This API provides 11 standard CRUD endpoints for each model.
 
 servers:
-  - url: http://localhost:3000
+  - url: /
     description: Development server
 
 tags:
@@ -45,7 +45,7 @@ tags:
     description: PartialReconcile management endpoints
 
 paths:
-  /api/v1/accounts:
+  /api/v1/accounting/accounts:
     get:
       tags:
         - Accounts
@@ -91,7 +91,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/accounts/{id}:
+  /api/v1/accounting/accounts/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -163,7 +163,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/accounts/bulk:
+  /api/v1/accounting/accounts/bulk:
     post:
       tags:
         - Accounts
@@ -255,7 +255,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounts/upsert:
+  /api/v1/accounting/accounts/upsert:
     post:
       tags:
         - Accounts
@@ -285,7 +285,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
 
-  /api/v1/accounts/trash:
+  /api/v1/accounting/accounts/trash:
     get:
       tags:
         - Accounts
@@ -302,7 +302,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountList'
 
-  /api/v1/accounts/{id}/restore:
+  /api/v1/accounting/accounts/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -320,7 +320,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/accounts/empty:
+  /api/v1/accounting/accounts/empty:
     delete:
       tags:
         - Accounts
@@ -337,7 +337,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/accounts/delete/bulk:
+  /api/v1/accounting/accounts/delete/bulk:
     post:
       tags:
         - Accounts
@@ -357,7 +357,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounts/restore/bulk:
+  /api/v1/accounting/accounts/restore/bulk:
     post:
       tags:
         - Accounts
@@ -375,7 +375,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounts/restore/all:
+  /api/v1/accounting/accounts/restore/all:
     post:
       tags:
         - Accounts
@@ -391,7 +391,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/accounts/trash/bulk:
+  /api/v1/accounting/accounts/trash/bulk:
     delete:
       tags:
         - Accounts
@@ -411,7 +411,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounting_posts:
+  /api/v1/accounting/accounting_posts:
     get:
       tags:
         - AccountingPosts
@@ -457,7 +457,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/accounting_posts/{id}:
+  /api/v1/accounting/accounting_posts/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -529,7 +529,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/accounting_posts/bulk:
+  /api/v1/accounting/accounting_posts/bulk:
     post:
       tags:
         - AccountingPosts
@@ -621,7 +621,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounting_posts/upsert:
+  /api/v1/accounting/accounting_posts/upsert:
     post:
       tags:
         - AccountingPosts
@@ -651,7 +651,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountingPost'
 
-  /api/v1/accounting_posts/trash:
+  /api/v1/accounting/accounting_posts/trash:
     get:
       tags:
         - AccountingPosts
@@ -668,7 +668,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountingPostList'
 
-  /api/v1/accounting_posts/{id}/restore:
+  /api/v1/accounting/accounting_posts/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -686,7 +686,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/accounting_posts/empty:
+  /api/v1/accounting/accounting_posts/empty:
     delete:
       tags:
         - AccountingPosts
@@ -703,7 +703,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/accounting_posts/delete/bulk:
+  /api/v1/accounting/accounting_posts/delete/bulk:
     post:
       tags:
         - AccountingPosts
@@ -723,7 +723,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounting_posts/restore/bulk:
+  /api/v1/accounting/accounting_posts/restore/bulk:
     post:
       tags:
         - AccountingPosts
@@ -741,7 +741,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/accounting_posts/restore/all:
+  /api/v1/accounting/accounting_posts/restore/all:
     post:
       tags:
         - AccountingPosts
@@ -757,7 +757,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/accounting_posts/trash/bulk:
+  /api/v1/accounting/accounting_posts/trash/bulk:
     delete:
       tags:
         - AccountingPosts
@@ -777,7 +777,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/cost_centers:
+  /api/v1/accounting/cost_centers:
     get:
       tags:
         - CostCenters
@@ -823,7 +823,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/cost_centers/{id}:
+  /api/v1/accounting/cost_centers/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -895,7 +895,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/cost_centers/bulk:
+  /api/v1/accounting/cost_centers/bulk:
     post:
       tags:
         - CostCenters
@@ -987,7 +987,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/cost_centers/upsert:
+  /api/v1/accounting/cost_centers/upsert:
     post:
       tags:
         - CostCenters
@@ -1017,7 +1017,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CostCenter'
 
-  /api/v1/cost_centers/trash:
+  /api/v1/accounting/cost_centers/trash:
     get:
       tags:
         - CostCenters
@@ -1034,7 +1034,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CostCenterList'
 
-  /api/v1/cost_centers/{id}/restore:
+  /api/v1/accounting/cost_centers/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1052,7 +1052,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/cost_centers/empty:
+  /api/v1/accounting/cost_centers/empty:
     delete:
       tags:
         - CostCenters
@@ -1069,7 +1069,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/cost_centers/delete/bulk:
+  /api/v1/accounting/cost_centers/delete/bulk:
     post:
       tags:
         - CostCenters
@@ -1089,7 +1089,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/cost_centers/restore/bulk:
+  /api/v1/accounting/cost_centers/restore/bulk:
     post:
       tags:
         - CostCenters
@@ -1107,7 +1107,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/cost_centers/restore/all:
+  /api/v1/accounting/cost_centers/restore/all:
     post:
       tags:
         - CostCenters
@@ -1123,7 +1123,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/cost_centers/trash/bulk:
+  /api/v1/accounting/cost_centers/trash/bulk:
     delete:
       tags:
         - CostCenters
@@ -1143,7 +1143,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/emv_qr_configs:
+  /api/v1/accounting/emv_qr_configs:
     get:
       tags:
         - EmvQrConfigs
@@ -1189,7 +1189,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/emv_qr_configs/{id}:
+  /api/v1/accounting/emv_qr_configs/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1261,7 +1261,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/emv_qr_configs/bulk:
+  /api/v1/accounting/emv_qr_configs/bulk:
     post:
       tags:
         - EmvQrConfigs
@@ -1353,7 +1353,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/emv_qr_configs/upsert:
+  /api/v1/accounting/emv_qr_configs/upsert:
     post:
       tags:
         - EmvQrConfigs
@@ -1383,7 +1383,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmvQrConfig'
 
-  /api/v1/emv_qr_configs/trash:
+  /api/v1/accounting/emv_qr_configs/trash:
     get:
       tags:
         - EmvQrConfigs
@@ -1400,7 +1400,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmvQrConfigList'
 
-  /api/v1/emv_qr_configs/{id}/restore:
+  /api/v1/accounting/emv_qr_configs/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1418,7 +1418,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/emv_qr_configs/empty:
+  /api/v1/accounting/emv_qr_configs/empty:
     delete:
       tags:
         - EmvQrConfigs
@@ -1435,7 +1435,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/emv_qr_configs/delete/bulk:
+  /api/v1/accounting/emv_qr_configs/delete/bulk:
     post:
       tags:
         - EmvQrConfigs
@@ -1455,7 +1455,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/emv_qr_configs/restore/bulk:
+  /api/v1/accounting/emv_qr_configs/restore/bulk:
     post:
       tags:
         - EmvQrConfigs
@@ -1473,7 +1473,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/emv_qr_configs/restore/all:
+  /api/v1/accounting/emv_qr_configs/restore/all:
     post:
       tags:
         - EmvQrConfigs
@@ -1489,7 +1489,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/emv_qr_configs/trash/bulk:
+  /api/v1/accounting/emv_qr_configs/trash/bulk:
     delete:
       tags:
         - EmvQrConfigs
@@ -1509,7 +1509,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bank_check_sequences:
+  /api/v1/accounting/bank_check_sequences:
     get:
       tags:
         - BankCheckSequences
@@ -1555,7 +1555,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/bank_check_sequences/{id}:
+  /api/v1/accounting/bank_check_sequences/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1627,7 +1627,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bank_check_sequences/bulk:
+  /api/v1/accounting/bank_check_sequences/bulk:
     post:
       tags:
         - BankCheckSequences
@@ -1719,7 +1719,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bank_check_sequences/upsert:
+  /api/v1/accounting/bank_check_sequences/upsert:
     post:
       tags:
         - BankCheckSequences
@@ -1749,7 +1749,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BankCheckSequence'
 
-  /api/v1/bank_check_sequences/trash:
+  /api/v1/accounting/bank_check_sequences/trash:
     get:
       tags:
         - BankCheckSequences
@@ -1766,7 +1766,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BankCheckSequenceList'
 
-  /api/v1/bank_check_sequences/{id}/restore:
+  /api/v1/accounting/bank_check_sequences/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -1784,7 +1784,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/bank_check_sequences/empty:
+  /api/v1/accounting/bank_check_sequences/empty:
     delete:
       tags:
         - BankCheckSequences
@@ -1801,7 +1801,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/bank_check_sequences/delete/bulk:
+  /api/v1/accounting/bank_check_sequences/delete/bulk:
     post:
       tags:
         - BankCheckSequences
@@ -1821,7 +1821,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bank_check_sequences/restore/bulk:
+  /api/v1/accounting/bank_check_sequences/restore/bulk:
     post:
       tags:
         - BankCheckSequences
@@ -1839,7 +1839,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/bank_check_sequences/restore/all:
+  /api/v1/accounting/bank_check_sequences/restore/all:
     post:
       tags:
         - BankCheckSequences
@@ -1855,7 +1855,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/bank_check_sequences/trash/bulk:
+  /api/v1/accounting/bank_check_sequences/trash/bulk:
     delete:
       tags:
         - BankCheckSequences
@@ -1875,7 +1875,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/printed_checks:
+  /api/v1/accounting/printed_checks:
     get:
       tags:
         - PrintedChecks
@@ -1921,7 +1921,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/printed_checks/{id}:
+  /api/v1/accounting/printed_checks/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -1993,7 +1993,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/printed_checks/bulk:
+  /api/v1/accounting/printed_checks/bulk:
     post:
       tags:
         - PrintedChecks
@@ -2085,7 +2085,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/printed_checks/upsert:
+  /api/v1/accounting/printed_checks/upsert:
     post:
       tags:
         - PrintedChecks
@@ -2115,7 +2115,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PrintedCheck'
 
-  /api/v1/printed_checks/trash:
+  /api/v1/accounting/printed_checks/trash:
     get:
       tags:
         - PrintedChecks
@@ -2132,7 +2132,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PrintedCheckList'
 
-  /api/v1/printed_checks/{id}/restore:
+  /api/v1/accounting/printed_checks/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2150,7 +2150,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/printed_checks/empty:
+  /api/v1/accounting/printed_checks/empty:
     delete:
       tags:
         - PrintedChecks
@@ -2167,7 +2167,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/printed_checks/delete/bulk:
+  /api/v1/accounting/printed_checks/delete/bulk:
     post:
       tags:
         - PrintedChecks
@@ -2187,7 +2187,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/printed_checks/restore/bulk:
+  /api/v1/accounting/printed_checks/restore/bulk:
     post:
       tags:
         - PrintedChecks
@@ -2205,7 +2205,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/printed_checks/restore/all:
+  /api/v1/accounting/printed_checks/restore/all:
     post:
       tags:
         - PrintedChecks
@@ -2221,7 +2221,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/printed_checks/trash/bulk:
+  /api/v1/accounting/printed_checks/trash/bulk:
     delete:
       tags:
         - PrintedChecks
@@ -2241,7 +2241,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tax_tag_repair_runs:
+  /api/v1/accounting/tax_tag_repair_runs:
     get:
       tags:
         - TaxTagRepairRuns
@@ -2287,7 +2287,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/tax_tag_repair_runs/{id}:
+  /api/v1/accounting/tax_tag_repair_runs/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -2359,7 +2359,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/tax_tag_repair_runs/bulk:
+  /api/v1/accounting/tax_tag_repair_runs/bulk:
     post:
       tags:
         - TaxTagRepairRuns
@@ -2451,7 +2451,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tax_tag_repair_runs/upsert:
+  /api/v1/accounting/tax_tag_repair_runs/upsert:
     post:
       tags:
         - TaxTagRepairRuns
@@ -2481,7 +2481,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaxTagRepairRun'
 
-  /api/v1/tax_tag_repair_runs/trash:
+  /api/v1/accounting/tax_tag_repair_runs/trash:
     get:
       tags:
         - TaxTagRepairRuns
@@ -2498,7 +2498,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaxTagRepairRunList'
 
-  /api/v1/tax_tag_repair_runs/{id}/restore:
+  /api/v1/accounting/tax_tag_repair_runs/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2516,7 +2516,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/tax_tag_repair_runs/empty:
+  /api/v1/accounting/tax_tag_repair_runs/empty:
     delete:
       tags:
         - TaxTagRepairRuns
@@ -2533,7 +2533,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/tax_tag_repair_runs/delete/bulk:
+  /api/v1/accounting/tax_tag_repair_runs/delete/bulk:
     post:
       tags:
         - TaxTagRepairRuns
@@ -2553,7 +2553,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tax_tag_repair_runs/restore/bulk:
+  /api/v1/accounting/tax_tag_repair_runs/restore/bulk:
     post:
       tags:
         - TaxTagRepairRuns
@@ -2571,7 +2571,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/tax_tag_repair_runs/restore/all:
+  /api/v1/accounting/tax_tag_repair_runs/restore/all:
     post:
       tags:
         - TaxTagRepairRuns
@@ -2587,7 +2587,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/tax_tag_repair_runs/trash/bulk:
+  /api/v1/accounting/tax_tag_repair_runs/trash/bulk:
     delete:
       tags:
         - TaxTagRepairRuns
@@ -2607,7 +2607,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/financial_statements:
+  /api/v1/accounting/financial_statements:
     get:
       tags:
         - FinancialStatements
@@ -2653,7 +2653,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/financial_statements/{id}:
+  /api/v1/accounting/financial_statements/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -2725,7 +2725,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/financial_statements/bulk:
+  /api/v1/accounting/financial_statements/bulk:
     post:
       tags:
         - FinancialStatements
@@ -2817,7 +2817,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/financial_statements/upsert:
+  /api/v1/accounting/financial_statements/upsert:
     post:
       tags:
         - FinancialStatements
@@ -2847,7 +2847,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FinancialStatement'
 
-  /api/v1/financial_statements/trash:
+  /api/v1/accounting/financial_statements/trash:
     get:
       tags:
         - FinancialStatements
@@ -2864,7 +2864,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FinancialStatementList'
 
-  /api/v1/financial_statements/{id}/restore:
+  /api/v1/accounting/financial_statements/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -2882,7 +2882,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/financial_statements/empty:
+  /api/v1/accounting/financial_statements/empty:
     delete:
       tags:
         - FinancialStatements
@@ -2899,7 +2899,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/financial_statements/delete/bulk:
+  /api/v1/accounting/financial_statements/delete/bulk:
     post:
       tags:
         - FinancialStatements
@@ -2919,7 +2919,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/financial_statements/restore/bulk:
+  /api/v1/accounting/financial_statements/restore/bulk:
     post:
       tags:
         - FinancialStatements
@@ -2937,7 +2937,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/financial_statements/restore/all:
+  /api/v1/accounting/financial_statements/restore/all:
     post:
       tags:
         - FinancialStatements
@@ -2953,7 +2953,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/financial_statements/trash/bulk:
+  /api/v1/accounting/financial_statements/trash/bulk:
     delete:
       tags:
         - FinancialStatements
@@ -2973,7 +2973,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/fiscal_periods:
+  /api/v1/accounting/fiscal_periods:
     get:
       tags:
         - FiscalPeriods
@@ -3019,7 +3019,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/fiscal_periods/{id}:
+  /api/v1/accounting/fiscal_periods/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3091,7 +3091,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/fiscal_periods/bulk:
+  /api/v1/accounting/fiscal_periods/bulk:
     post:
       tags:
         - FiscalPeriods
@@ -3183,7 +3183,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/fiscal_periods/upsert:
+  /api/v1/accounting/fiscal_periods/upsert:
     post:
       tags:
         - FiscalPeriods
@@ -3213,7 +3213,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FiscalPeriod'
 
-  /api/v1/fiscal_periods/trash:
+  /api/v1/accounting/fiscal_periods/trash:
     get:
       tags:
         - FiscalPeriods
@@ -3230,7 +3230,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FiscalPeriodList'
 
-  /api/v1/fiscal_periods/{id}/restore:
+  /api/v1/accounting/fiscal_periods/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3248,7 +3248,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/fiscal_periods/empty:
+  /api/v1/accounting/fiscal_periods/empty:
     delete:
       tags:
         - FiscalPeriods
@@ -3265,7 +3265,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/fiscal_periods/delete/bulk:
+  /api/v1/accounting/fiscal_periods/delete/bulk:
     post:
       tags:
         - FiscalPeriods
@@ -3285,7 +3285,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/fiscal_periods/restore/bulk:
+  /api/v1/accounting/fiscal_periods/restore/bulk:
     post:
       tags:
         - FiscalPeriods
@@ -3303,7 +3303,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/fiscal_periods/restore/all:
+  /api/v1/accounting/fiscal_periods/restore/all:
     post:
       tags:
         - FiscalPeriods
@@ -3319,7 +3319,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/fiscal_periods/trash/bulk:
+  /api/v1/accounting/fiscal_periods/trash/bulk:
     delete:
       tags:
         - FiscalPeriods
@@ -3339,7 +3339,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journals:
+  /api/v1/accounting/journals:
     get:
       tags:
         - Journals
@@ -3385,7 +3385,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/journals/{id}:
+  /api/v1/accounting/journals/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3457,7 +3457,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/journals/bulk:
+  /api/v1/accounting/journals/bulk:
     post:
       tags:
         - Journals
@@ -3549,7 +3549,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journals/upsert:
+  /api/v1/accounting/journals/upsert:
     post:
       tags:
         - Journals
@@ -3579,7 +3579,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Journal'
 
-  /api/v1/journals/trash:
+  /api/v1/accounting/journals/trash:
     get:
       tags:
         - Journals
@@ -3596,7 +3596,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/JournalList'
 
-  /api/v1/journals/{id}/restore:
+  /api/v1/accounting/journals/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3614,7 +3614,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/journals/empty:
+  /api/v1/accounting/journals/empty:
     delete:
       tags:
         - Journals
@@ -3631,7 +3631,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/journals/delete/bulk:
+  /api/v1/accounting/journals/delete/bulk:
     post:
       tags:
         - Journals
@@ -3651,7 +3651,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journals/restore/bulk:
+  /api/v1/accounting/journals/restore/bulk:
     post:
       tags:
         - Journals
@@ -3669,7 +3669,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journals/restore/all:
+  /api/v1/accounting/journals/restore/all:
     post:
       tags:
         - Journals
@@ -3685,7 +3685,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/journals/trash/bulk:
+  /api/v1/accounting/journals/trash/bulk:
     delete:
       tags:
         - Journals
@@ -3705,7 +3705,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journal_lines:
+  /api/v1/accounting/journal_lines:
     get:
       tags:
         - JournalLines
@@ -3751,7 +3751,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/journal_lines/{id}:
+  /api/v1/accounting/journal_lines/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -3823,7 +3823,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/journal_lines/bulk:
+  /api/v1/accounting/journal_lines/bulk:
     post:
       tags:
         - JournalLines
@@ -3915,7 +3915,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journal_lines/upsert:
+  /api/v1/accounting/journal_lines/upsert:
     post:
       tags:
         - JournalLines
@@ -3945,7 +3945,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/JournalLine'
 
-  /api/v1/journal_lines/trash:
+  /api/v1/accounting/journal_lines/trash:
     get:
       tags:
         - JournalLines
@@ -3962,7 +3962,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/JournalLineList'
 
-  /api/v1/journal_lines/{id}/restore:
+  /api/v1/accounting/journal_lines/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -3980,7 +3980,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/journal_lines/empty:
+  /api/v1/accounting/journal_lines/empty:
     delete:
       tags:
         - JournalLines
@@ -3997,7 +3997,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/journal_lines/delete/bulk:
+  /api/v1/accounting/journal_lines/delete/bulk:
     post:
       tags:
         - JournalLines
@@ -4017,7 +4017,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journal_lines/restore/bulk:
+  /api/v1/accounting/journal_lines/restore/bulk:
     post:
       tags:
         - JournalLines
@@ -4035,7 +4035,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/journal_lines/restore/all:
+  /api/v1/accounting/journal_lines/restore/all:
     post:
       tags:
         - JournalLines
@@ -4051,7 +4051,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/journal_lines/trash/bulk:
+  /api/v1/accounting/journal_lines/trash/bulk:
     delete:
       tags:
         - JournalLines
@@ -4071,7 +4071,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/ledgers:
+  /api/v1/accounting/ledgers:
     get:
       tags:
         - Ledgers
@@ -4117,7 +4117,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/ledgers/{id}:
+  /api/v1/accounting/ledgers/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4189,7 +4189,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/ledgers/bulk:
+  /api/v1/accounting/ledgers/bulk:
     post:
       tags:
         - Ledgers
@@ -4281,7 +4281,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/ledgers/upsert:
+  /api/v1/accounting/ledgers/upsert:
     post:
       tags:
         - Ledgers
@@ -4311,7 +4311,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ledger'
 
-  /api/v1/ledgers/trash:
+  /api/v1/accounting/ledgers/trash:
     get:
       tags:
         - Ledgers
@@ -4328,7 +4328,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LedgerList'
 
-  /api/v1/ledgers/{id}/restore:
+  /api/v1/accounting/ledgers/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -4346,7 +4346,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/ledgers/empty:
+  /api/v1/accounting/ledgers/empty:
     delete:
       tags:
         - Ledgers
@@ -4363,7 +4363,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/ledgers/delete/bulk:
+  /api/v1/accounting/ledgers/delete/bulk:
     post:
       tags:
         - Ledgers
@@ -4383,7 +4383,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/ledgers/restore/bulk:
+  /api/v1/accounting/ledgers/restore/bulk:
     post:
       tags:
         - Ledgers
@@ -4401,7 +4401,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/ledgers/restore/all:
+  /api/v1/accounting/ledgers/restore/all:
     post:
       tags:
         - Ledgers
@@ -4417,7 +4417,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/ledgers/trash/bulk:
+  /api/v1/accounting/ledgers/trash/bulk:
     delete:
       tags:
         - Ledgers
@@ -4437,7 +4437,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliations:
+  /api/v1/accounting/reconciliations:
     get:
       tags:
         - Reconciliations
@@ -4483,7 +4483,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/reconciliations/{id}:
+  /api/v1/accounting/reconciliations/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4555,7 +4555,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/reconciliations/bulk:
+  /api/v1/accounting/reconciliations/bulk:
     post:
       tags:
         - Reconciliations
@@ -4647,7 +4647,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliations/upsert:
+  /api/v1/accounting/reconciliations/upsert:
     post:
       tags:
         - Reconciliations
@@ -4677,7 +4677,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Reconciliation'
 
-  /api/v1/reconciliations/trash:
+  /api/v1/accounting/reconciliations/trash:
     get:
       tags:
         - Reconciliations
@@ -4694,7 +4694,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReconciliationList'
 
-  /api/v1/reconciliations/{id}/restore:
+  /api/v1/accounting/reconciliations/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -4712,7 +4712,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/reconciliations/empty:
+  /api/v1/accounting/reconciliations/empty:
     delete:
       tags:
         - Reconciliations
@@ -4729,7 +4729,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/reconciliations/delete/bulk:
+  /api/v1/accounting/reconciliations/delete/bulk:
     post:
       tags:
         - Reconciliations
@@ -4749,7 +4749,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliations/restore/bulk:
+  /api/v1/accounting/reconciliations/restore/bulk:
     post:
       tags:
         - Reconciliations
@@ -4767,7 +4767,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliations/restore/all:
+  /api/v1/accounting/reconciliations/restore/all:
     post:
       tags:
         - Reconciliations
@@ -4783,7 +4783,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/reconciliations/trash/bulk:
+  /api/v1/accounting/reconciliations/trash/bulk:
     delete:
       tags:
         - Reconciliations
@@ -4803,7 +4803,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliation_items:
+  /api/v1/accounting/reconciliation_items:
     get:
       tags:
         - ReconciliationItems
@@ -4849,7 +4849,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/reconciliation_items/{id}:
+  /api/v1/accounting/reconciliation_items/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -4921,7 +4921,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/reconciliation_items/bulk:
+  /api/v1/accounting/reconciliation_items/bulk:
     post:
       tags:
         - ReconciliationItems
@@ -5013,7 +5013,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliation_items/upsert:
+  /api/v1/accounting/reconciliation_items/upsert:
     post:
       tags:
         - ReconciliationItems
@@ -5043,7 +5043,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReconciliationItem'
 
-  /api/v1/reconciliation_items/trash:
+  /api/v1/accounting/reconciliation_items/trash:
     get:
       tags:
         - ReconciliationItems
@@ -5060,7 +5060,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReconciliationItemList'
 
-  /api/v1/reconciliation_items/{id}/restore:
+  /api/v1/accounting/reconciliation_items/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5078,7 +5078,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/reconciliation_items/empty:
+  /api/v1/accounting/reconciliation_items/empty:
     delete:
       tags:
         - ReconciliationItems
@@ -5095,7 +5095,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/reconciliation_items/delete/bulk:
+  /api/v1/accounting/reconciliation_items/delete/bulk:
     post:
       tags:
         - ReconciliationItems
@@ -5115,7 +5115,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliation_items/restore/bulk:
+  /api/v1/accounting/reconciliation_items/restore/bulk:
     post:
       tags:
         - ReconciliationItems
@@ -5133,7 +5133,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/reconciliation_items/restore/all:
+  /api/v1/accounting/reconciliation_items/restore/all:
     post:
       tags:
         - ReconciliationItems
@@ -5149,7 +5149,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/reconciliation_items/trash/bulk:
+  /api/v1/accounting/reconciliation_items/trash/bulk:
     delete:
       tags:
         - ReconciliationItems
@@ -5169,7 +5169,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/full_reconciles:
+  /api/v1/accounting/full_reconciles:
     get:
       tags:
         - FullReconciles
@@ -5215,7 +5215,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/full_reconciles/{id}:
+  /api/v1/accounting/full_reconciles/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -5287,7 +5287,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/full_reconciles/bulk:
+  /api/v1/accounting/full_reconciles/bulk:
     post:
       tags:
         - FullReconciles
@@ -5379,7 +5379,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/full_reconciles/upsert:
+  /api/v1/accounting/full_reconciles/upsert:
     post:
       tags:
         - FullReconciles
@@ -5409,7 +5409,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FullReconcile'
 
-  /api/v1/full_reconciles/trash:
+  /api/v1/accounting/full_reconciles/trash:
     get:
       tags:
         - FullReconciles
@@ -5426,7 +5426,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FullReconcileList'
 
-  /api/v1/full_reconciles/{id}/restore:
+  /api/v1/accounting/full_reconciles/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5444,7 +5444,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/full_reconciles/empty:
+  /api/v1/accounting/full_reconciles/empty:
     delete:
       tags:
         - FullReconciles
@@ -5461,7 +5461,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/full_reconciles/delete/bulk:
+  /api/v1/accounting/full_reconciles/delete/bulk:
     post:
       tags:
         - FullReconciles
@@ -5481,7 +5481,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/full_reconciles/restore/bulk:
+  /api/v1/accounting/full_reconciles/restore/bulk:
     post:
       tags:
         - FullReconciles
@@ -5499,7 +5499,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/full_reconciles/restore/all:
+  /api/v1/accounting/full_reconciles/restore/all:
     post:
       tags:
         - FullReconciles
@@ -5515,7 +5515,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/full_reconciles/trash/bulk:
+  /api/v1/accounting/full_reconciles/trash/bulk:
     delete:
       tags:
         - FullReconciles
@@ -5535,7 +5535,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/partial_reconciles:
+  /api/v1/accounting/partial_reconciles:
     get:
       tags:
         - PartialReconciles
@@ -5581,7 +5581,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/partial_reconciles/{id}:
+  /api/v1/accounting/partial_reconciles/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
 
@@ -5653,7 +5653,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/partial_reconciles/bulk:
+  /api/v1/accounting/partial_reconciles/bulk:
     post:
       tags:
         - PartialReconciles
@@ -5745,7 +5745,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/partial_reconciles/upsert:
+  /api/v1/accounting/partial_reconciles/upsert:
     post:
       tags:
         - PartialReconciles
@@ -5775,7 +5775,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PartialReconcile'
 
-  /api/v1/partial_reconciles/trash:
+  /api/v1/accounting/partial_reconciles/trash:
     get:
       tags:
         - PartialReconciles
@@ -5792,7 +5792,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PartialReconcileList'
 
-  /api/v1/partial_reconciles/{id}/restore:
+  /api/v1/accounting/partial_reconciles/{id}/restore:
     parameters:
       - $ref: '#/components/parameters/IdParam'
     post:
@@ -5810,7 +5810,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/partial_reconciles/empty:
+  /api/v1/accounting/partial_reconciles/empty:
     delete:
       tags:
         - PartialReconciles
@@ -5827,7 +5827,7 @@ paths:
                   deleted_count:
                     type: integer
 
-  /api/v1/partial_reconciles/delete/bulk:
+  /api/v1/accounting/partial_reconciles/delete/bulk:
     post:
       tags:
         - PartialReconciles
@@ -5847,7 +5847,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/partial_reconciles/restore/bulk:
+  /api/v1/accounting/partial_reconciles/restore/bulk:
     post:
       tags:
         - PartialReconciles
@@ -5865,7 +5865,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/partial_reconciles/restore/all:
+  /api/v1/accounting/partial_reconciles/restore/all:
     post:
       tags:
         - PartialReconciles
@@ -5881,7 +5881,7 @@ paths:
                 properties:
                   restored: { type: integer }
 
-  /api/v1/partial_reconciles/trash/bulk:
+  /api/v1/accounting/partial_reconciles/trash/bulk:
     delete:
       tags:
         - PartialReconciles
