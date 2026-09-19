@@ -72,6 +72,15 @@ fn internal(e: anyhow::Error) -> ReconcileError {
     ReconcileError::Internal(e.to_string())
 }
 
+/// The comparable form of a reference, or `None` when there is nothing to
+/// compare. Case and surrounding whitespace are not part of a reference:
+/// the same cheque number reaches the book and the statement through
+/// different hands.
+fn references_pair(reference: Option<&str>) -> Option<String> {
+    let trimmed = reference?.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_lowercase())
+}
+
 /// One book entry during matching (mutable `matched` flag).
 struct BookEntry {
     ledger_id: Uuid,
@@ -122,14 +131,36 @@ impl BankReconciliationService {
             })
             .collect();
 
-        // Greedy match: each statement line to the first unmatched book entry of equal amount.
+        // Greedy match, reference first: a statement line takes the unmatched book
+        // entry that carries the same reference and the same amount, and only
+        // falls back to the first unmatched entry of that amount when no
+        // reference pairs them.
+        //
+        // Amount alone is not an identity. Two receipts of the same value in one
+        // period are ordinary, and matching them by arrival order pairs the wrong
+        // ledger row with the wrong statement line: the totals still balance, so
+        // nothing looks wrong, while each row is stamped reconciled against a
+        // line it has nothing to do with. The reference is the one field that
+        // says which is which.
         let mut matched: Vec<MatchedPair> = Vec::new();
         let mut unmatched_stmt: Vec<UnmatchedStatement> = Vec::new();
         for line in &req.statement_lines {
-            match book
-                .iter_mut()
-                .find(|b| !b.matched && b.amount == line.amount)
-            {
+            let by_reference = references_pair(line.reference.as_deref()).and_then(|wanted| {
+                book.iter()
+                    .position(|b| {
+                        !b.matched
+                            && b.amount == line.amount
+                            && references_pair(b.reference.as_deref())
+                                .is_some_and(|have| have == wanted)
+                    })
+            });
+            let hit = match by_reference {
+                Some(i) => Some(i),
+                None => book
+                    .iter()
+                    .position(|b| !b.matched && b.amount == line.amount),
+            };
+            match hit.map(|i| &mut book[i]) {
                 Some(b) => {
                     b.matched = true;
                     matched.push(MatchedPair {

@@ -285,11 +285,11 @@ impl PostingRepository for SqlxPostingRepository {
         write: PostingWrite,
     ) -> anyhow::Result<PostingCommit> {
         let now = write.now;
-        let mut tx = conn;
+        let tx = conn;
 
         let total_debit: Decimal = write.lines.iter().map(|l| l.debit).sum();
         let total_credit: Decimal = write.lines.iter().map(|l| l.credit).sum();
-        let accounts = load_accounts_locked(&mut tx, &write.lines).await?;
+        let accounts = load_accounts_locked(tx, &write.lines).await?;
 
         let journal_id = Uuid::new_v4();
         let journal_number = format!(
@@ -386,7 +386,7 @@ impl PostingRepository for SqlxPostingRepository {
         }
 
         append_ledger_entries(
-            &mut tx,
+            tx,
             write.branch_id,
             journal_id,
             &journal_number,
@@ -396,6 +396,7 @@ impl PostingRepository for SqlxPostingRepository {
             write.fiscal_month,
             &write.currency,
             write.description.as_deref(),
+            write.source_reference.as_deref(),
             is_reversing,
             &line_inputs,
             &accounts,
@@ -581,6 +582,9 @@ impl PostingRepository for SqlxPostingRepository {
             c.fiscal_month,
             &c.currency,
             c.description.as_deref(),
+            // A manual journal's own number is its reference; it is already on
+            // every row through `journal_number`.
+            None,
             false,
             &c.lines,
             &accounts,
@@ -722,6 +726,7 @@ async fn append_ledger_entries(
     fiscal_month: i32,
     currency: &str,
     description: Option<&str>,
+    reference: Option<&str>,
     is_reversing: bool,
     lines: &[LedgerEntryInput],
     accounts: &HashMap<Uuid, AccountInfo>,
@@ -767,12 +772,13 @@ async fn append_ledger_entries(
             r#"INSERT INTO accounting.ledgers
                 (id, account_id, account_number, account_name, account_type,
                  normal_balance, journal_id, journal_number, journal_line_id, transaction_date,
-                 posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, currency,
-                 debit_amount, credit_amount, balance_before, balance_after, balance_change,
-                 sequence_number, branch_id, party_type, party_id, cost_center_id, project_id,
-                 department_id, is_reversed)
+                 posting_date, fiscal_period_id, fiscal_year, fiscal_month, description, reference,
+                 currency, debit_amount, credit_amount, balance_before, balance_after,
+                 balance_change, sequence_number, branch_id, party_type, party_id, cost_center_id,
+                 project_id, department_id, is_reversed)
                VALUES ($1,$2,$3,$4,$5::account_type,$6::normal_balance,$7,$8,$9,$10,$11,$12,$13,
-                       $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::party_type,$25,$26,$27,$28,$29)"#,
+                       $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25::party_type,$26,$27,$28,$29,
+                       $30)"#,
         )
         .bind(ledger_id)
         .bind(line.account_id)
@@ -789,6 +795,10 @@ async fn append_ledger_entries(
         .bind(fiscal_year)
         .bind(fiscal_month)
         .bind(description.unwrap_or(&acct.name))
+        // The document reference travels with the row: it is what a bank
+        // reconciliation pairs a statement line to when two entries share an
+        // amount, and a ledger that drops it can only be matched by value.
+        .bind(reference)
         .bind(currency)
         .bind(line.debit)
         .bind(line.credit)

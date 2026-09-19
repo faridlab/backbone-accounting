@@ -101,6 +101,53 @@ async fn receipt(svc: &PostingService, company: Uuid, bank: Uuid, revenue: Uuid,
     svc.post(r, None).await.unwrap();
 }
 
+/// The same cash receipt, carrying the document reference the bank statement
+/// will name (a cheque or transfer number).
+async fn receipt_with_reference(
+    svc: &PostingService,
+    company: Uuid,
+    bank: Uuid,
+    revenue: Uuid,
+    amount: &str,
+    reference: &str,
+) {
+    let mut r = PostingRequest::original(company, "payment", Uuid::new_v4(), posting_date(company));
+    r.source_reference = Some(reference.to_string());
+    r.lines = vec![
+        PostingLine {
+            account_id: bank,
+            debit: dec(amount),
+            credit: Decimal::ZERO,
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
+        PostingLine {
+            account_id: revenue,
+            debit: Decimal::ZERO,
+            credit: dec(amount),
+            party_type: None,
+            party_id: None,
+            cost_center_id: None,
+            project_id: None,
+            department_id: None,
+            description: None,
+        },
+    ];
+    svc.post(r, None).await.unwrap();
+}
+
+fn stmt_with_reference(amount: &str, reference: &str) -> StatementLine {
+    StatementLine {
+        date: NaiveDate::from_ymd_opt(2026, 1, 20).unwrap(),
+        amount: dec(amount),
+        reference: Some(reference.to_string()),
+    }
+}
+
 async fn is_reconciled_count(pool: &PgPool, account: Uuid) -> i64 {
     sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id=$1 AND is_reconciled=TRUE")
         .bind(account).fetch_one(pool).await.unwrap()
@@ -203,4 +250,58 @@ async fn rcg2_full_match() {
     assert!(res.is_balanced);
     assert_eq!(res.difference, dec("0.00"));
     assert_eq!(is_reconciled_count(&pool, bank).await, 3);
+}
+
+// RCG-3 — same amount twice: the reference decides which book entry a statement line takes ──
+#[tokio::test]
+async fn rcg3_equal_amounts_pair_by_reference_not_by_order() {
+    let _guard = DB_LOCK.lock().await;
+    let pool = pool().await;
+    let (company, bank, revenue) = seed(&pool).await;
+    let posting = PostingService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+    ));
+    let recon = BankReconciliationService::new(std::sync::Arc::new(
+        backbone_accounting::infrastructure::persistence::SqlxBankReconciliationRepository::new(
+            pool.clone(),
+        ),
+    ));
+
+    // Two receipts of the SAME amount, posted in this order.
+    receipt_with_reference(&posting, company, bank, revenue, "150.00", "CHQ-1001").await;
+    receipt_with_reference(&posting, company, bank, revenue, "150.00", "CHQ-1002").await;
+
+    // The statement lists them the other way round, which is what a bank does.
+    let res = recon
+        .reconcile(req(
+            company,
+            bank,
+            vec![
+                stmt_with_reference("150.00", "chq-1002"),
+                stmt_with_reference("150.00", "CHQ-1001"),
+            ],
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(res.matched_count, 2);
+    assert!(res.is_balanced);
+
+    // Every matched pair names the same document on both sides. Matching by
+    // amount and arrival order alone would cross them, balance all the same,
+    // and stamp each ledger row against the wrong statement line.
+    let crossed: i64 = sqlx::query_scalar(
+        r#"SELECT COUNT(*)
+             FROM accounting.reconciliation_items i
+             JOIN accounting.ledgers l ON l.id = i.ledger_id
+            WHERE i.source = 'matched'
+              AND l.account_id = $1
+              AND lower(l.reference) IS DISTINCT FROM lower(i.statement_reference)"#,
+    )
+    .bind(bank)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(crossed, 0, "a statement line was paired with the wrong book entry");
+    assert_eq!(is_reconciled_count(&pool, bank).await, 2);
 }
