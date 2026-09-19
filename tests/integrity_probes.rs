@@ -307,7 +307,8 @@ async fn concurrent_distinct_sources_one_account_keeps_balance_chain() {
     }
 }
 
-// ── Probe 3: guarded composition does NOT expose write verbs on posted GL entities ──#[tokio::test]
+// ── Probe 3: guarded composition does NOT expose write verbs on posted GL entities ──
+#[tokio::test]
 async fn guarded_routes_lock_posted_gl_writes() {
     let pool = pool().await;
     let module = AccountingModule::builder()
