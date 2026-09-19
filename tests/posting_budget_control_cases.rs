@@ -335,7 +335,7 @@ async fn insert_draft_journal(
     .bind(j)
     .bind(format!("MJD-{j}"))
     .bind(date)
-    .bind(date.year() as i32)
+    .bind(date.year())
     .bind(date.month() as i32)
     .bind(total)
     .execute(pool)

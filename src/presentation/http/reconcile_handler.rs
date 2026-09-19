@@ -175,7 +175,7 @@ async fn reconcile_handler(
 async fn unreconcile_handler(
     State(service): State<Arc<ReconcileWriteService>>,
     Path(partial_id): Path<Uuid>,
-    Json(body): Json<UnreconcileBody>,
+    Json(_body): Json<UnreconcileBody>,
 ) -> impl IntoResponse {
     match service.unreconcile(partial_id, None).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
@@ -186,7 +186,7 @@ async fn unreconcile_handler(
 async fn matching_group_handler(
     State(service): State<Arc<ReconcileWriteService>>,
     Path(line_id): Path<Uuid>,
-    Query(q): Query<CompanyQuery>,
+    Query(_q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
     match service.matching_group(line_id).await {
         Ok(g) => (

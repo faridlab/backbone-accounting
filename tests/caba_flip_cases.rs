@@ -242,7 +242,7 @@ async fn flip_journal_count(pool: &PgPool) -> i64 {
     .unwrap()
 }
 
-fn pair(company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
+fn pair(_company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
     PairRequest {
         debit: d,
         credit: c,

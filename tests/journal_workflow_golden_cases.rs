@@ -100,7 +100,7 @@ async fn insert_draft_journal(
     .bind(j)
     .bind(format!("MJD-{j}"))
     .bind(date)
-    .bind(date.year() as i32)
+    .bind(date.year())
     .bind(date.month() as i32)
     .bind(total)
     .execute(pool)
@@ -232,7 +232,7 @@ async fn reject_keeps_ledger_empty() {
     assert_eq!(journal_status(&pool, j).await, "rejected");
     let ledgers: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id = ANY($1)")
-            .bind(&[bank, rev])
+            .bind([bank, rev])
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -275,7 +275,7 @@ async fn void_reverses_to_zero() {
     // Original ledger retained (2 rows) + 2 reversal rows = 4.
     let ledgers: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM accounting.ledgers WHERE account_id = ANY($1)")
-            .bind(&[bank, rev])
+            .bind([bank, rev])
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -293,7 +293,7 @@ async fn void_reverses_to_zero() {
     .await
     .unwrap();
     assert_eq!(row.get::<String, _>("s"), "voided");
-    assert_eq!(row.get::<bool, _>("is_voided"), true);
+    assert!(row.get::<bool, _>("is_voided"));
     assert_eq!(
         row.get::<Option<String>, _>("void_reason").unwrap(),
         "posted in error"

@@ -21,7 +21,7 @@ async fn pool() -> PgPool {
     PgPool::connect(&url).await.expect("connect DB")
 }
 
-fn register(company: Uuid, bank: Uuid, mode: &str, next: i64) -> RegisterSequence {
+fn register(_company: Uuid, bank: Uuid, mode: &str, next: i64) -> RegisterSequence {
     RegisterSequence {
         bank_account_id: bank,
         numbering_mode: mode.into(),
@@ -29,7 +29,7 @@ fn register(company: Uuid, bank: Uuid, mode: &str, next: i64) -> RegisterSequenc
     }
 }
 
-fn record(company: Uuid, bank: Uuid, number: Option<String>) -> RecordCheck {
+fn record(_company: Uuid, bank: Uuid, number: Option<String>) -> RecordCheck {
     RecordCheck {
         bank_account_id: bank,
         payment_id: Uuid::new_v4(),

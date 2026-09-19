@@ -196,7 +196,7 @@ impl ReconcileWriteService {
                 .repo
                 .lock_line_by_locator(conn, locator)
                 .await
-                .map_err(|e| internal(e.into()))?
+                .map_err(internal)?
             {
                 LocatorResolution::One(l) => lines.push(l),
                 LocatorResolution::NotFound => return Err(ReconcileError::LineNotFound),
@@ -210,13 +210,13 @@ impl ReconcileWriteService {
             .repo
             .account_flags(conn, debit.account_id)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
             .ok_or_else(|| ReconcileError::Conflict("account not found".into()))?;
         let residuals = self
             .repo
             .residuals_of(conn, &[debit.id, credit.id])
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         let applied = reconcile_rules::validate_pair(
             ambient_company(),
             &debit,
@@ -258,7 +258,7 @@ impl ReconcileWriteService {
                 },
             )
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
 
         // Exchange difference — only when the posting rates differ AND exactly one side's
         // residual hit zero with the other retaining the predicted rate delta
@@ -271,7 +271,7 @@ impl ReconcileWriteService {
                 .repo
                 .residuals_of(conn, &[debit.id, credit.id])
                 .await
-                .map_err(|e| internal(e.into()))?;
+                .map_err(internal)?;
             let res_d = res_of(&after, debit.id);
             let res_c = res_of(&after, credit.id);
             let (hi, lo) = if debit.exchange_rate > credit.exchange_rate {
@@ -303,7 +303,7 @@ impl ReconcileWriteService {
                 self.repo
                     .set_exchange_move(conn, partial_id, journal_id)
                     .await
-                    .map_err(|e| internal(e.into()))?;
+                    .map_err(internal)?;
                 // The derived second edge: pair the exchange journal's reconcilable line
                 // with the original line that retained the delta, so the whole component
                 // reaches zero residual together.
@@ -311,7 +311,7 @@ impl ReconcileWriteService {
                     .repo
                     .journal_lines_with_ids(conn, journal_id)
                     .await
-                    .map_err(|e| internal(e.into()))?
+                    .map_err(internal)?
                     .into_iter()
                     .find(|(_, l)| l.account_id == debit.account_id)
                     .map(|(id, _)| id)
@@ -345,7 +345,7 @@ impl ReconcileWriteService {
                         },
                     )
                     .await
-                    .map_err(|e| internal(e.into()))?;
+                    .map_err(internal)?;
                 exchange_total = diff;
             }
         }
@@ -384,10 +384,10 @@ impl ReconcileWriteService {
                 now,
             )
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         self.pair_reversal_counterparts(conn, &[debit.id, credit.id])
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
 
         Ok(EdgeOutcome {
             partial_id: Some(partial_id),
@@ -417,7 +417,7 @@ impl ReconcileWriteService {
             .repo
             .period_closed(conn, posting_date)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
         {
             return Err(ReconcileError::PeriodClosed);
         }
@@ -453,7 +453,7 @@ impl ReconcileWriteService {
             .posting
             .commit_posting_on(conn, write)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         Ok(commit.journal_id)
     }
 
@@ -506,7 +506,7 @@ impl ReconcileWriteService {
                 side.source_id,
             )
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         if deferred.is_empty() {
             return Ok(()); // the document accrued no cash-basis tax
         }
@@ -532,7 +532,7 @@ impl ReconcileWriteService {
                     .collect::<Vec<_>>(),
             )
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
             .into_iter()
             .collect();
         // Cent-granular; a delta that rounds to zero (or dips non-positive after
@@ -555,7 +555,7 @@ impl ReconcileWriteService {
             .repo
             .period_closed(conn, max_date)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
         {
             return Err(ReconcileError::PeriodClosed);
         }
@@ -620,7 +620,7 @@ impl ReconcileWriteService {
             .posting
             .commit_posting_on(conn, write)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         let journal_id = commit.journal_id;
 
         // Derived pairings: each flip's transition leg against the original
@@ -631,7 +631,7 @@ impl ReconcileWriteService {
             .repo
             .journal_lines_with_ids(conn, journal_id)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         let mut used = std::collections::HashSet::new();
         for (d, amt) in &flips {
             let mirrored_credit = d.is_debit;
@@ -678,7 +678,7 @@ impl ReconcileWriteService {
                     },
                 )
                 .await
-                .map_err(|e| internal(e.into()))?;
+                .map_err(internal)?;
         }
         Ok(())
     }
@@ -825,7 +825,7 @@ impl ReconcileWriteService {
                 .repo
                 .lock_line_by_locator(conn, locator)
                 .await
-                .map_err(|e| internal(e.into()))?
+                .map_err(internal)?
             {
                 LocatorResolution::One(l) => lines.push(l),
                 LocatorResolution::NotFound => return Err(ReconcileError::LineNotFound),
@@ -836,7 +836,7 @@ impl ReconcileWriteService {
             .repo
             .partials_between(conn, lines[0].id, lines[1].id)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         if closure.is_empty() {
             return Ok(());
         }
@@ -847,7 +847,7 @@ impl ReconcileWriteService {
                 .repo
                 .derived_partials(conn, p.id)
                 .await
-                .map_err(|e| internal(e.into()))?
+                .map_err(internal)?
             {
                 if !seen.contains(&d.id) {
                     seen.push(d.id);
@@ -869,7 +869,7 @@ impl ReconcileWriteService {
             .repo
             .load_partial(conn, partial_id)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
             .ok_or(ReconcileError::LineNotFound)?;
         // Lock the affected lines before mutating.
         self.repo
@@ -878,13 +878,13 @@ impl ReconcileWriteService {
                 &[partial.debit_move_id, partial.credit_move_id],
             )
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         let mut closure = vec![partial.clone()];
         for d in self
             .repo
             .derived_partials(conn, partial.id)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
         {
             if d.id != partial.id {
                 closure.push(d);
@@ -920,7 +920,7 @@ impl ReconcileWriteService {
             .repo
             .generated_journal_ids(conn, &ids)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         for jid in journal_ids {
             self.reverse_generated_journal(conn, jid, actor)
                 .await?;
@@ -941,7 +941,7 @@ impl ReconcileWriteService {
         self.repo
             .delete_partials(conn, &ids)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
 
         // 3) Clear the flags on every affected line BEFORE any group dissolve (the
         //    dissolve's FK discipline depends on it). Zero-residual components get
@@ -950,18 +950,18 @@ impl ReconcileWriteService {
         self.repo
             .clear_line_flags(conn, &affected_lines)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         for group in &affected_groups {
             let survivors = self
                 .repo
                 .group_partial_ids(conn, *group)
                 .await
-                .map_err(|e| internal(e.into()))?;
+                .map_err(internal)?;
             if survivors.is_empty() {
                 self.repo
                     .dissolve_group(conn, *group)
                     .await
-                    .map_err(|e| internal(e.into()))?;
+                    .map_err(internal)?;
             }
         }
 
@@ -969,12 +969,12 @@ impl ReconcileWriteService {
         //    edges (the deleted ones were not the whole story).
         self.complete_group_for(conn, &affected_lines, Decimal::ZERO, Utc::now())
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
 
         // 5) Reverse-then-reconcile for every affected line.
         self.pair_reversal_counterparts(conn, &affected_lines)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         Ok(())
     }
 
@@ -991,7 +991,7 @@ impl ReconcileWriteService {
             .repo
             .journal_reversal_meta(conn, journal_id)
             .await
-            .map_err(|e| internal(e.into()))?
+            .map_err(internal)?
         else {
             return Ok(());
         };
@@ -999,7 +999,7 @@ impl ReconcileWriteService {
             .repo
             .journal_lines_with_ids(conn, journal_id)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         if lines.is_empty() {
             return Ok(());
         }
@@ -1044,7 +1044,7 @@ impl ReconcileWriteService {
         self.posting
             .commit_posting_on(conn, write)
             .await
-            .map_err(|e| internal(e.into()))?;
+            .map_err(internal)?;
         Ok(())
     }
 

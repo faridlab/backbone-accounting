@@ -161,14 +161,14 @@ impl EmvQrService {
             .pool
             .begin()
             .await
-            .map_err(|e| internal(e))?;
+            .map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
         // transaction when the caller bound one. An undecorated deployment has no
         // ambient scope and skips this entirely (unfenced by design).
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         // One atomic upsert. The conflict target is the slot's tenant-free unique
@@ -209,9 +209,9 @@ impl EmvQrService {
         .bind(&input.initiation)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(EmvQrConfigAck {
             config_id,
             bank_account_id: input.bank_account_id,
@@ -239,13 +239,13 @@ impl EmvQrService {
         currency: Option<String>,
         reference: Option<String>,
     ) -> Result<EmvPayloadAck, EmvQrServiceError> {
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
         // caller bound one; an undecorated deployment skips this entirely.
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         let row = sqlx::query_as::<_, StoredConfig>(
@@ -260,8 +260,8 @@ impl EmvQrService {
         .bind(bank_account_id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
-        tx.commit().await.map_err(|e| internal(e))?;
+        .map_err(internal)?;
+        tx.commit().await.map_err(internal)?;
 
         let Some(cfg) = row else {
             return Err(EmvQrServiceError::ConfigMissing(ambient_company()));

@@ -57,7 +57,6 @@ fn input() -> EmvQrConfigInput {
 async fn payload_renders_from_saved_config() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
     let ack = svc.upsert_config(input()).await.unwrap();
@@ -127,7 +126,6 @@ fn top_level_tags(payload: &str) -> Vec<String> {
 async fn payload_without_amount_omits_tags_54_and_62() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
     let ack = svc.upsert_config(input()).await.unwrap();
 
@@ -150,7 +148,6 @@ async fn payload_without_amount_omits_tags_54_and_62() {
 async fn upsert_is_idempotent_per_slot() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
     let first = svc.upsert_config(input()).await.unwrap();
@@ -177,7 +174,6 @@ async fn upsert_is_idempotent_per_slot() {
 async fn slot_resolution_prefers_bank_specific_config() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let bank = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
@@ -220,7 +216,6 @@ async fn missing_config_refuses_fail_closed() {
 async fn invalid_config_refuses_before_write() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
 
     let rows_before: i64 =
@@ -255,7 +250,6 @@ async fn invalid_config_refuses_before_write() {
 async fn render_time_currency_override_is_validated() {
     let _guard = DB_LOCK.lock().await;
     let pool = pool().await;
-    let company = Uuid::new_v4();
     let svc = EmvQrService::new(pool.clone());
     let ack = svc.upsert_config(input()).await.unwrap();
 

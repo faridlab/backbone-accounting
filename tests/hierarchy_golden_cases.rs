@@ -129,7 +129,7 @@ async fn seed_fiscal_periods(pool: &PgPool) -> (Uuid, Uuid, Uuid, Uuid) {
 #[tokio::test]
 async fn account_ancestors_root_first() {
     let pool = pool().await;
-    let (company, root, mid, leaf) = seed_accounts(&pool).await;
+    let (_company, root, mid, leaf) = seed_accounts(&pool).await;
     let chain = svc(&pool)
         .ancestors(HierarchyTable::Account, leaf)
         .await
@@ -154,7 +154,7 @@ async fn account_ancestors_root_first() {
 #[tokio::test]
 async fn cost_center_ancestors_root_first() {
     let pool = pool().await;
-    let (company, root, mid, leaf) = seed_cost_centers(&pool).await;
+    let (_company, root, mid, leaf) = seed_cost_centers(&pool).await;
     let chain = svc(&pool)
         .ancestors(HierarchyTable::CostCenter, leaf)
         .await
@@ -166,7 +166,7 @@ async fn cost_center_ancestors_root_first() {
 #[tokio::test]
 async fn fiscal_period_ancestors_root_first() {
     let pool = pool().await;
-    let (company, root, mid, leaf) = seed_fiscal_periods(&pool).await;
+    let (_company, root, mid, leaf) = seed_fiscal_periods(&pool).await;
     let chain = svc(&pool)
         .ancestors(HierarchyTable::FiscalPeriod, leaf)
         .await

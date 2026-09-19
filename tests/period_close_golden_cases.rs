@@ -104,7 +104,7 @@ async fn seed(pool: &PgPool) -> Setup {
     )
     .bind(period)
     .bind(format!("{y:04}-{m:02}"))
-    .bind(y as i32)
+    .bind(y)
     .bind(month_start)
     .bind(month_end)
     .execute(pool).await.unwrap();

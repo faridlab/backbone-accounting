@@ -73,7 +73,7 @@ fn err_response(e: JournalWorkflowError) -> (axum::http::StatusCode, Json<serde_
 async fn submit(
     State(svc): State<Arc<JournalWorkflowService>>,
     Path(id): Path<Uuid>,
-    Query(q): Query<CompanyQuery>,
+    Query(_q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
     match svc.submit(id).await {
         Ok(()) => Json(WorkflowResponse {

@@ -77,3 +77,24 @@ http-body-util = "0.1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 jsonwebtoken = "9.3"
 rand = "0.8"
+
+# Lint posture.
+#
+# The families below are what the generated trees emit, not decisions this
+# module made: the DTO conversions clone Copy values, the entity enums write
+# `impl Default` by hand, the seeder pushes into a fresh vector, the generated
+# constructors take one argument per column. They cannot be fixed here, because
+# a regeneration puts them straight back, and left on they bury the warnings
+# that do belong to hand-written code. The money literals in the tests group by
+# cents on purpose (`Decimal::new(250_00, 2)` reads as 250.00).
+#
+# Anything outside this list is expected to stay at zero: `cargo clippy
+# --all-targets` is part of the module's check routine.
+[lints.clippy]
+clone_on_copy = "allow"
+default_constructed_unit_structs = "allow"
+derivable_impls = "allow"
+inconsistent_digit_grouping = "allow"
+needless_borrows_for_generic_args = "allow"
+too_many_arguments = "allow"
+vec_init_then_push = "allow"

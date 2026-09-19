@@ -133,7 +133,13 @@ pub struct AccountReconcileFlags {
 }
 
 /// Outcome of locator resolution: exactly one line, or a typed failure.
+///
+/// The resolved snapshot is carried inline rather than boxed: resolving to one
+/// line is the ordinary outcome of every locator, so boxing would put an
+/// allocation on the path that always succeeds to save a few words on the two
+/// that do not.
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum LocatorResolution {
     One(ReconcileLineSnapshot),
     NotFound,

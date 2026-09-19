@@ -184,13 +184,13 @@ impl TaxTagRepairService {
         &self,
         limit: i64,
     ) -> Result<Vec<RepairRunRow>, TaxTagRepairError> {
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
         // caller bound one; an undecorated deployment skips this entirely.
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
         let rows = sqlx::query_as::<_, RepairRunRow>(
             r#"SELECT id, date_from, date_to, rules, lines_examined, lines_retagged,
@@ -202,8 +202,8 @@ impl TaxTagRepairService {
         .bind(limit)
         .fetch_all(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
-        tx.commit().await.map_err(|e| internal(e))?;
+        .map_err(internal)?;
+        tx.commit().await.map_err(internal)?;
         Ok(rows)
     }
 
@@ -230,13 +230,13 @@ impl TaxTagRepairService {
             }
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope when the
         // caller bound one; an undecorated deployment skips this entirely.
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         // Lock-posture guards: the window must not cross a locked period, and
@@ -254,7 +254,7 @@ impl TaxTagRepairService {
             .bind(req.date_to)
             .fetch_all(&mut *tx)
             .await
-            .map_err(|e| internal(e))?;
+            .map_err(internal)?;
         if !locked.is_empty() {
             return Err(TaxTagRepairError::LockedPeriodInWindow(locked));
         }
@@ -263,7 +263,7 @@ impl TaxTagRepairService {
             .bind(req.date_to)
             .fetch_all(&mut *tx)
             .await
-            .map_err(|e| internal(e))?;
+            .map_err(internal)?;
         if !closed.is_empty() && !req.allow_closed_periods {
             return Err(TaxTagRepairError::ClosedPeriodRequiresOverride(closed));
         }
@@ -279,7 +279,7 @@ impl TaxTagRepairService {
                 .filter(|t| seen.insert((*t).clone()))
                 .cloned()
                 .collect();
-            let tags_json = serde_json::to_value(&tags).map_err(|e| internal(e))?;
+            let tags_json = serde_json::to_value(&tags).map_err(internal)?;
 
             // The selector placeholders are ALWAYS bound: a NULL selector
             // neutralizes its arm, which keeps the SQL shape (and the bind
@@ -318,7 +318,7 @@ impl TaxTagRepairService {
                 .bind(rule.is_tax_line)
                 .fetch_one(&mut *tx)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
                 (row.0, row.1)
             } else {
                 // Set-at-a-time rewrite. journal_lines carries no updated_at
@@ -340,7 +340,7 @@ impl TaxTagRepairService {
                 .bind(rule.is_tax_line)
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| internal(e))?
+                .map_err(internal)?
                 .rows_affected() as i64;
                 // This statement binds no tag value, so its selector slots are
                 // $3/$4, not $4/$5.
@@ -357,7 +357,7 @@ impl TaxTagRepairService {
                 .bind(rule.is_tax_line)
                 .fetch_one(&mut *tx)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
                 (examined, changed)
             };
 
@@ -371,11 +371,11 @@ impl TaxTagRepairService {
         }
 
         let rules_json =
-            serde_json::to_value(&req.rules).map_err(|e| internal(e))?;
+            serde_json::to_value(&req.rules).map_err(internal)?;
         let lines_examined: i64 = per_rule.iter().map(|r| r.lines_examined).sum();
         let lines_retagged: i64 = per_rule.iter().map(|r| r.lines_retagged).sum();
         let overridden_json =
-            serde_json::to_value(&closed).map_err(|e| internal(e))?;
+            serde_json::to_value(&closed).map_err(internal)?;
 
         let run_id: Uuid = sqlx::query_scalar(
             r#"INSERT INTO accounting.tax_tag_repair_runs
@@ -396,9 +396,9 @@ impl TaxTagRepairService {
         .bind(req.reason.trim())
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(RepairReport {
             run_id,
             dry_run: req.dry_run,

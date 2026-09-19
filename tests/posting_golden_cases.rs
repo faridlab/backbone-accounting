@@ -672,7 +672,7 @@ async fn gc10_closed_period() {
            VALUES ($1,$2,'monthly'::period_type,$3,$4,$5,'closed'::period_status)"#,
     )
     .bind(format!("{y:04}-{m:02}"))
-    .bind(format!("{} closed-period probe", format!("{y:04}-{m:02}")))
+    .bind(format!("{y:04}-{m:02} closed-period probe"))
     .bind(y)
     .bind(start)
     .bind(end)

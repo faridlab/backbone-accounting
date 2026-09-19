@@ -200,13 +200,6 @@ struct SequenceRow {
     next_number: i64,
 }
 
-/// The tenant a check sequence belongs to, taken from the request's own scope.
-fn ambient_company() -> Uuid {
-    backbone_orm::org_scope::current_org_scope()
-        .and_then(|s| s.legacy_company_id())
-        .unwrap_or_default()
-}
-
 impl CheckPrintingService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -229,14 +222,14 @@ impl CheckPrintingService {
             ));
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
         // transaction when the caller bound one. An undecorated deployment has no
         // ambient scope and skips this entirely (unfenced by design).
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         let row = sqlx::query_as::<_, SequenceRow>(
@@ -254,9 +247,9 @@ impl CheckPrintingService {
         .bind(req.next_number)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(SequenceAck {
             sequence_id: row.id,
             bank_account_id: req.bank_account_id,
@@ -282,11 +275,11 @@ impl CheckPrintingService {
                 "count must be >= 1".into(),
             ));
         }
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         let ack = self
             .allocate_check_numbers_on(&mut tx, bank_account_id, count)
             .await?;
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(ack)
     }
 
@@ -311,7 +304,7 @@ impl CheckPrintingService {
         .bind(count)
         .fetch_optional(&mut **tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
         let Some(new_cursor) = bumped else {
             // Distinguish "no row" from "wrong mode" for the refusal message.
@@ -322,7 +315,7 @@ impl CheckPrintingService {
             .bind(bank_account_id)
             .fetch_optional(&mut **tx)
             .await
-            .map_err(|e| internal(e))?;
+            .map_err(internal)?;
             return Err(match mode {
                 None => CheckPrintingError::SequenceNotRegistered(bank_account_id),
                 Some(m) => CheckPrintingError::NumberingModeConflict {
@@ -357,14 +350,14 @@ impl CheckPrintingService {
             return Err(CheckPrintingError::InvalidAmount);
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
         // transaction when the caller bound one. An undecorated deployment has no
         // ambient scope and skips this entirely (unfenced by design).
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         let seq = sqlx::query_as::<_, SequenceRow>(
@@ -376,7 +369,7 @@ impl CheckPrintingService {
         .bind(req.bank_account_id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
         let check_number = match seq {
             None => {
@@ -446,7 +439,7 @@ impl CheckPrintingService {
             Err(e) => return Err(internal(e)),
         };
 
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(PrintedCheckAck {
             printed_check_id: id,
             bank_account_id: req.bank_account_id,
@@ -466,14 +459,14 @@ impl CheckPrintingService {
         printed_check_id: Uuid,
         actor: Option<Uuid>,
     ) -> Result<PrintedCheckAck, CheckPrintingError> {
-        let mut tx = self.pool.begin().await.map_err(|e| internal(e))?;
+        let mut tx = self.pool.begin().await.map_err(internal)?;
         // Tenancy posture (ADR-0029): relay the AMBIENT request scope onto this
         // transaction when the caller bound one. An undecorated deployment has no
         // ambient scope and skips this entirely (unfenced by design).
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
         }
 
         let voided = sqlx::query_as::<_, VoidRow>(
@@ -491,7 +484,7 @@ impl CheckPrintingService {
         .bind(actor.map(|a| a.to_string()))
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| internal(e))?;
+        .map_err(internal)?;
 
         let row = match voided {
             Some(r) => r,
@@ -502,7 +495,7 @@ impl CheckPrintingService {
                 .bind(printed_check_id)
                 .fetch_optional(&mut *tx)
                 .await
-                .map_err(|e| internal(e))?;
+                .map_err(internal)?;
                 return Err(match exists.as_deref() {
                     Some("voided") => CheckPrintingError::AlreadyVoided(printed_check_id),
                     _ => CheckPrintingError::CheckNotFound(printed_check_id),
@@ -510,7 +503,7 @@ impl CheckPrintingService {
             }
         };
 
-        tx.commit().await.map_err(|e| internal(e))?;
+        tx.commit().await.map_err(internal)?;
         Ok(PrintedCheckAck {
             printed_check_id: row.id,
             bank_account_id: row.bank_account_id,

@@ -217,7 +217,7 @@ async fn residual(pool: &PgPool, line: Uuid) -> Decimal {
     .unwrap()
 }
 
-fn pair(company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
+fn pair(_company: Uuid, d: LineLocator, c: LineLocator, amount: &str) -> PairRequest {
     PairRequest {
         debit: d,
         credit: c,
@@ -1001,7 +1001,7 @@ async fn concurrent_completions_stamp_one_group() {
     .fetch_all(&pool)
     .await
     .unwrap();
-    let uniform = stamps.iter().map(|s| *s).collect::<Option<Vec<Uuid>>>();
+    let uniform = stamps.iter().copied().collect::<Option<Vec<Uuid>>>();
     let uniform = uniform.expect("every completed line carries a group");
     assert!(
         uniform.windows(2).all(|w| w[0] == w[1]),

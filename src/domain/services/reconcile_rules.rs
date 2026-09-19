@@ -30,9 +30,9 @@ fn is_party_subtype(subtype: &str) -> bool {
 /// - G4: opposite directions — the debit side carries a debit, the credit side a credit
 /// - G5: both lines are posted under posted journals
 /// - G6: settlement-dimension-bound — on a party account both lines carry the SAME party;
-///       non-party accounts are unconstrained
+///   non-party accounts are unconstrained
 /// - G7: CLAMP — `applied = min(amount, residual_debit, residual_credit)`; a zero clamp is
-///       a NO-OP success (the on-account remainder stays unreconciled), never an error
+///   a NO-OP success (the on-account remainder stays unreconciled), never an error
 ///
 /// G8 (period-open for the exchange-move date) is checked by the write service only when
 /// an exchange difference actually arises.
