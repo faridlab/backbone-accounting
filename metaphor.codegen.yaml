@@ -107,7 +107,52 @@ user_owned:
   - "docs/business-flows/**"
   - "docs/adr/**"
 
-  # Hand-authored migrations (the tenancy strip — the strip's ordering guard is
-  # hand-authored logic, not schema-derived emission).
+  # Hand-authored migrations. Everything listed here carries logic no schema
+  # can express, so a regeneration must leave it alone: a migration that is
+  # neither marked as generated nor declared here is swept on a forced regen,
+  # and a swept migration is a schema that silently stops matching the code.
+  # The rule for the next one: declare it in the same change that lands it.
+  #
+  # The tenancy strip (its ordering guard is hand-authored logic).
   - "migrations/20260910232200_strip_tenancy.up.sql"
   - "migrations/20260910232200_strip_tenancy.down.sql"
+
+  # Posting-source vocabulary: each producer module that started posting added
+  # its own value to the enum. One-way by nature, so they carry no down file.
+  - "migrations/20260706000000_add_manufacturing_posting_source.up.sql"
+  - "migrations/20260706010000_add_asset_posting_source.up.sql"
+  - "migrations/20260708000000_add_payroll_posting_source.up.sql"
+  - "migrations/20260710000000_add_maintenance_posting_source.up.sql"
+  - "migrations/20260712000000_add_equity_posting_source.up.sql"
+  - "migrations/20260819100004_posting_source_type_reconciliation.up.sql"
+  - "migrations/20260819100004_posting_source_type_reconciliation.down.sql"
+  - "migrations/20260822100000_posting_source_type_gateway_fee.up.sql"
+  - "migrations/20260822100000_posting_source_type_gateway_fee.down.sql"
+
+  # The posting contract's own guarantees: the idempotency key that collapses a
+  # retried post, and the fence the tenancy work later re-based.
+  - "migrations/20260712000100_accounting_post_idempotency_key.up.sql"
+  - "migrations/20260819100000_company_fence_strict.up.sql"
+  - "migrations/20260819100000_company_fence_strict.down.sql"
+
+  # Reconciliation shape: the journal line's link to its full-reconcile group.
+  - "migrations/20260819100003_journal_line_full_reconcile_id.up.sql"
+  - "migrations/20260819100003_journal_line_full_reconcile_id.down.sql"
+
+  # Chart-of-accounts shape: where an account came from, the columns the
+  # install path stopped using, and the account status lifecycle.
+  - "migrations/20260820100000_chart_provenance.up.sql"
+  - "migrations/20260820100000_chart_provenance.down.sql"
+  - "migrations/20260820100001_drop_unused_account_columns.up.sql"
+  - "migrations/20260820100001_drop_unused_account_columns.down.sql"
+  - "migrations/20260821130000_status_lifecycle.up.sql"
+  - "migrations/20260821130000_status_lifecycle.down.sql"
+
+  # The localisation-facing surfaces: the QR display fields, cheque printing,
+  # and the tax-tag repair run.
+  - "migrations/20260906100000_emv_qr_display.up.sql"
+  - "migrations/20260906100000_emv_qr_display.down.sql"
+  - "migrations/20260906110000_bank_check_printing.up.sql"
+  - "migrations/20260906110000_bank_check_printing.down.sql"
+  - "migrations/20260906120000_tax_tag_repairs.up.sql"
+  - "migrations/20260906120000_tax_tag_repairs.down.sql"
