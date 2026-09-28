@@ -216,6 +216,9 @@ impl ChartInstallService {
             org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(anyhow::Error::from)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(anyhow::Error::from)?;
         }
 
         if self.repo.company_has_postings(&mut tx).await? {

@@ -191,6 +191,9 @@ impl TaxTagRepairService {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(internal)?;
         }
         let rows = sqlx::query_as::<_, RepairRunRow>(
             r#"SELECT id, date_from, date_to, rules, lines_examined, lines_retagged,
@@ -235,6 +238,9 @@ impl TaxTagRepairService {
         // caller bound one; an undecorated deployment skips this entirely.
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
                 .await
                 .map_err(internal)?;
         }

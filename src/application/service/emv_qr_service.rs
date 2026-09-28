@@ -169,6 +169,9 @@ impl EmvQrService {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(internal)?;
         }
 
         // One atomic upsert. The conflict target is the slot's tenant-free unique
@@ -244,6 +247,9 @@ impl EmvQrService {
         // caller bound one; an undecorated deployment skips this entirely.
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
                 .await
                 .map_err(internal)?;
         }

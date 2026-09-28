@@ -237,6 +237,7 @@ impl PostingRepository for SqlxPostingRepository {
         // ambient scope and skips this entirely.
         if let Some(scope) = org_scope::current_org_scope() {
             org_scope::bind_org_scope_on(&mut tx, &scope).await?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx).await?;
         }
 
         match self.commit_posting_on(&mut tx, write.clone()).await {
@@ -564,6 +565,7 @@ impl PostingRepository for SqlxPostingRepository {
         // Tenancy posture (ADR-0029) — see `commit_posting`.
         if let Some(scope) = org_scope::current_org_scope() {
             org_scope::bind_org_scope_on(&mut tx, &scope).await?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx).await?;
         }
         let accounts = load_accounts_locked(
             &mut tx,

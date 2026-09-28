@@ -1093,6 +1093,9 @@ impl ReconcileWriteService {
             org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(|e| internal(e.into()))?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(|e| internal(e.into()))?;
         }
         let out = self.reconcile_pair_on(&mut tx, req).await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
@@ -1109,6 +1112,9 @@ impl ReconcileWriteService {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
         if let Some(scope) = org_scope::current_org_scope() {
             org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
                 .await
                 .map_err(|e| internal(e.into()))?;
         }
@@ -1135,6 +1141,9 @@ impl ReconcileWriteService {
             org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(|e| internal(e.into()))?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(|e| internal(e.into()))?;
         }
         let group = self.matching_group_on(&mut tx, line_id).await?;
         tx.commit().await.map_err(|e| internal(e.into()))?;
@@ -1152,6 +1161,9 @@ impl ReconcileWriteService {
         let mut tx = self.pool.begin().await.map_err(|e| internal(e.into()))?;
         if let Some(scope) = org_scope::current_org_scope() {
             org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(|e| internal(e.into()))?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
                 .await
                 .map_err(|e| internal(e.into()))?;
         }

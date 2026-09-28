@@ -230,6 +230,9 @@ impl CheckPrintingService {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(internal)?;
         }
 
         let row = sqlx::query_as::<_, SequenceRow>(
@@ -358,6 +361,9 @@ impl CheckPrintingService {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
                 .await
                 .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
+                .await
+                .map_err(internal)?;
         }
 
         let seq = sqlx::query_as::<_, SequenceRow>(
@@ -465,6 +471,9 @@ impl CheckPrintingService {
         // ambient scope and skips this entirely (unfenced by design).
         if let Some(scope) = backbone_orm::org_scope::current_org_scope() {
             backbone_orm::org_scope::bind_org_scope_on(&mut tx, &scope)
+                .await
+                .map_err(internal)?;
+            backbone_orm::audit_context::relay_ambient_audit_on(&mut tx)
                 .await
                 .map_err(internal)?;
         }
