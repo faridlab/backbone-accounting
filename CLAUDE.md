@@ -150,3 +150,13 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Scratch databases need the audit schema first
+
+The GL tables are audited (`auditlog.audit_trails` + its enums), so
+`sqlx migrate run` against a fresh scratch database aborts partway with
+"schema \"auditlog\" does not exist". Apply backbone-auditlog's migrations
+BEFORE this module's — the audit module publishes its directory as
+`backbone_auditlog::MIGRATIONS_DIR` (compile-time const, the pinned tag's
+checkout). The case suites otherwise assume an externally migrated
+scratch database (DATABASE_URL, default :5433).
