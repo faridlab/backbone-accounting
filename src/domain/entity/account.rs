@@ -395,6 +395,7 @@ impl backbone_orm::EntityRepoMeta for Account {
         m.insert("account_subtype".to_string(), "account_subtype".to_string());
         m.insert("normal_balance".to_string(), "normal_balance".to_string());
         m.insert("status".to_string(), "account_status".to_string());
+        m.insert("opening_balance_date".to_string(), "date".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

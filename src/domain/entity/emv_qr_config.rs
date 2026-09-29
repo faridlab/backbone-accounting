@@ -210,6 +210,8 @@ impl backbone_orm::EntityRepoMeta for EmvQrConfig {
         let mut m = std::collections::HashMap::new();
         m.insert("id".to_string(), "uuid".to_string());
         m.insert("bank_account_id".to_string(), "uuid".to_string());
+        m.insert("created_at".to_string(), "timestamptz".to_string());
+        m.insert("updated_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

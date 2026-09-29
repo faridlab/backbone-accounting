@@ -385,6 +385,10 @@ impl backbone_orm::EntityRepoMeta for AccountingPost {
         m.insert("source_type".to_string(), "posting_source_type".to_string());
         m.insert("posting_type".to_string(), "posting_type".to_string());
         m.insert("posting_status".to_string(), "posting_status".to_string());
+        m.insert("scheduled_at".to_string(), "timestamptz".to_string());
+        m.insert("posted_at".to_string(), "timestamptz".to_string());
+        m.insert("failed_at".to_string(), "timestamptz".to_string());
+        m.insert("next_retry_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

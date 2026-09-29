@@ -49,6 +49,9 @@ pub use application::service::ReconciliationItemService;
 pub use application::service::FullReconcileService;
 pub use application::service::PartialReconcileService;
 
+// Re-exports - Validation
+pub use application::validator::{ValidationError, ValidationResult};
+
 // Re-exports - Workflows
 pub use application::workflows::*;
 

@@ -471,6 +471,14 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
         m.insert("parent_id".to_string(), "uuid".to_string());
         m.insert("period_type".to_string(), "period_type".to_string());
         m.insert("status".to_string(), "period_status".to_string());
+        m.insert("start_date".to_string(), "date".to_string());
+        m.insert("end_date".to_string(), "date".to_string());
+        m.insert("opening_balance_date".to_string(), "timestamptz".to_string());
+        m.insert("closing_started_at".to_string(), "timestamptz".to_string());
+        m.insert("closed_at".to_string(), "timestamptz".to_string());
+        m.insert("locked_at".to_string(), "timestamptz".to_string());
+        m.insert("adjustment_deadline".to_string(), "date".to_string());
+        m.insert("statements_generated_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

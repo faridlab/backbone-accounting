@@ -516,6 +516,13 @@ impl backbone_orm::EntityRepoMeta for Reconciliation {
         m.insert("previous_reconciliation_id".to_string(), "uuid".to_string());
         m.insert("reconciliation_type".to_string(), "reconciliation_type".to_string());
         m.insert("status".to_string(), "reconciliation_status".to_string());
+        m.insert("period_start".to_string(), "date".to_string());
+        m.insert("period_end".to_string(), "date".to_string());
+        m.insert("statement_date".to_string(), "date".to_string());
+        m.insert("started_at".to_string(), "timestamptz".to_string());
+        m.insert("completed_at".to_string(), "timestamptz".to_string());
+        m.insert("reviewed_at".to_string(), "timestamptz".to_string());
+        m.insert("import_date".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

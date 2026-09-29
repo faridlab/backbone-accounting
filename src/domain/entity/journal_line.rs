@@ -482,6 +482,8 @@ impl backbone_orm::EntityRepoMeta for JournalLine {
         m.insert("full_reconcile_id".to_string(), "uuid".to_string());
         m.insert("ledger_id".to_string(), "uuid".to_string());
         m.insert("party_type".to_string(), "party_type".to_string());
+        m.insert("reconciled_at".to_string(), "timestamptz".to_string());
+        m.insert("posted_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

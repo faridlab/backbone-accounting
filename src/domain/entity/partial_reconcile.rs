@@ -269,6 +269,9 @@ impl backbone_orm::EntityRepoMeta for PartialReconcile {
         m.insert("exchange_move_id".to_string(), "uuid".to_string());
         m.insert("source_id".to_string(), "uuid".to_string());
         m.insert("origin".to_string(), "reconcile_origin".to_string());
+        m.insert("max_date".to_string(), "date".to_string());
+        m.insert("created_at".to_string(), "timestamptz".to_string());
+        m.insert("updated_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

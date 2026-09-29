@@ -590,6 +590,15 @@ impl backbone_orm::EntityRepoMeta for Journal {
         m.insert("journal_type".to_string(), "journal_type".to_string());
         m.insert("source".to_string(), "journal_source".to_string());
         m.insert("status".to_string(), "journal_status".to_string());
+        m.insert("transaction_date".to_string(), "date".to_string());
+        m.insert("posting_date".to_string(), "date".to_string());
+        m.insert("reversed_at".to_string(), "timestamptz".to_string());
+        m.insert("auto_reverse_date".to_string(), "date".to_string());
+        m.insert("submitted_at".to_string(), "timestamptz".to_string());
+        m.insert("approved_at".to_string(), "timestamptz".to_string());
+        m.insert("rejected_at".to_string(), "timestamptz".to_string());
+        m.insert("posted_at".to_string(), "timestamptz".to_string());
+        m.insert("voided_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

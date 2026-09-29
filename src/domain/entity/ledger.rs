@@ -506,6 +506,9 @@ impl backbone_orm::EntityRepoMeta for Ledger {
         m.insert("account_type".to_string(), "account_type".to_string());
         m.insert("normal_balance".to_string(), "normal_balance".to_string());
         m.insert("party_type".to_string(), "party_type".to_string());
+        m.insert("transaction_date".to_string(), "date".to_string());
+        m.insert("posting_date".to_string(), "date".to_string());
+        m.insert("reconciled_at".to_string(), "timestamptz".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

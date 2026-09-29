@@ -454,6 +454,11 @@ impl backbone_orm::EntityRepoMeta for ReconciliationItem {
         m.insert("matched_with_id".to_string(), "uuid".to_string());
         m.insert("adjustment_journal_id".to_string(), "uuid".to_string());
         m.insert("status".to_string(), "reconciliation_item_status".to_string());
+        m.insert("book_date".to_string(), "date".to_string());
+        m.insert("statement_date".to_string(), "date".to_string());
+        m.insert("match_date".to_string(), "timestamptz".to_string());
+        m.insert("adjusted_at".to_string(), "timestamptz".to_string());
+        m.insert("expected_clear_date".to_string(), "date".to_string());
         m
     }
     fn search_fields() -> &'static [&'static str] {

@@ -38,7 +38,7 @@ pub mod tax_tag_repair_handler;
 
 // Re-exports
 pub use account_handler::{create_account_routes, create_account_read_routes, create_account_write_routes};
-pub use accounting_post_handler::{create_accounting_post_routes, create_accounting_post_read_routes, create_accounting_post_write_routes};
+pub use accounting_post_handler::{create_accounting_post_routes, create_accounting_post_read_routes, create_accounting_post_write_routes, create_accounting_post_history_route};
 pub use cost_center_handler::{create_cost_center_routes, create_cost_center_read_routes, create_cost_center_write_routes};
 pub use emv_qr_config_handler::{create_emv_qr_config_routes, create_emv_qr_config_read_routes, create_emv_qr_config_write_routes};
 pub use bank_check_sequence_handler::{create_bank_check_sequence_routes, create_bank_check_sequence_read_routes, create_bank_check_sequence_write_routes};
@@ -46,8 +46,8 @@ pub use printed_check_handler::{create_printed_check_routes, create_printed_chec
 pub use tax_tag_repair_run_handler::{create_tax_tag_repair_run_routes, create_tax_tag_repair_run_read_routes, create_tax_tag_repair_run_write_routes};
 pub use financial_statement_handler::{create_financial_statement_routes, create_financial_statement_read_routes, create_financial_statement_write_routes};
 pub use fiscal_period_handler::{create_fiscal_period_routes, create_fiscal_period_read_routes, create_fiscal_period_write_routes};
-pub use journal_handler::{create_journal_routes, create_journal_read_routes, create_journal_write_routes};
-pub use journal_line_handler::{create_journal_line_routes, create_journal_line_read_routes, create_journal_line_write_routes};
+pub use journal_handler::{create_journal_routes, create_journal_read_routes, create_journal_write_routes, create_journal_history_route};
+pub use journal_line_handler::{create_journal_line_routes, create_journal_line_read_routes, create_journal_line_write_routes, create_journal_line_history_route};
 pub use ledger_handler::{create_ledger_routes, create_ledger_read_routes, create_ledger_write_routes};
 pub use reconciliation_handler::{create_reconciliation_routes, create_reconciliation_read_routes, create_reconciliation_write_routes};
 pub use reconciliation_item_handler::{create_reconciliation_item_routes, create_reconciliation_item_read_routes, create_reconciliation_item_write_routes};
