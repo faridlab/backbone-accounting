@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "backbone-accounting"
-version = "0.9.18"
+version = "0.9.25"
 dependencies = [
  "anyhow",
  "async-trait",
