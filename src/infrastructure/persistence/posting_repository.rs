@@ -21,13 +21,16 @@ use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
 
 use backbone_orm::org_scope;
-// The multi-row and scalar read twins live only in the legacy `company_scope` module. Their
-// connection discipline is what this adapter needs — request-dedicated connection when the
-// composing service bound one, plain pool otherwise. The helper's legacy task-local branch is
-// never taken: this module sets no legacy scope of its own (ADR-0029).
-use backbone_orm::company_scope::{
-    fetch_all_rows_scoped, fetch_one_scalar_scoped, fetch_optional_scalar_scoped,
-};
+// The multi-row read twin rides the org-scope module; its connection discipline is the
+// request-dedicated connection when the composing service bound one, plain pool otherwise,
+// no scope invented. The helper's legacy task-local branch is never taken: this module
+// sets no legacy scope of its own (ADR-0029).
+use backbone_orm::org_scope::fetch_all_rows_scoped;
+// The scalar read twins live only in the legacy `company_scope` module. Their connection
+// discipline is what this adapter needs — request-dedicated connection when the composing
+// service bound one, plain pool otherwise. The helper's legacy task-local branch is never
+// taken: this module sets no legacy scope of its own (ADR-0029).
+use backbone_orm::company_scope::{fetch_one_scalar_scoped, fetch_optional_scalar_scoped};
 use uuid::Uuid;
 
 use crate::domain::gl_posting::{map_source, PostingLine};

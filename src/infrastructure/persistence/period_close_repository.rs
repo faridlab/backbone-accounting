@@ -11,12 +11,12 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use backbone_orm::company_scope::fetch_all_rows_scoped;
-// The optional-row read twin rides the org-scope module; its connection discipline is the
-// request-dedicated connection when the composing service bound one, plain pool otherwise.
-// The legacy task-local branch is never taken: this module sets no legacy scope of its own
-// (ADR-0029).
+// The multi-row and optional-row read twins ride the org-scope module; their connection
+// discipline is the request-dedicated connection when the composing service bound one,
+// plain pool otherwise, no scope invented. The legacy task-local branch is never taken:
+// this module sets no legacy scope of its own (ADR-0029).
 use backbone_orm::org_scope;
+use backbone_orm::org_scope::fetch_all_rows_scoped;
 
 use crate::domain::repositories::period_close_repository::{
     PeriodCloseRepository, PeriodRow, PlBalanceRow,
