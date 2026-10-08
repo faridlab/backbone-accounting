@@ -36,7 +36,7 @@ impl Seeder for SeedFiscalPeriodSeeder {
     }
 
     fn order(&self) -> i32 {
-        16
+        9
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {

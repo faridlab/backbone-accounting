@@ -36,7 +36,7 @@ impl Seeder for SeedPartialReconcileSeeder {
     }
 
     fn order(&self) -> i32 {
-        13
+        16
     }
 
     async fn should_run(&self, pool: &PgPool) -> Result<bool> {
