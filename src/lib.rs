@@ -326,7 +326,7 @@ impl AccountingModule {
 /// Builder for AccountingModule
 pub struct AccountingModuleBuilder {
     db_pool: Option<PgPool>,
-    // <<< CUSTOM FIELDS
+    // <<< CUSTOM BUILDER FIELDS
     deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
     budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
     chart_datasets: Vec<Arc<crate::domain::chart_dataset::ChartDataset>>,
@@ -338,7 +338,7 @@ impl AccountingModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
-            // <<< CUSTOM INIT
+            // <<< CUSTOM BUILDER DEFAULTS
             deferred_tax: None,
             budget_control: None,
             chart_datasets: Vec::new(),
