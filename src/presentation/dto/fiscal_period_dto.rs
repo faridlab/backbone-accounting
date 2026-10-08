@@ -90,6 +90,13 @@ pub struct CreateFiscalPeriodDto {
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "lock_reason")]
     pub lock_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_at")]
+    pub reopened_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_by")]
+    pub reopened_by: Option<Uuid>,
+    #[cfg_attr(feature = "validation", validate(length(max = 255)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopen_reason")]
+    pub reopen_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_adjustments")]
     pub allow_adjustments: bool,
@@ -195,6 +202,13 @@ pub struct UpdateFiscalPeriodDto {
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "lock_reason")]
     pub lock_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_at")]
+    pub reopened_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_by")]
+    pub reopened_by: Option<Uuid>,
+    #[cfg_attr(feature = "validation", validate(length(max = 255)))]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopen_reason")]
+    pub reopen_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_adjustments")]
     pub allow_adjustments: bool,
@@ -303,6 +317,13 @@ pub struct PatchFiscalPeriodDto {
     #[cfg_attr(feature = "validation", validate(length(max = 255)))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "lock_reason")]
     pub lock_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "reopened_at")]
+    pub reopened_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "reopened_by")]
+    pub reopened_by: Option<Uuid>,
+    #[cfg_attr(feature = "validation", validate(length(max = 255)))]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "reopen_reason")]
+    pub reopen_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "allow_adjustments")]
     pub allow_adjustments: Option<bool>,
@@ -343,7 +364,7 @@ pub struct PatchFiscalPeriodDto {
 impl PatchFiscalPeriodDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.start_date.is_some() || self.end_date.is_some() || self.fiscal_year.is_some() || self.fiscal_quarter.is_some() || self.fiscal_month.is_some() || self.parent_id.is_some() || self.level.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_date.is_some() || self.opening_balance_by.is_some() || self.closing_started_at.is_some() || self.closing_started_by.is_some() || self.closed_at.is_some() || self.closed_by.is_some() || self.locked_at.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.allow_adjustments.is_some() || self.adjustment_deadline.is_some() || self.total_debits.is_some() || self.total_credits.is_some() || self.journal_count.is_some() || self.total_revenue.is_some() || self.total_expenses.is_some() || self.net_income.is_some() || self.total_assets.is_some() || self.total_liabilities.is_some() || self.total_equity.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.statements_generated_at.is_some() || self.notes.is_some()
+        self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.start_date.is_some() || self.end_date.is_some() || self.fiscal_year.is_some() || self.fiscal_quarter.is_some() || self.fiscal_month.is_some() || self.parent_id.is_some() || self.level.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_date.is_some() || self.opening_balance_by.is_some() || self.closing_started_at.is_some() || self.closing_started_by.is_some() || self.closed_at.is_some() || self.closed_by.is_some() || self.locked_at.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.reopened_at.is_some() || self.reopened_by.is_some() || self.reopen_reason.is_some() || self.allow_adjustments.is_some() || self.adjustment_deadline.is_some() || self.total_debits.is_some() || self.total_credits.is_some() || self.journal_count.is_some() || self.total_revenue.is_some() || self.total_expenses.is_some() || self.net_income.is_some() || self.total_assets.is_some() || self.total_liabilities.is_some() || self.total_equity.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.statements_generated_at.is_some() || self.notes.is_some()
     }
 }
 
@@ -391,6 +412,9 @@ pub struct FiscalPeriodResponseDto {
     pub locked_at: Option<DateTime<Utc>>,
     pub locked_by: Option<Uuid>,
     pub lock_reason: Option<String>,
+    pub reopened_at: Option<DateTime<Utc>>,
+    pub reopened_by: Option<Uuid>,
+    pub reopen_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub allow_adjustments: bool,
     pub adjustment_deadline: Option<NaiveDate>,
@@ -503,6 +527,9 @@ impl From<FiscalPeriod> for FiscalPeriodResponseDto {
             locked_at: entity.locked_at,
             locked_by: entity.locked_by,
             lock_reason: entity.lock_reason,
+            reopened_at: entity.reopened_at,
+            reopened_by: entity.reopened_by,
+            reopen_reason: entity.reopen_reason,
             allow_adjustments: entity.allow_adjustments,
             adjustment_deadline: entity.adjustment_deadline,
             total_debits: entity.total_debits,
@@ -562,6 +589,9 @@ impl From<CreateFiscalPeriodDto> for FiscalPeriod {
             locked_at: dto.locked_at,
             locked_by: dto.locked_by,
             lock_reason: dto.lock_reason,
+            reopened_at: dto.reopened_at,
+            reopened_by: dto.reopened_by,
+            reopen_reason: dto.reopen_reason,
             allow_adjustments: dto.allow_adjustments,
             adjustment_deadline: dto.adjustment_deadline,
             total_debits: dto.total_debits,
@@ -608,6 +638,9 @@ impl From<&FiscalPeriod> for FiscalPeriodResponseDto {
             locked_at: entity.locked_at.clone(),
             locked_by: entity.locked_by.clone(),
             lock_reason: entity.lock_reason.clone(),
+            reopened_at: entity.reopened_at.clone(),
+            reopened_by: entity.reopened_by.clone(),
+            reopen_reason: entity.reopen_reason.clone(),
             allow_adjustments: entity.allow_adjustments.clone(),
             adjustment_deadline: entity.adjustment_deadline.clone(),
             total_debits: entity.total_debits.clone(),
@@ -658,6 +691,9 @@ impl backbone_core::ApplyUpdateDto<UpdateFiscalPeriodDto> for FiscalPeriod {
         self.locked_at = dto.locked_at;
         self.locked_by = dto.locked_by;
         self.lock_reason = dto.lock_reason;
+        self.reopened_at = dto.reopened_at;
+        self.reopened_by = dto.reopened_by;
+        self.reopen_reason = dto.reopen_reason;
         self.allow_adjustments = dto.allow_adjustments;
         self.adjustment_deadline = dto.adjustment_deadline;
         self.total_debits = dto.total_debits;
@@ -685,3 +721,4 @@ impl backbone_core::ApplyUpdateDto<UpdateFiscalPeriodDto> for FiscalPeriod {
 // Add custom DTOs specific to FiscalPeriod here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

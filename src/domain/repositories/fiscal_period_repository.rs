@@ -56,6 +56,8 @@ pub struct FiscalPeriodFilter {
     pub closed_by: Option<Uuid>,
     pub locked_by: Option<Uuid>,
     pub lock_reason: Option<String>,
+    pub reopened_by: Option<Uuid>,
+    pub reopen_reason: Option<String>,
     pub allow_adjustments: Option<bool>,
     pub balance_sheet_generated: Option<bool>,
     pub income_statement_generated: Option<bool>,
@@ -65,7 +67,7 @@ pub struct FiscalPeriodFilter {
 impl FiscalPeriodFilter {
     /// Check if any filter is set
     pub fn has_filters(&self) -> bool {
-        self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.parent_id.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_by.is_some() || self.closing_started_by.is_some() || self.closed_by.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.allow_adjustments.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.notes.is_some()
+        self.period_code.is_some() || self.name.is_some() || self.period_type.is_some() || self.parent_id.is_some() || self.status.is_some() || self.is_current.is_some() || self.opening_balance_set.is_some() || self.opening_balance_by.is_some() || self.closing_started_by.is_some() || self.closed_by.is_some() || self.locked_by.is_some() || self.lock_reason.is_some() || self.reopened_by.is_some() || self.reopen_reason.is_some() || self.allow_adjustments.is_some() || self.balance_sheet_generated.is_some() || self.income_statement_generated.is_some() || self.notes.is_some()
     }
 }
 

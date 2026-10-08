@@ -74,6 +74,9 @@ pub struct FiscalPeriod {
     pub locked_at: Option<DateTime<Utc>>,
     pub locked_by: Option<Uuid>,
     pub lock_reason: Option<String>,
+    pub reopened_at: Option<DateTime<Utc>>,
+    pub reopened_by: Option<Uuid>,
+    pub reopen_reason: Option<String>,
     pub allow_adjustments: bool,
     pub adjustment_deadline: Option<NaiveDate>,
     pub total_debits: Decimal,
@@ -126,6 +129,9 @@ impl FiscalPeriod {
             locked_at: None,
             locked_by: None,
             lock_reason: None,
+            reopened_at: None,
+            reopened_by: None,
+            reopen_reason: None,
             allow_adjustments,
             adjustment_deadline: None,
             total_debits,
@@ -277,6 +283,24 @@ impl FiscalPeriod {
         self
     }
 
+    /// Set the reopened_at field (chainable)
+    pub fn with_reopened_at(mut self, value: DateTime<Utc>) -> Self {
+        self.reopened_at = Some(value);
+        self
+    }
+
+    /// Set the reopened_by field (chainable)
+    pub fn with_reopened_by(mut self, value: Uuid) -> Self {
+        self.reopened_by = Some(value);
+        self
+    }
+
+    /// Set the reopen_reason field (chainable)
+    pub fn with_reopen_reason(mut self, value: String) -> Self {
+        self.reopen_reason = Some(value);
+        self
+    }
+
     /// Set the adjustment_deadline field (chainable)
     pub fn with_adjustment_deadline(mut self, value: NaiveDate) -> Self {
         self.adjustment_deadline = Some(value);
@@ -369,6 +393,15 @@ impl FiscalPeriod {
                 "lock_reason" => {
                     if let Ok(v) = serde_json::from_value(value) { self.lock_reason = v; }
                 }
+                "reopened_at" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.reopened_at = v; }
+                }
+                "reopened_by" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.reopened_by = v; }
+                }
+                "reopen_reason" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.reopen_reason = v; }
+                }
                 "allow_adjustments" => {
                     if let Ok(v) = serde_json::from_value(value) { self.allow_adjustments = v; }
                 }
@@ -436,6 +469,9 @@ impl super::Entity for FiscalPeriod {
 }
 
 impl backbone_core::PersistentEntity for FiscalPeriod {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["status", "closing_started_at", "closing_started_by", "closed_at", "closed_by", "locked_at", "locked_by", "lock_reason", "reopened_at", "reopened_by", "reopen_reason"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }
@@ -477,6 +513,7 @@ impl backbone_orm::EntityRepoMeta for FiscalPeriod {
         m.insert("closing_started_at".to_string(), "timestamptz".to_string());
         m.insert("closed_at".to_string(), "timestamptz".to_string());
         m.insert("locked_at".to_string(), "timestamptz".to_string());
+        m.insert("reopened_at".to_string(), "timestamptz".to_string());
         m.insert("adjustment_deadline".to_string(), "date".to_string());
         m.insert("statements_generated_at".to_string(), "timestamptz".to_string());
         m
@@ -517,6 +554,9 @@ pub struct FiscalPeriodBuilder {
     locked_at: Option<DateTime<Utc>>,
     locked_by: Option<Uuid>,
     lock_reason: Option<String>,
+    reopened_at: Option<DateTime<Utc>>,
+    reopened_by: Option<Uuid>,
+    reopen_reason: Option<String>,
     allow_adjustments: Option<bool>,
     adjustment_deadline: Option<NaiveDate>,
     total_debits: Option<Decimal>,
@@ -667,6 +707,24 @@ impl FiscalPeriodBuilder {
         self
     }
 
+    /// Set the reopened_at field (optional)
+    pub fn reopened_at(mut self, value: DateTime<Utc>) -> Self {
+        self.reopened_at = Some(value);
+        self
+    }
+
+    /// Set the reopened_by field (optional)
+    pub fn reopened_by(mut self, value: Uuid) -> Self {
+        self.reopened_by = Some(value);
+        self
+    }
+
+    /// Set the reopen_reason field (optional)
+    pub fn reopen_reason(mut self, value: String) -> Self {
+        self.reopen_reason = Some(value);
+        self
+    }
+
     /// Set the allow_adjustments field (default: `false`)
     pub fn allow_adjustments(mut self, value: bool) -> Self {
         self.allow_adjustments = Some(value);
@@ -791,6 +849,9 @@ impl FiscalPeriodBuilder {
             locked_at: self.locked_at,
             locked_by: self.locked_by,
             lock_reason: self.lock_reason,
+            reopened_at: self.reopened_at,
+            reopened_by: self.reopened_by,
+            reopen_reason: self.reopen_reason,
             allow_adjustments: self.allow_adjustments.unwrap_or(false),
             adjustment_deadline: self.adjustment_deadline,
             total_debits: self.total_debits.unwrap_or(Decimal::from(0)),

@@ -20,6 +20,7 @@ pub fn fiscal_period_validator() -> FiscalPeriodValidator {
         .rule(NonNegative::new("fiscal_year", |e: &FiscalPeriod| e.fiscal_year as i64))
         .rule(NonNegative::new("level", |e: &FiscalPeriod| e.level as i64))
         .rule(OptionalNotBlank::new("lock_reason", |e: &FiscalPeriod| e.lock_reason.as_deref()))
+        .rule(OptionalNotBlank::new("reopen_reason", |e: &FiscalPeriod| e.reopen_reason.as_deref()))
         .rule(NonNegative::new("journal_count", |e: &FiscalPeriod| e.journal_count as i64))
         .rule(OptionalNotBlank::new("notes", |e: &FiscalPeriod| e.notes.as_deref()))
     // <<< CUSTOM RULES

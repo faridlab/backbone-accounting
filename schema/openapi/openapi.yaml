@@ -8535,6 +8535,18 @@ components:
           nullable: true
           type: string
           maxLength: 255
+        reopened_at:
+          nullable: true
+          type: string
+          format: date-time
+        reopened_by:
+          nullable: true
+          type: string
+          format: uuid
+        reopen_reason:
+          nullable: true
+          type: string
+          maxLength: 255
         allow_adjustments:
           type: boolean
         adjustment_deadline:
@@ -8695,6 +8707,18 @@ components:
           nullable: true
           type: string
           maxLength: 255
+        reopened_at:
+          nullable: true
+          type: string
+          format: date-time
+        reopened_by:
+          nullable: true
+          type: string
+          format: uuid
+        reopen_reason:
+          nullable: true
+          type: string
+          maxLength: 255
         allow_adjustments:
           type: boolean
         adjustment_deadline:
@@ -8842,6 +8866,18 @@ components:
           nullable: true
           type: string
           maxLength: 255
+        reopened_at:
+          nullable: true
+          type: string
+          format: date-time
+        reopened_by:
+          nullable: true
+          type: string
+          format: uuid
+        reopen_reason:
+          nullable: true
+          type: string
+          maxLength: 255
         allow_adjustments:
           type: boolean
         adjustment_deadline:
@@ -8962,6 +8998,18 @@ components:
           type: string
           format: uuid
         lock_reason:
+          nullable: true
+          type: string
+          maxLength: 255
+        reopened_at:
+          nullable: true
+          type: string
+          format: date-time
+        reopened_by:
+          nullable: true
+          type: string
+          format: uuid
+        reopen_reason:
           nullable: true
           type: string
           maxLength: 255

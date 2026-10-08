@@ -132,7 +132,9 @@ models:
       status:
         type: PeriodStatus
         attributes: ["@default(open)"]
-        description: "Period status"
+        lifecycle:
+          shape: hand_set
+        description: "Period status (hand_set, ADR-0016): open -> closing -> closed -> locked, or closed -> open by a reopen; moved only by the close, lock and reopen verbs, never by a generic write. A locked period is final"
 
       is_current:
         type: bool
@@ -160,35 +162,71 @@ models:
       # =======================================================================
       closing_started_at:
         type: datetime?
-        description: "Closing process started"
+        lifecycle:
+          shape: hand_set
+        description: "Closing process started; written only by the close, lock and reopen verbs"
 
       closing_started_by:
         type: uuid?
-        description: "Who started closing"
+        lifecycle:
+          shape: hand_set
+        description: "Who started closing; written only by the close, lock and reopen verbs"
 
       closed_at:
         type: datetime?
-        description: "Period closed timestamp"
+        lifecycle:
+          shape: hand_set
+        description: "Period closed timestamp; written only by the close, lock and reopen verbs"
 
       closed_by:
         type: uuid?
-        description: "Who closed the period"
+        lifecycle:
+          shape: hand_set
+        description: "Who closed the period; written only by the close, lock and reopen verbs"
 
       # =======================================================================
       # Lock
       # =======================================================================
       locked_at:
         type: datetime?
-        description: "Period locked timestamp"
+        lifecycle:
+          shape: hand_set
+        description: "Period locked timestamp; written only by the close, lock and reopen verbs"
 
       locked_by:
         type: uuid?
-        description: "Who locked the period"
+        lifecycle:
+          shape: hand_set
+        description: "Who locked the period; written only by the close, lock and reopen verbs"
 
       lock_reason:
         type: string?
         attributes: ["@max(255)"]
-        description: "Reason for locking"
+        lifecycle:
+          shape: hand_set
+        description: "Reason for locking; written only by the close, lock and reopen verbs"
+
+      # =======================================================================
+      # Reopen
+      # =======================================================================
+      reopened_at:
+        type: datetime?
+        lifecycle:
+          shape: hand_set
+        description: "When the period was last reopened; written only by the close, lock and reopen verbs"
+
+      reopened_by:
+        type: uuid?
+        lifecycle:
+          shape: hand_set
+        description: "Who last reopened the period; written only by the close, lock and reopen verbs"
+
+      reopen_reason:
+        type: string?
+        attributes: ["@max(255)"]
+        lifecycle:
+          shape: hand_set
+        description: "Why the period was last reopened; written only by the close, lock and reopen verbs"
 
       # =======================================================================
       # Adjustments
