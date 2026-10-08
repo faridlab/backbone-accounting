@@ -32,6 +32,14 @@ pub struct PeriodCloseResult {
 pub enum PeriodCloseError {
     PeriodNotFound(Uuid),
     AlreadyClosed,
+    /// Another close of the same period holds the claim.
+    CloseInProgress,
+    /// Lock and reopen act on a closed period only.
+    NotClosed { status: String },
+    /// A locked period is final: it is neither locked again nor reopened.
+    Locked,
+    /// Lock and reopen must say why.
+    ReasonRequired,
     Posting(PostingError),
     Internal(String),
 }
@@ -40,6 +48,12 @@ impl std::fmt::Display for PeriodCloseError {
         match self {
             PeriodCloseError::PeriodNotFound(id) => write!(f, "period_not_found: {id}"),
             PeriodCloseError::AlreadyClosed => write!(f, "period_already_closed"),
+            PeriodCloseError::CloseInProgress => write!(f, "period_close_in_progress"),
+            PeriodCloseError::NotClosed { status } => {
+                write!(f, "period_not_closed: the period is {status}; only a closed period can be locked or reopened")
+            }
+            PeriodCloseError::Locked => write!(f, "period_locked: a locked period is final"),
+            PeriodCloseError::ReasonRequired => write!(f, "reason_required: say why the period is locked or reopened"),
             PeriodCloseError::Posting(e) => write!(f, "posting_error: {e}"),
             PeriodCloseError::Internal(e) => write!(f, "internal_error: {e}"),
         }
@@ -92,18 +106,114 @@ impl PeriodCloseService {
         period_id: Uuid,
         retained_earnings_account_id: Uuid,
     ) -> Result<PeriodCloseResult, PeriodCloseError> {
-        let Some(period) = self
-            .repo
+        self.close_period_as(period_id, retained_earnings_account_id, None).await
+    }
+
+    /// [`close_period`](Self::close_period), recording `actor` as the person
+    /// who started and finished the close.
+    ///
+    /// The period is claimed (`closing`) before the closing entry is posted,
+    /// so a second close of the same period is refused instead of posting a
+    /// second closing entry. If posting fails the claim is given back and the
+    /// period returns to the status it had.
+    pub async fn close_period_as(
+        &self,
+        period_id: Uuid,
+        retained_earnings_account_id: Uuid,
+        actor: Option<Uuid>,
+    ) -> Result<PeriodCloseResult, PeriodCloseError> {
+        let period = self.period(period_id).await?;
+        match period.status.as_str() {
+            "closed" | "locked" => return Err(PeriodCloseError::AlreadyClosed),
+            "closing" => return Err(PeriodCloseError::CloseInProgress),
+            _ => {}
+        }
+        let Some(prior_status) = self.repo.begin_close(period_id, actor).await.map_err(internal)? else {
+            // Lost the claim between the read and the write: say what won.
+            return Err(match self.period(period_id).await?.status.as_str() {
+                "closing" => PeriodCloseError::CloseInProgress,
+                _ => PeriodCloseError::AlreadyClosed,
+            });
+        };
+
+        match self.post_closing_entry(period_id, &period, retained_earnings_account_id).await {
+            Ok(result) => {
+                if !self.repo.finish_close(period_id, actor).await.map_err(internal)? {
+                    return Err(PeriodCloseError::Internal(
+                        "the period left `closing` while its close was posting".into(),
+                    ));
+                }
+                Ok(result)
+            }
+            Err(e) => {
+                self.repo.abort_close(period_id, &prior_status).await.map_err(internal)?;
+                Err(e)
+            }
+        }
+    }
+
+    /// Make a closed period final. A locked period refuses every posting and
+    /// cannot be reopened.
+    pub async fn lock_period(
+        &self,
+        period_id: Uuid,
+        actor: Option<Uuid>,
+        reason: &str,
+    ) -> Result<(), PeriodCloseError> {
+        let reason = required_reason(reason)?;
+        self.require_closed(period_id).await?;
+        if self.repo.lock(period_id, actor, reason).await.map_err(internal)? {
+            return Ok(());
+        }
+        // Another move won between the read and the write.
+        self.require_closed(period_id).await?;
+        Err(PeriodCloseError::Internal("the period could not be locked".into()))
+    }
+
+    /// Reopen a closed period so it takes postings again. The closing entry
+    /// already posted stays: a later close posts only what changed since.
+    pub async fn reopen_period(
+        &self,
+        period_id: Uuid,
+        actor: Option<Uuid>,
+        reason: &str,
+    ) -> Result<(), PeriodCloseError> {
+        let reason = required_reason(reason)?;
+        self.require_closed(period_id).await?;
+        if self.repo.reopen(period_id, actor, reason).await.map_err(internal)? {
+            return Ok(());
+        }
+        self.require_closed(period_id).await?;
+        Err(PeriodCloseError::Internal("the period could not be reopened".into()))
+    }
+
+    async fn period(
+        &self,
+        period_id: Uuid,
+    ) -> Result<crate::domain::repositories::period_close_repository::PeriodRow, PeriodCloseError> {
+        self.repo
             .find_period(period_id)
             .await
             .map_err(internal)?
-        else {
-            return Err(PeriodCloseError::PeriodNotFound(period_id));
-        };
-        if period.status == "closed" || period.status == "locked" {
-            return Err(PeriodCloseError::AlreadyClosed);
-        }
+            .ok_or(PeriodCloseError::PeriodNotFound(period_id))
+    }
 
+    async fn require_closed(&self, period_id: Uuid) -> Result<(), PeriodCloseError> {
+        match self.period(period_id).await?.status.as_str() {
+            "closed" => Ok(()),
+            "locked" => Err(PeriodCloseError::Locked),
+            other => Err(PeriodCloseError::NotClosed { status: other.to_string() }),
+        }
+    }
+
+    /// Post the entry that zeroes the period's P&L into retained earnings.
+    /// `closing_post_id` is `None` when the period had no P&L activity.
+    async fn post_closing_entry(
+        &self,
+        period_id: Uuid,
+        period: &crate::domain::repositories::period_close_repository::PeriodRow,
+        retained_earnings_account_id: Uuid,
+    ) -> Result<PeriodCloseResult, PeriodCloseError> {
         let rows = self
             .repo
             .sum_pl_balances(period.start_date, period.end_date)
@@ -136,7 +246,6 @@ impl PeriodCloseService {
         let net_income = revenue_total - expense_total;
 
         if lines.is_empty() {
-            self.repo.mark_closed(period_id).await.map_err(internal)?;
             return Ok(PeriodCloseResult {
                 period_id,
                 net_income,
@@ -169,10 +278,20 @@ impl PeriodCloseService {
             .unwrap_or_default();
         let mut req = PostingRequest::original(company_id, "manual", period_id, period.end_date);
         req.description = Some("Period close".to_string());
+        // One closing entry per close cycle. Without a key the post dedups on
+        // its source (this period), so the close after a reopen would get the
+        // first close's entry back and leave the reopened P&L unclosed. The
+        // cycle is named by the last reopen, so a retry within one cycle still
+        // collapses onto the entry it already posted.
+        req.idempotency_key = Some(format!(
+            "period-close:{period_id}:{}",
+            period
+                .reopened_at
+                .map(|t| t.timestamp_micros().to_string())
+                .unwrap_or_else(|| "initial".to_string())
+        ));
         req.lines = lines;
         let result = self.posting.post(req, None).await?;
-
-        self.repo.mark_closed(period_id).await.map_err(internal)?;
 
         Ok(PeriodCloseResult {
             period_id,
@@ -181,6 +300,15 @@ impl PeriodCloseService {
             closing_journal_id: Some(result.journal_id),
         })
     }
+}
+
+/// A lock or reopen reason, trimmed; blank is refused.
+fn required_reason(reason: &str) -> Result<&str, PeriodCloseError> {
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return Err(PeriodCloseError::ReasonRequired);
+    }
+    Ok(reason)
 }
 
 fn close_line(account_id: Uuid, debit: Decimal, credit: Decimal) -> PostingLine {

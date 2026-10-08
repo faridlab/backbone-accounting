@@ -89,6 +89,7 @@ user_owned:
   - "tests/caba_flip_cases.rs"
   - "tests/reconciliation_golden_cases.rs"
   - "tests/period_close_golden_cases.rs"
+  - "tests/period_lifecycle_golden_cases.rs"
   - "tests/messaging_bus.rs"
   - "tests/integrity_probes.rs"
   - "tests/journal_workflow_golden_cases.rs"
@@ -133,6 +134,10 @@ user_owned:
   # retried post, and the fence the tenancy work later re-based.
   - "migrations/20260712000100_accounting_post_idempotency_key.up.sql"
   - "migrations/20260819100000_company_fence_strict.up.sql"
+  # The fiscal period lifecycle: the reopen trail and the trigger that holds
+  # every writer to the close, lock and reopen transitions.
+  - "migrations/20261008100000_fiscal_period_status_verbs.up.sql"
+  - "migrations/20261008100000_fiscal_period_status_verbs.down.sql"
   - "migrations/20260819100000_company_fence_strict.down.sql"
 
   # Reconciliation shape: the journal line's link to its full-reconcile group.

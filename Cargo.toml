@@ -14,7 +14,7 @@ path = "src/lib.rs"
 # Backbone Framework CORE dependencies
 backbone-core = { version = "2.7.35", features = ["postgres"] }
 backbone-orm = { version = "2.7.35" }
-backbone-auth = { version = "2.7.35" }
+backbone-auth = { version = "2.7.35", features = ["axum"] }
 backbone-messaging = { version = "2.7.35" }
 
 # Core dependencies

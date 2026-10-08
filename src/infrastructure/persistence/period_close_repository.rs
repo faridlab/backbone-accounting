@@ -41,7 +41,7 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
         let row = org_scope::fetch_optional_row_scoped(
             &self.pool,
             sqlx::query(
-                "SELECT start_date, end_date, status::text AS status FROM accounting.fiscal_periods WHERE id=$1",
+                "SELECT start_date, end_date, status::text AS status, reopened_at FROM accounting.fiscal_periods WHERE id=$1",
             )
             .bind(period_id),
         )
@@ -50,6 +50,7 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
             start_date: r.get("start_date"),
             end_date: r.get("end_date"),
             status: r.get("status"),
+            reopened_at: r.get("reopened_at"),
         }))
     }
 
@@ -86,15 +87,92 @@ impl PeriodCloseRepository for SqlxPeriodCloseRepository {
             .collect())
     }
 
-    async fn mark_closed(&self, period_id: Uuid) -> anyhow::Result<()> {
+    // Every status move below is one conditional UPDATE: the `WHERE status`
+    // clause is the check, so a move that lost a race matches no row instead
+    // of overwriting the winner. The transition trigger
+    // (migrations/20261008100000_fiscal_period_status_verbs) holds any other
+    // writer to the same moves.
+
+    async fn begin_close(&self, period_id: Uuid, actor: Option<Uuid>) -> anyhow::Result<Option<String>> {
+        let row = org_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"WITH prior AS (
+                       SELECT status::text AS status FROM accounting.fiscal_periods WHERE id = $1
+                   )
+                   UPDATE accounting.fiscal_periods
+                      SET status = 'closing'::period_status,
+                          closing_started_at = now(),
+                          closing_started_by = $2
+                    WHERE id = $1 AND status IN ('open', 'adjusting')
+                RETURNING (SELECT status FROM prior) AS prior_status"#,
+            )
+            .bind(period_id)
+            .bind(actor),
+        )
+        .await?;
+        Ok(row.map(|r| r.get("prior_status")))
+    }
+
+    async fn finish_close(&self, period_id: Uuid, actor: Option<Uuid>) -> anyhow::Result<bool> {
+        let done = org_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE accounting.fiscal_periods
+                      SET status = 'closed'::period_status, closed_at = now(), closed_by = $2
+                    WHERE id = $1 AND status = 'closing'"#,
+            )
+            .bind(period_id)
+            .bind(actor),
+        )
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    async fn abort_close(&self, period_id: Uuid, back_to: &str) -> anyhow::Result<()> {
         org_scope::execute_scoped(
             &self.pool,
             sqlx::query(
-                "UPDATE accounting.fiscal_periods SET status='closed'::period_status WHERE id=$1",
+                r#"UPDATE accounting.fiscal_periods
+                      SET status = $2::period_status, closing_started_at = NULL, closing_started_by = NULL
+                    WHERE id = $1 AND status = 'closing'"#,
             )
-            .bind(period_id),
+            .bind(period_id)
+            .bind(back_to),
         )
         .await?;
         Ok(())
+    }
+
+    async fn lock(&self, period_id: Uuid, actor: Option<Uuid>, reason: &str) -> anyhow::Result<bool> {
+        let done = org_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE accounting.fiscal_periods
+                      SET status = 'locked'::period_status, locked_at = now(), locked_by = $2, lock_reason = $3
+                    WHERE id = $1 AND status = 'closed'"#,
+            )
+            .bind(period_id)
+            .bind(actor)
+            .bind(reason),
+        )
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    async fn reopen(&self, period_id: Uuid, actor: Option<Uuid>, reason: &str) -> anyhow::Result<bool> {
+        let done = org_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                r#"UPDATE accounting.fiscal_periods
+                      SET status = 'open'::period_status, reopened_at = now(), reopened_by = $2, reopen_reason = $3
+                    WHERE id = $1 AND status = 'closed'"#,
+            )
+            .bind(period_id)
+            .bind(actor)
+            .bind(reason),
+        )
+        .await?;
+        Ok(done.rows_affected() == 1)
     }
 }

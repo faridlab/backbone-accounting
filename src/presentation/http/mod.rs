@@ -55,7 +55,8 @@ pub use full_reconcile_handler::{create_full_reconcile_routes, create_full_recon
 pub use partial_reconcile_handler::{create_partial_reconcile_routes, create_partial_reconcile_read_routes, create_partial_reconcile_write_routes};
 // <<< CUSTOM
 pub use accounting_ops_handler::{
-    create_bank_reconciliation_routes, create_period_close_routes, ClosePeriodBody,
+    create_bank_reconciliation_routes, create_period_close_routes, create_period_finality_routes,
+    ClosePeriodBody, PeriodReasonBody,
 };
 pub use chart_routes::create_chart_routes;
 pub use guarded_routes::create_guarded_accounting_routes;
