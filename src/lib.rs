@@ -140,7 +140,7 @@ impl AccountingModule {
             create_printed_check_routes,
             create_tax_tag_repair_run_routes,
             create_financial_statement_routes,
-            create_fiscal_period_routes,
+            create_fiscal_period_read_routes,
             create_journal_routes,
             create_journal_line_routes,
             create_ledger_routes,
@@ -159,7 +159,10 @@ impl AccountingModule {
             .merge(create_printed_check_routes(self.printed_check_service.clone()))
             .merge(create_tax_tag_repair_run_routes(self.tax_tag_repair_run_service.clone()))
             .merge(create_financial_statement_routes(self.financial_statement_service.clone()))
-            .merge(create_fiscal_period_routes(self.fiscal_period_service.clone()))
+            // FiscalPeriod: hand_set lifecycle — the state field moves only through the
+            // module's validated verbs; generic writes cannot reach it, so only the
+            // read surface mounts here.
+            .merge(create_fiscal_period_read_routes(self.fiscal_period_service.clone()))
             .merge(create_journal_routes(self.journal_service.clone()))
             .merge(create_journal_line_routes(self.journal_line_service.clone()))
             .merge(create_ledger_routes(self.ledger_service.clone()))

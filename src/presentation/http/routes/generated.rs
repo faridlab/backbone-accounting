@@ -17,7 +17,7 @@ use super::{
     printed_check_handler::create_printed_check_routes,
     tax_tag_repair_run_handler::create_tax_tag_repair_run_routes,
     financial_statement_handler::create_financial_statement_routes,
-    fiscal_period_handler::create_fiscal_period_routes,
+    fiscal_period_handler::create_fiscal_period_read_routes,
     journal_handler::create_journal_routes,
     journal_line_handler::create_journal_line_routes,
     ledger_handler::create_ledger_routes,
@@ -99,8 +99,8 @@ pub fn configure_routes(services: HttpServices) -> Router {
         .merge(create_tax_tag_repair_run_routes(services.tax_tag_repair_run))
         // FinancialStatement routes (12 Backbone endpoints)
         .merge(create_financial_statement_routes(services.financial_statement))
-        // FiscalPeriod routes (12 Backbone endpoints)
-        .merge(create_fiscal_period_routes(services.fiscal_period))
+        // FiscalPeriod routes (READ-ONLY mount — hand_set lifecycle; the state field moves only through the module's validated verbs)
+        .merge(create_fiscal_period_read_routes(services.fiscal_period))
         // Journal routes (12 Backbone endpoints)
         .merge(create_journal_routes(services.journal))
         // JournalLine routes (12 Backbone endpoints)
@@ -154,7 +154,7 @@ pub mod individual {
     }
 
     pub fn fiscal_period_routes(service: Arc<FiscalPeriodService>) -> Router {
-        create_fiscal_period_routes(service)
+        create_fiscal_period_read_routes(service)
     }
 
     pub fn journal_routes(service: Arc<JournalService>) -> Router {
