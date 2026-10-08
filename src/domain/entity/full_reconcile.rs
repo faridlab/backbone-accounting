@@ -143,6 +143,9 @@ impl super::Entity for FullReconcile {
 }
 
 impl backbone_core::PersistentEntity for FullReconcile {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["created_at"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

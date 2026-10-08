@@ -177,6 +177,9 @@ impl super::Entity for EmvQrConfig {
 }
 
 impl backbone_core::PersistentEntity for EmvQrConfig {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["created_at"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

@@ -137,6 +137,9 @@ impl super::Entity for BankCheckSequence {
 }
 
 impl backbone_core::PersistentEntity for BankCheckSequence {
+    fn write_protected_fields() -> &'static [&'static str] {
+        &["created_at"]
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }
