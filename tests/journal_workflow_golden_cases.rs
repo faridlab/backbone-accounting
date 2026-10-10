@@ -386,7 +386,8 @@ async fn approve_and_void_record_the_principal_not_the_actor_the_body_names() {
     let (approver, voider, forged) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
     let router = workflow_router(&pool);
 
-    let submit = post_as(router.clone(), format!("/journals/{j}/submit"), serde_json::json!({}), Some(approver)).await;
+    // Someone other than the approver submits: a submitter may not approve their own journal.
+    let submit = post_as(router.clone(), format!("/journals/{j}/submit"), serde_json::json!({}), Some(voider)).await;
     assert_eq!(submit, axum::http::StatusCode::OK);
     let approve = post_as(
         router.clone(),
@@ -438,4 +439,74 @@ async fn reject_records_the_principal_and_a_request_with_no_principal_is_refused
     .await;
     assert_eq!(reject, axum::http::StatusCode::OK);
     assert_eq!(journal_actor(&pool, j, "rejected_by").await, Some(rejecter), "the rejecter is the principal");
+}
+
+// ── segregation of duties: whoever submitted or created a journal does not approve it ──
+
+/// Set the installation's self-approval setting, creating the settings table a scratch
+/// database lacks (`None` removes the row, so the default applies).
+async fn set_self_approval(pool: &PgPool, value: Option<&str>) {
+    sqlx::query("CREATE SCHEMA IF NOT EXISTS platform").execute(pool).await.unwrap();
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS platform.sysparams (id uuid PRIMARY KEY, group_name text NOT NULL, \
+         key text NOT NULL, value text, status text NOT NULL DEFAULT 'active')",
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query("DELETE FROM platform.sysparams WHERE group_name='accounting' AND key='journal_self_approval'")
+        .execute(pool)
+        .await
+        .unwrap();
+    if let Some(v) = value {
+        sqlx::query("INSERT INTO platform.sysparams (id, group_name, key, value) VALUES ($1, 'accounting', 'journal_self_approval', $2)")
+            .bind(Uuid::new_v4())
+            .bind(v)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+}
+
+#[tokio::test]
+async fn the_submitter_cannot_approve_their_own_journal_unless_the_installation_allows_it() {
+    let _guard = DB_LOCK.lock().await;
+    let pool = pool().await;
+    let (company, bank, rev) = seed_coa(&pool).await;
+    let (author, approver) = (Uuid::new_v4(), Uuid::new_v4());
+    let router = workflow_router(&pool);
+    set_self_approval(&pool, None).await;
+
+    // Refused by default: the submitter is recorded and may not approve.
+    let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
+    assert_eq!(post_as(router.clone(), format!("/journals/{j}/submit"), serde_json::json!({}), Some(author)).await, axum::http::StatusCode::OK);
+    assert_eq!(journal_actor(&pool, j, "submitted_by").await, Some(author), "submit records the principal");
+    assert_eq!(
+        post_as(router.clone(), format!("/journals/{j}/approve"), serde_json::json!({}), Some(author)).await,
+        axum::http::StatusCode::FORBIDDEN,
+        "self-approval is refused"
+    );
+    assert_eq!(journal_status(&pool, j).await, "pending_approval", "nothing posted");
+    // Someone else approves it.
+    assert_eq!(post_as(router.clone(), format!("/journals/{j}/approve"), serde_json::json!({}), Some(approver)).await, axum::http::StatusCode::OK);
+
+    // The creator is refused too, even when someone else submitted.
+    let j2 = insert_draft_journal(&pool, company, bank, rev, "50000", "50000").await;
+    sqlx::query("UPDATE accounting.journals SET metadata = jsonb_set(coalesce(metadata,'{}'::jsonb), '{created_by}', to_jsonb($2::text)) WHERE id=$1")
+        .bind(j2)
+        .bind(author.to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+    post_as(router.clone(), format!("/journals/{j2}/submit"), serde_json::json!({}), Some(approver)).await;
+    assert_eq!(
+        post_as(router.clone(), format!("/journals/{j2}/approve"), serde_json::json!({}), Some(author)).await,
+        axum::http::StatusCode::FORBIDDEN,
+        "the creator may not approve"
+    );
+
+    // An installation that allows it lets the submitter through.
+    set_self_approval(&pool, Some("allow")).await;
+    assert_eq!(post_as(router.clone(), format!("/journals/{j2}/approve"), serde_json::json!({}), Some(author)).await, axum::http::StatusCode::OK);
+    set_self_approval(&pool, None).await;
 }

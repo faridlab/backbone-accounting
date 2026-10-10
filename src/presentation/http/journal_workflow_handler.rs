@@ -83,10 +83,16 @@ fn err_response(e: JournalWorkflowError) -> (axum::http::StatusCode, Json<serde_
 
 async fn submit(
     State(svc): State<Arc<JournalWorkflowService>>,
+    org: OrgContext,
     Path(id): Path<Uuid>,
     Query(_q): Query<CompanyQuery>,
 ) -> impl IntoResponse {
-    match svc.submit(id).await {
+    run_submit(svc, id, actor(&org)).await
+}
+
+/// Shared execution for submit: the submitter is recorded for the self-approval rule.
+async fn run_submit(svc: Arc<JournalWorkflowService>, id: Uuid, submitted_by: Option<Uuid>) -> axum::response::Response {
+    match svc.submit_as(id, submitted_by).await {
         Ok(()) => Json(WorkflowResponse {
             success: true,
             journal_id: id,
@@ -223,11 +229,20 @@ fn principal(auth: &AuthContext) -> Option<Uuid> {
 }
 
 #[cfg(feature = "auth")]
+async fn submit_protected(
+    State(svc): State<Arc<JournalWorkflowService>>,
+    Extension(auth): Extension<AuthContext>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    run_submit(svc, id, principal(&auth)).await
+}
+
+#[cfg(feature = "auth")]
 async fn approve_protected(
     State(svc): State<Arc<JournalWorkflowService>>,
     Extension(auth): Extension<AuthContext>,
     Path(id): Path<Uuid>,
-    Json(body): Json<ApproveBody>,
+    Json(_body): Json<ApproveBody>,
 ) -> impl IntoResponse {
     run_approve(svc, id, principal(&auth)).await
 }
@@ -262,7 +277,7 @@ pub fn create_protected_journal_workflow_routes<A: AuthMiddleware + Send + Sync 
 
     let auth_layer = auth.clone();
     Router::new()
-        .route("/journals/:id/submit", post(submit))
+        .route("/journals/:id/submit", post(submit_protected))
         .route("/journals/:id/approve", post(approve_protected))
         .route("/journals/:id/reject", post(reject_protected))
         .route("/journals/:id/void", post(void_protected))

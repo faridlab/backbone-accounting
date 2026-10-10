@@ -21,8 +21,12 @@ use crate::domain::repositories::posting_repository::PostingRepository;
 
 /// Typed workflow failure. `code()` is the stable error string.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum JournalWorkflowError {
     NotFound(Uuid),
+    /// The approver submitted or created the journal, and the installation does not allow
+    /// self-approval (`accounting / journal_self_approval`).
+    SelfApproval(Uuid),
     InvalidState {
         id: Uuid,
         current: String,
@@ -37,6 +41,7 @@ impl JournalWorkflowError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::NotFound(_) => "journal_not_found",
+            Self::SelfApproval(_) => "journal_self_approval",
             Self::InvalidState { .. } => "invalid_journal_state",
             Self::NotPosted(_) => "journal_not_posted",
             Self::Posting(_) => "posting_error",
@@ -46,6 +51,7 @@ impl JournalWorkflowError {
     pub fn http_status(&self) -> u16 {
         match self {
             Self::NotFound(_) => 404,
+            Self::SelfApproval(_) => 403,
             Self::Internal(_) => 500,
             Self::Posting(e) => e.http_status(),
             _ => 422,
@@ -57,6 +63,10 @@ impl std::fmt::Display for JournalWorkflowError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NotFound(id) => write!(f, "journal_not_found: {id}"),
+            Self::SelfApproval(id) => write!(
+                f,
+                "journal_self_approval: {id} was submitted or created by its approver; another person must approve it"
+            ),
             Self::InvalidState {
                 id,
                 current,
@@ -118,9 +128,19 @@ impl JournalWorkflowService {
         &self,
         journal_id: Uuid,
     ) -> Result<(), JournalWorkflowError> {
+        self.submit_as(journal_id, None).await
+    }
+
+    /// `draft → pending_approval`, recording who submitted it, which the self-approval rule
+    /// reads. Rejects if the journal is not `draft`.
+    pub async fn submit_as(
+        &self,
+        journal_id: Uuid,
+        submitted_by: Option<Uuid>,
+    ) -> Result<(), JournalWorkflowError> {
         let ok = self
             .workflow
-            .submit(journal_id)
+            .submit_as(journal_id, submitted_by)
             .await
             .map_err(internal)?;
         if !ok {
@@ -136,6 +156,15 @@ impl JournalWorkflowService {
         journal_id: Uuid,
         approved_by: Option<Uuid>,
     ) -> Result<crate::domain::gl_posting::PostingResult, JournalWorkflowError> {
+        // Segregation of duties: whoever submitted or created the journal does not approve it,
+        // unless the installation allows it.
+        if let Some(approver) = approved_by {
+            let authors = self.workflow.authors(journal_id).await.map_err(internal)?;
+            let own = authors.submitted_by == Some(approver) || authors.created_by == Some(approver);
+            if own && !self.workflow.self_approval_allowed().await.map_err(internal)? {
+                return Err(JournalWorkflowError::SelfApproval(journal_id));
+            }
+        }
         let now = Utc::now();
         let ok = self
             .workflow

@@ -19,7 +19,7 @@ use backbone_orm::org_scope;
 use backbone_orm::company_scope::fetch_optional_scalar_scoped;
 
 use crate::domain::repositories::journal_workflow_repository::{
-    JournalStatusRow, JournalWorkflowRepository,
+    JournalAuthors, JournalStatusRow, JournalWorkflowRepository,
 };
 
 pub struct SqlxJournalWorkflowRepository {
@@ -83,6 +83,58 @@ impl JournalWorkflowRepository for SqlxJournalWorkflowRepository {
         Ok(res.rows_affected() > 0)
     }
 
+    async fn submit_as(&self, journal_id: Uuid, submitted_by: Option<Uuid>) -> anyhow::Result<bool> {
+        let res = org_scope::execute_scoped(
+            &self.pool,
+            sqlx::query(
+                "UPDATE accounting.journals SET status='pending_approval'::journal_status, submitted_by=$2 \
+                 WHERE id=$1 AND status='draft'::journal_status \
+                 AND (metadata->>'deleted_at') IS NULL",
+            )
+            .bind(journal_id)
+            .bind(submitted_by),
+        )
+        .await?;
+        Ok(res.rows_affected() > 0)
+    }
+    async fn authors(&self, journal_id: Uuid) -> anyhow::Result<JournalAuthors> {
+        let row = org_scope::fetch_optional_row_scoped(
+            &self.pool,
+            sqlx::query(
+                "SELECT submitted_by, metadata->>'created_by' AS created_by FROM accounting.journals WHERE id=$1",
+            )
+            .bind(journal_id),
+        )
+        .await?;
+        Ok(row
+            .map(|r| JournalAuthors {
+                submitted_by: r.get("submitted_by"),
+                created_by: r
+                    .get::<Option<String>, _>("created_by")
+                    .and_then(|s| Uuid::parse_str(&s).ok()),
+            })
+            .unwrap_or_default())
+    }
+    async fn self_approval_allowed(&self) -> anyhow::Result<bool> {
+        // A database without the settings store, or without the row, keeps the default: refuse.
+        let has_settings: Option<bool> = fetch_optional_scalar_scoped(
+            &self.pool,
+            sqlx::query_scalar("SELECT to_regclass('platform.sysparams') IS NOT NULL"),
+        )
+        .await?;
+        if has_settings != Some(true) {
+            return Ok(false);
+        }
+        let value: Option<String> = fetch_optional_scalar_scoped(
+            &self.pool,
+            sqlx::query_scalar(
+                "SELECT value FROM platform.sysparams \
+                 WHERE group_name='accounting' AND key='journal_self_approval' AND status::text='active' LIMIT 1",
+            ),
+        )
+        .await?;
+        Ok(value.as_deref().map(str::trim) == Some("allow"))
+    }
     async fn approve(
         &self,
         journal_id: Uuid,

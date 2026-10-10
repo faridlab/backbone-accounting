@@ -20,6 +20,15 @@ pub struct JournalStatusRow {
     pub currency: String,
 }
 
+/// The people a journal's self-approval rule compares the approver against.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct JournalAuthors {
+    /// Who moved it from draft to pending approval.
+    pub submitted_by: Option<Uuid>,
+    /// Who created it (the audit metadata's `created_by`).
+    pub created_by: Option<Uuid>,
+}
+
 #[async_trait]
 pub trait JournalWorkflowRepository: Send + Sync {
     /// Load status + currency for the void guard. None if the journal doesn't exist / wrong tenant.
@@ -36,6 +45,25 @@ pub trait JournalWorkflowRepository: Send + Sync {
 
     /// `draft → pending_approval`. Returns false if the journal wasn't `draft` (or not found).
     async fn submit(&self, journal_id: Uuid,) -> anyhow::Result<bool>;
+
+    /// `draft → pending_approval`, recording who submitted it. The default records nobody.
+    async fn submit_as(&self, journal_id: Uuid, submitted_by: Option<Uuid>) -> anyhow::Result<bool> {
+        let _ = submitted_by;
+        self.submit(journal_id).await
+    }
+
+    /// Who submitted and who created the journal, for the self-approval rule. The default
+    /// knows neither.
+    async fn authors(&self, journal_id: Uuid) -> anyhow::Result<JournalAuthors> {
+        let _ = journal_id;
+        Ok(JournalAuthors::default())
+    }
+
+    /// Whether the installation lets a journal's submitter or creator approve it
+    /// (`accounting / journal_self_approval = allow`). The default refuses.
+    async fn self_approval_allowed(&self) -> anyhow::Result<bool> {
+        Ok(false)
+    }
 
     /// `pending_approval → approved`, stamping approver/at. Returns false if not pending.
     async fn approve(

@@ -124,7 +124,7 @@ pub use chart_install_repository::{
 pub use budget_control::{BudgetBreach, BudgetControlPort, BudgetEnforcement};
 pub use deferred_tax::{DeferredTaxLine, DeferredTaxLookup};
 pub use hierarchy_repository::{HierarchyNode, HierarchyRepository, HierarchyTable};
-pub use journal_workflow_repository::{JournalStatusRow, JournalWorkflowRepository};
+pub use journal_workflow_repository::{JournalAuthors, JournalStatusRow, JournalWorkflowRepository};
 pub use period_close_repository::{PeriodCloseRepository, PeriodRow, PlBalanceRow};
 pub use posting_repository::{
     FailedPost, LedgerEntryInput, ManualJournalCommit, ManualJournalForPost, PostableAccount,
