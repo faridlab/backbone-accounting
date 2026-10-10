@@ -322,7 +322,7 @@ async fn plg7_a_generic_patch_cannot_move_the_status() {
     ] {
         let res = periods.partial_update(&id, [(field.to_string(), value)].into()).await;
         assert!(
-            matches!(&res, Err(ServiceError::Validation(m)) if m.contains("field_not_writable") && m.contains(field)),
+            matches!(&res, Err(ServiceError::Violations(v)) if v.iter().any(|v| v.code == "field_not_writable" && v.path == field)),
             "{field}: {res:?}"
         );
     }
