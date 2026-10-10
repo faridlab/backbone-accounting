@@ -48,6 +48,8 @@ pub struct PostingRequestDto {
     pub posting_type: String,
     pub reverses_post_id: Option<Uuid>,
     pub description: Option<String>,
+    /// Ignored: the poster is the authenticated principal. Still accepted so existing
+    /// callers keep working.
     pub posted_by: Option<Uuid>,
     #[serde(default)]
     pub idempotency_key: Option<String>,
@@ -70,11 +72,15 @@ pub struct PostingResponse {
     pub error_code: Option<String>,
 }
 
+/// The person posting is the org guard's authenticated principal, never a field of the body,
+/// which could name anyone as the ledger's author. A request without the `OrgContext` the
+/// host's org guard inserts is refused with 401.
 async fn post_handler(
     State(service): State<Arc<PostingService>>,
+    org: backbone_auth::org::OrgContext,
     Json(dto): Json<PostingRequestDto>,
 ) -> impl IntoResponse {
-    let posted_by = dto.posted_by;
+    let posted_by = Uuid::parse_str(&org.user_id).ok();
     run_post(service, posting_request_from_dto(dto), posted_by).await
 }
 
@@ -148,7 +154,8 @@ async fn run_post(
     }
 }
 
-/// Route: `POST /accounting/posts` — the inbound GL-posting endpoint.
+/// Route: `POST /accounting/posts` — the inbound GL-posting endpoint. Mount it behind the
+/// host's org guard: the poster is read from its `OrgContext`.
 pub fn create_posting_routes(service: Arc<PostingService>) -> Router {
     Router::new()
         .route("/accounting/posts", post(post_handler))

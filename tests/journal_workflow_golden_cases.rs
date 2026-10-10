@@ -325,3 +325,117 @@ async fn submit_rejects_non_draft() {
     let err = svc.submit(j).await.unwrap_err();
     assert_eq!(err.code(), "invalid_journal_state");
 }
+
+// ── the acting user is the session's principal, never a field of the request body ──
+
+fn workflow_router(pool: &PgPool) -> axum::Router {
+    backbone_accounting::presentation::http::create_journal_workflow_routes(std::sync::Arc::new(
+        JournalWorkflowService::new(
+            std::sync::Arc::new(
+                backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(
+                    pool.clone(),
+                ),
+            ),
+            std::sync::Arc::new(
+                backbone_accounting::infrastructure::persistence::SqlxJournalWorkflowRepository::new(
+                    pool.clone(),
+                ),
+            ),
+        ),
+    ))
+}
+
+/// POST `body` to `path`, as `user` when given (the org guard's context), or with no
+/// authenticated principal at all.
+async fn post_as(
+    router: axum::Router,
+    path: String,
+    body: serde_json::Value,
+    user: Option<Uuid>,
+) -> axum::http::StatusCode {
+    use tower::ServiceExt;
+    let mut req = axum::http::Request::post(path)
+        .header("content-type", "application/json")
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    if let Some(user) = user {
+        req.extensions_mut().insert(backbone_auth::org::OrgContext {
+            acting_unit_id: Uuid::new_v4(),
+            entitled_units: vec![],
+            legacy_company_id: None,
+            user_id: user.to_string(),
+        });
+    }
+    router.oneshot(req).await.unwrap().status()
+}
+
+async fn journal_actor(pool: &PgPool, j: Uuid, column: &str) -> Option<Uuid> {
+    sqlx::query_scalar(&format!("SELECT {column} FROM accounting.journals WHERE id=$1"))
+        .bind(j)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn approve_and_void_record_the_principal_not_the_actor_the_body_names() {
+    let _guard = DB_LOCK.lock().await;
+    let pool = pool().await;
+    let (company, bank, rev) = seed_coa(&pool).await;
+    let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
+    let (approver, voider, forged) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+    let router = workflow_router(&pool);
+
+    let submit = post_as(router.clone(), format!("/journals/{j}/submit"), serde_json::json!({}), Some(approver)).await;
+    assert_eq!(submit, axum::http::StatusCode::OK);
+    let approve = post_as(
+        router.clone(),
+        format!("/journals/{j}/approve"),
+        serde_json::json!({ "approved_by": forged }),
+        Some(approver),
+    )
+    .await;
+    assert_eq!(approve, axum::http::StatusCode::OK);
+    assert_eq!(journal_actor(&pool, j, "approved_by").await, Some(approver), "the approver is the principal");
+
+    let void = post_as(
+        router,
+        format!("/journals/{j}/void"),
+        serde_json::json!({ "voided_by": forged, "reason": "entered twice" }),
+        Some(voider),
+    )
+    .await;
+    assert_eq!(void, axum::http::StatusCode::OK);
+    assert_eq!(journal_actor(&pool, j, "voided_by").await, Some(voider), "the voider is the principal");
+}
+
+#[tokio::test]
+async fn reject_records_the_principal_and_a_request_with_no_principal_is_refused() {
+    let _guard = DB_LOCK.lock().await;
+    let pool = pool().await;
+    let (company, bank, rev) = seed_coa(&pool).await;
+    let j = insert_draft_journal(&pool, company, bank, rev, "100000", "100000").await;
+    let (rejecter, forged) = (Uuid::new_v4(), Uuid::new_v4());
+    let router = workflow_router(&pool);
+    post_as(router.clone(), format!("/journals/{j}/submit"), serde_json::json!({}), Some(rejecter)).await;
+
+    let anonymous = post_as(
+        router.clone(),
+        format!("/journals/{j}/reject"),
+        serde_json::json!({ "reason": "wrong account", "rejected_by": forged }),
+        None,
+    )
+    .await;
+    assert_eq!(anonymous, axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(journal_status(&pool, j).await, "pending_approval", "nothing moved");
+
+    let reject = post_as(
+        router,
+        format!("/journals/{j}/reject"),
+        serde_json::json!({ "reason": "wrong account", "rejected_by": forged }),
+        Some(rejecter),
+    )
+    .await;
+    assert_eq!(reject, axum::http::StatusCode::OK);
+    assert_eq!(journal_actor(&pool, j, "rejected_by").await, Some(rejecter), "the rejecter is the principal");
+}

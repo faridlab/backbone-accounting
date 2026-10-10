@@ -2,9 +2,15 @@
 //!
 //! Hand-authored (user-owned; see `metaphor.codegen.yaml`). Wraps `JournalWorkflowService`:
 //!   POST /journals/:id/submit                                      (no body)
-//!   POST /journals/:id/approve   body { approved_by }
-//!   POST /journals/:id/reject    body { reason, rejected_by? }
-//!   POST /journals/:id/void      body { voided_by?, reason }
+//!   POST /journals/:id/approve   body {}
+//!   POST /journals/:id/reject    body { reason }
+//!   POST /journals/:id/void      body { reason }
+//!
+//! The person approving, rejecting or voiding is the authenticated principal, read from the
+//! `OrgContext` the host's org guard inserts, never a field of the body: a body could name
+//! anyone as the approver. A request without that context is refused with 401. The bodies
+//! still accept the old `approved_by` / `rejected_by` / `voided_by` fields so existing
+//! callers keep working, and ignore them.
 //!
 //! `approve` posts the journal to the ledger; `void` posts a reversal. Both flow through the
 //! audited `PostingService` core (FOR UPDATE per-account lock, idempotency, immutable ledger).
@@ -21,6 +27,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use backbone_auth::org::OrgContext;
+
 use crate::application::service::journal_workflow_service::{
     JournalWorkflowError, JournalWorkflowService,
 };
@@ -31,17 +39,20 @@ pub struct CompanyQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct ApproveBody {
+    /// Ignored: the approver is the authenticated principal.
     pub approved_by: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RejectBody {
     pub reason: String,
+    /// Ignored: the rejecter is the authenticated principal.
     pub rejected_by: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct VoidBody {
+    /// Ignored: the voider is the authenticated principal.
     pub voided_by: Option<Uuid>,
     pub reason: String,
 }
@@ -88,28 +99,36 @@ async fn submit(
     }
 }
 
+/// The person acting: the org guard's authenticated principal.
+fn actor(org: &OrgContext) -> Option<Uuid> {
+    Uuid::parse_str(&org.user_id).ok()
+}
+
 async fn approve(
     State(svc): State<Arc<JournalWorkflowService>>,
+    org: OrgContext,
     Path(id): Path<Uuid>,
-    Json(body): Json<ApproveBody>,
+    Json(_body): Json<ApproveBody>,
 ) -> impl IntoResponse {
-    run_approve(svc, id, body.approved_by).await
+    run_approve(svc, id, actor(&org)).await
 }
 
 async fn reject(
     State(svc): State<Arc<JournalWorkflowService>>,
+    org: OrgContext,
     Path(id): Path<Uuid>,
     Json(body): Json<RejectBody>,
 ) -> impl IntoResponse {
-    run_reject(svc, id, body.reason, body.rejected_by).await
+    run_reject(svc, id, body.reason, actor(&org)).await
 }
 
 async fn void(
     State(svc): State<Arc<JournalWorkflowService>>,
+    org: OrgContext,
     Path(id): Path<Uuid>,
     Json(body): Json<VoidBody>,
 ) -> impl IntoResponse {
-    run_void(svc, id, body.voided_by, body.reason).await
+    run_void(svc, id, actor(&org), body.reason).await
 }
 
 /// Shared execution for approve (open + protected variants).
@@ -171,7 +190,8 @@ async fn run_void(
     }
 }
 
-/// Route composer for the manual-journal workflow endpoints.
+/// Route composer for the manual-journal workflow endpoints. Mount it behind the host's org
+/// guard: approve, reject and void read the acting user from its `OrgContext`.
 pub fn create_journal_workflow_routes(service: Arc<JournalWorkflowService>) -> Router {
     Router::new()
         .route("/journals/:id/submit", post(submit))

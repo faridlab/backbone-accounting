@@ -795,3 +795,63 @@ async fn gc11_header_account() {
         .await;
     assert_rejected_no_write("GC-11", res, "non_postable_account", &pool, &a).await;
 }
+
+// ── the poster is the session's principal, never a field of the request body ──
+
+#[tokio::test]
+async fn the_posting_route_records_the_principal_and_refuses_a_request_with_none() {
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let pool = pool().await;
+    let (company, a) = seed_coa(&pool).await;
+    let router = backbone_accounting::presentation::http::create_posting_routes(std::sync::Arc::new(
+        PostingService::new(std::sync::Arc::new(
+            backbone_accounting::infrastructure::persistence::SqlxPostingRepository::new(pool.clone()),
+        )),
+    ));
+    let (poster, forged) = (Uuid::new_v4(), Uuid::new_v4());
+    let body = serde_json::json!({
+        "source_type": "manual",
+        "source_id": Uuid::new_v4(),
+        "posting_date": posting_date(company),
+        "posted_by": forged,
+        "lines": [
+            { "account_id": a["1100"], "debit": "1000.00" },
+            { "account_id": a["4000"], "credit": "1000.00" },
+        ],
+    });
+    let send = |user: Option<Uuid>| {
+        let mut req = axum::http::Request::post("/accounting/posts")
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(body.to_string()))
+            .unwrap();
+        if let Some(user) = user {
+            req.extensions_mut().insert(backbone_auth::org::OrgContext {
+                acting_unit_id: Uuid::new_v4(),
+                entitled_units: vec![],
+                legacy_company_id: None,
+                user_id: user.to_string(),
+            });
+        }
+        router.clone().oneshot(req)
+    };
+
+    let anonymous = send(None).await.unwrap();
+    assert_eq!(anonymous.status(), axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(journal_count(&pool, &a).await, 0, "nothing posted");
+
+    let resp = send(Some(poster)).await.unwrap();
+    assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    let bytes = http_body_util::BodyExt::collect(resp.into_body()).await.unwrap().to_bytes();
+    let journal: Uuid = serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()["journal_id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let posted_by: Option<Uuid> = sqlx::query_scalar("SELECT posted_by FROM accounting.journals WHERE id=$1")
+        .bind(journal)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(posted_by, Some(poster), "the poster is the principal");
+}
