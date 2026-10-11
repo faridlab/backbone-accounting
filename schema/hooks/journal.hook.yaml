@@ -16,6 +16,7 @@ version: 2
 state_machines:
   - entity: Journal
     field: status
+    verbs: hand
     initial: draft
     states: [draft, pending_approval, approved, rejected, posted, voided]
     transitions:

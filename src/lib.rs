@@ -341,7 +341,7 @@ impl AccountingModuleBuilder {
 
         // Journal service
         let journal_repository = Arc::new(JournalRepository::new(db_pool.clone()));
-        let journal_service = Arc::new(JournalService::with_repository(journal_repository.clone()));
+        let journal_service = Arc::new(JournalService::with_repository(journal_repository.clone()).with_guard(Arc::new(crate::application::service::JournalRowRules)));
 
         // JournalLine service
         let journal_line_repository = Arc::new(JournalLineRepository::new(db_pool.clone()));

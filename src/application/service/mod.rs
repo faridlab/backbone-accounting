@@ -41,6 +41,7 @@ pub use reconciliation_service::ReconciliationService;
 pub use reconciliation_item_service::ReconciliationItemService;
 pub use full_reconcile_service::FullReconcileService;
 pub use partial_reconcile_service::PartialReconcileService;
+pub use journal_service::JournalRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

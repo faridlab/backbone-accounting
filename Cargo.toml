@@ -1,6 +1,6 @@
 [package]
 name = "backbone-accounting"
-version = "0.11.1"
+version = "0.11.2"
 edition = "2021"
 description = "GL, journals, ledger, reconciliation (extracted from bersihir)"
 license = "MIT OR Apache-2.0"
@@ -12,7 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Backbone Framework CORE dependencies
-backbone-core = { version = "3.0.0", features = ["postgres"] }
+backbone-core = { version = "3.7.0", features = ["postgres"] }
 backbone-orm = { version = "3.0.0" }
 backbone-auth = { version = "3.0.0", features = ["axum"] }
 backbone-messaging = { version = "3.0.0" }
