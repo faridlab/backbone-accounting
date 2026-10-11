@@ -20,8 +20,10 @@ pub enum PostingSourceType {
     Payroll,
     Maintenance,
     Equity,
-    Manual,
     Reconciliation,
+    GatewayFee,
+    FinalSettlement,
+    Manual,
 }
 
 impl std::fmt::Display for PostingSourceType {
@@ -38,8 +40,10 @@ impl std::fmt::Display for PostingSourceType {
             Self::Payroll => write!(f, "payroll"),
             Self::Maintenance => write!(f, "maintenance"),
             Self::Equity => write!(f, "equity"),
-            Self::Manual => write!(f, "manual"),
             Self::Reconciliation => write!(f, "reconciliation"),
+            Self::GatewayFee => write!(f, "gateway_fee"),
+            Self::FinalSettlement => write!(f, "final_settlement"),
+            Self::Manual => write!(f, "manual"),
         }
     }
 }
@@ -60,8 +64,10 @@ impl FromStr for PostingSourceType {
             "payroll" => Ok(Self::Payroll),
             "maintenance" => Ok(Self::Maintenance),
             "equity" => Ok(Self::Equity),
-            "manual" => Ok(Self::Manual),
             "reconciliation" => Ok(Self::Reconciliation),
+            "gateway_fee" => Ok(Self::GatewayFee),
+            "final_settlement" => Ok(Self::FinalSettlement),
+            "manual" => Ok(Self::Manual),
             _ => Err(format!("Unknown PostingSourceType variant: {}", s)),
         }
     }

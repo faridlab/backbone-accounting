@@ -236,10 +236,14 @@ enums:
         description: "Asset maintenance visit cost (parts + labor)"
       - name: equity
         description: "Cap table + dividends (share issue/buyback, dividend declare/pay)"
-      - name: manual
-        description: "Manual posting"
       - name: reconciliation
         description: "Reconciliation-generated move (exchange difference; later CABA)"
+      - name: gateway_fee
+        description: "Payment gateway fee booked when a provider-notified charge settles"
+      - name: final_settlement
+        description: "Offboarding final settlement: the leaver's last pay (severance, leave encashment)"
+      - name: manual
+        description: "Manual posting"
 
   # ---------------------------------------------------------------------------
   # Posting Type

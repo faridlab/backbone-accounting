@@ -98,6 +98,7 @@ user_owned:
   - "tests/emv_qr_cases.rs"
   - "tests/check_printing_cases.rs"
   - "tests/tax_tag_repair_cases.rs"
+  - "tests/posting_source_cases.rs"
   - "tests/features/**"
 
   # Hand-authored module documentation (PRD/BRD/FSD, business flows, ADRs).
