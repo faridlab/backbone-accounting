@@ -5,5 +5,7 @@
 pub mod persistence;
 
 // <<< CUSTOM
-pub mod messaging;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

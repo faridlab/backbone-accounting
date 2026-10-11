@@ -37,6 +37,7 @@ pub use full_reconcile_domain_policy::FullReconcileDomainPolicy;
 pub use partial_reconcile_domain_policy::PartialReconcileDomainPolicy;
 
 // <<< CUSTOM
-pub mod posting_rules;
-pub mod reconcile_rules;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

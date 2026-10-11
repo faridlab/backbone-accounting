@@ -23,14 +23,6 @@ mod partial_reconcile_repository;
 
 // Custom persistence modules
 // <<< CUSTOM
-pub mod bank_reconciliation_repository;
-pub mod chart_install_repository;
-pub mod hierarchy_repository;
-pub mod journal_workflow_repository;
-pub mod period_close_repository;
-pub mod posting_repository;
-pub mod reconcile_graph_repository;
-pub mod reporting_repository;
 // END CUSTOM
 
 // Re-exports
@@ -60,12 +52,7 @@ pub use backbone_orm::repository::{
 
 // Re-export custom persistence types
 // <<< CUSTOM
-pub use bank_reconciliation_repository::SqlxBankReconciliationRepository;
-pub use chart_install_repository::SqlxChartInstallRepository;
-pub use hierarchy_repository::SqlxHierarchyRepository;
-pub use journal_workflow_repository::SqlxJournalWorkflowRepository;
-pub use period_close_repository::SqlxPeriodCloseRepository;
-pub use posting_repository::SqlxPostingRepository;
-pub use reconcile_graph_repository::SqlxReconcileGraphRepository;
-pub use reporting_repository::SqlxReportingRepository;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

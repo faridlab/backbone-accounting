@@ -15,8 +15,7 @@ pub use specifications::*;
 pub use entity::*;
 
 // <<< CUSTOM
-pub mod chart_dataset;
-pub mod emv_qr;
-pub mod gl_posting;
-pub mod reconcile_graph;
 // END CUSTOM
+
+// This directory's extension (hand-written; ADR-0031).
+include!("mod.ext.rs");

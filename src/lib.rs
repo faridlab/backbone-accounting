@@ -27,6 +27,16 @@ pub mod exports;
 // <<< CUSTOM MODULES
 // END CUSTOM
 
+// The module's extension (hand-written; ADR-0031).
+#[path = "lib.ext.rs"]
+mod lib_ext;
+pub use lib_ext::*;
+/// This crate's module and builder under fixed names, for the extension's `impl` blocks.
+#[allow(dead_code)]
+pub(crate) type ThisModule = AccountingModule;
+#[allow(dead_code)]
+pub(crate) type ThisModuleBuilder = AccountingModuleBuilder;
+
 // Re-exports for convenience - Domain entities
 pub use domain::entity::*;
 
@@ -90,35 +100,61 @@ pub struct AccountingModule {
     pub(crate) reconciliation_item_service: Arc<ReconciliationItemService>,
     pub(crate) full_reconcile_service: Arc<FullReconcileService>,
     pub(crate) partial_reconcile_service: Arc<PartialReconcileService>,
+    /// The module's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    pub(crate) ext: ModuleExt,
     // <<< CUSTOM FIELDS
-    pub(crate) db_pool: PgPool,
-    pub(crate) reconcile_write_service:
-        Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>,
-    /// The check printing surface: per-bank-journal check-number sequences and
-    /// the printed-check registry.
-    pub(crate) check_printing_service:
-        Arc<crate::application::service::check_printing_service::CheckPrintingService>,
-    /// The EMV(QRCPS)/QRIS display surface: merchant QR configuration and the
-    /// invoice payload render.
-    pub(crate) emv_qr_service:
-        Arc<crate::application::service::emv_qr_service::EmvQrService>,
-    /// The tax-tag legal-change repair verb and its audit ledger read.
-    pub(crate) tax_tag_repair_service:
-        Arc<crate::application::service::tax_tag_repair_service::TaxTagRepairService>,
-    /// Host-implemented cash-basis tax deferral lookup, kept so post-build
-    /// service variants (e.g. the exchange-account one) keep the flip wired.
-    pub(crate) deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
-    /// Host-implemented budget control, kept so every posting path the host
-    /// builds from this module (the HTTP posting verb, the journal workflow,
-    /// the period close) can arm the consult from one registration.
-    pub(crate) budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
-    /// Chart install engine over the datasets registered via `with_chart_dataset`.
-    pub(crate) chart_install_service:
-        Arc<crate::application::service::chart_install_service::ChartInstallService>,
-    /// On-the-fly financial reports (TB tree, BS, P&L, GL, partner ledger, aged AR/AP).
-    pub(crate) reporting_service:
-        Arc<crate::application::service::reporting_service::ReportingService>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for AccountingModule {
+    type Target = ModuleExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for AccountingModule {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
+}
+
+/// What the extension's `build` hook receives from the generated build (ADR-0031).
+#[allow(dead_code)]
+pub(crate) struct ModuleParts<'a> {
+    pub(crate) db_pool: &'a PgPool,
+    pub(crate) account_service: &'a Arc<AccountService>,
+    pub(crate) account_repository: &'a Arc<AccountRepository>,
+    pub(crate) accounting_post_service: &'a Arc<AccountingPostService>,
+    pub(crate) accounting_post_repository: &'a Arc<AccountingPostRepository>,
+    pub(crate) cost_center_service: &'a Arc<CostCenterService>,
+    pub(crate) cost_center_repository: &'a Arc<CostCenterRepository>,
+    pub(crate) emv_qr_config_service: &'a Arc<EmvQrConfigService>,
+    pub(crate) emv_qr_config_repository: &'a Arc<EmvQrConfigRepository>,
+    pub(crate) bank_check_sequence_service: &'a Arc<BankCheckSequenceService>,
+    pub(crate) bank_check_sequence_repository: &'a Arc<BankCheckSequenceRepository>,
+    pub(crate) printed_check_service: &'a Arc<PrintedCheckService>,
+    pub(crate) printed_check_repository: &'a Arc<PrintedCheckRepository>,
+    pub(crate) tax_tag_repair_run_service: &'a Arc<TaxTagRepairRunService>,
+    pub(crate) tax_tag_repair_run_repository: &'a Arc<TaxTagRepairRunRepository>,
+    pub(crate) financial_statement_service: &'a Arc<FinancialStatementService>,
+    pub(crate) financial_statement_repository: &'a Arc<FinancialStatementRepository>,
+    pub(crate) fiscal_period_service: &'a Arc<FiscalPeriodService>,
+    pub(crate) fiscal_period_repository: &'a Arc<FiscalPeriodRepository>,
+    pub(crate) journal_service: &'a Arc<JournalService>,
+    pub(crate) journal_repository: &'a Arc<JournalRepository>,
+    pub(crate) journal_line_service: &'a Arc<JournalLineService>,
+    pub(crate) journal_line_repository: &'a Arc<JournalLineRepository>,
+    pub(crate) ledger_service: &'a Arc<LedgerService>,
+    pub(crate) ledger_repository: &'a Arc<LedgerRepository>,
+    pub(crate) reconciliation_service: &'a Arc<ReconciliationService>,
+    pub(crate) reconciliation_repository: &'a Arc<ReconciliationRepository>,
+    pub(crate) reconciliation_item_service: &'a Arc<ReconciliationItemService>,
+    pub(crate) reconciliation_item_repository: &'a Arc<ReconciliationItemRepository>,
+    pub(crate) full_reconcile_service: &'a Arc<FullReconcileService>,
+    pub(crate) full_reconcile_repository: &'a Arc<FullReconcileRepository>,
+    pub(crate) partial_reconcile_service: &'a Arc<PartialReconcileService>,
+    pub(crate) partial_reconcile_repository: &'a Arc<PartialReconcileRepository>,
 }
 
 impl AccountingModule {
@@ -229,110 +265,29 @@ impl AccountingModule {
     }
 
     // <<< CUSTOM METHODS
-    /// The registered budget-control port, if any — the single registration a
-    /// host threads into every `PostingService` it builds from this module
-    /// (`.with_budget_control_if_set(m.budget_control())`), so the HTTP
-    /// posting verb, the journal workflow, and the period close all consult
-    /// the same control.
-    pub fn budget_control(
-        &self,
-    ) -> Option<Arc<dyn crate::domain::repositories::BudgetControlPort>> {
-        self.budget_control.clone()
-    }
-
-    /// The on-the-fly financial reports (Trial Balance tree, Balance Sheet, Income
-    /// Statement, General Ledger, Partner Ledger, Aged AR/AP). Read-only; scoped reads.
-    pub fn reporting_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::reporting_service::ReportingService> {
-        self.reporting_service.clone()
-    }
-
-    /// The reconciliation write service — the ONLY sanctioned writer of the
-    /// reconciliation graph (guards + CLAMP + side-effecting unlink). The graph tables
-    /// carry no CRUD surface anywhere; `guarded_routes` mounts its verb routes.
-    pub fn reconcile_write_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>
-    {
-        self.reconcile_write_service.clone()
-    }
-
-    /// Build a reconcile write service with the FX (exchange-difference) account
-    /// configured. Without one, any rate divergence that demands an exchange move fails
-    /// closed (`exchange_account_unconfigured`) — normal single-currency posts never
-    /// generate one, so the default service is complete for them.
-    pub fn reconcile_write_service_with_exchange_account(
-        &self,
-        exchange_account_id: uuid::Uuid,
-    ) -> std::sync::Arc<crate::application::service::reconcile_write_service::ReconcileWriteService>
-    {
-        std::sync::Arc::new(
-            crate::application::service::reconcile_write_service::ReconcileWriteService::new(
-                std::sync::Arc::new(
-                    crate::infrastructure::persistence::reconcile_graph_repository::SqlxReconcileGraphRepository::new(),
-                ),
-                std::sync::Arc::new(
-                    crate::infrastructure::persistence::posting_repository::SqlxPostingRepository::new(
-                        self.db_pool.clone(),
-                    ),
-                ),
-                self.db_pool.clone(),
-                Some(exchange_account_id),
-            )
-            .with_deferred_tax_if_set(self.deferred_tax.clone()),
-        )
-    }
-
-    /// The chart install engine — validates, gates, and writes a registered chart
-    /// dataset into the accounts, idempotently. The install VERB itself is
-    /// host-mounted (it orchestrates beyond this module); this handle is the engine
-    /// the host verb drives.
-    pub fn chart_install_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::chart_install_service::ChartInstallService>
-    {
-        self.chart_install_service.clone()
-    }
-
-    /// The check printing surface — sequence registration, atomic number
-    /// allocation, the printed-check registry, and voids. `guarded_routes`
-    /// mounts its verb routes; there is no CRUD path to these tables.
-    pub fn check_printing_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::check_printing_service::CheckPrintingService>
-    {
-        self.check_printing_service.clone()
-    }
-
-    /// The EMV(QRCPS)/QRIS display surface — merchant QR configuration and the
-    /// invoice payload render (payloads are built on demand, never stored).
-    pub fn emv_qr_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::emv_qr_service::EmvQrService> {
-        self.emv_qr_service.clone()
-    }
-
-    /// The tax-tag legal-change repair verb (reason mandatory, locked periods
-    /// refused, closed periods overridden explicitly, every run audit-stamped)
-    /// plus its audit-ledger read.
-    pub fn tax_tag_repair_service(
-        &self,
-    ) -> std::sync::Arc<crate::application::service::tax_tag_repair_service::TaxTagRepairService>
-    {
-        self.tax_tag_repair_service.clone()
-    }
     // END CUSTOM
 }
 
 /// Builder for AccountingModule
 pub struct AccountingModuleBuilder {
     db_pool: Option<PgPool>,
+    /// The builder's extension state (`lib.ext.rs`); its fields read through `Deref`.
+    ext: ModuleBuilderExt,
     // <<< CUSTOM BUILDER FIELDS
-    deferred_tax: Option<Arc<dyn crate::domain::repositories::DeferredTaxLookup>>,
-    budget_control: Option<Arc<dyn crate::domain::repositories::BudgetControlPort>>,
-    chart_datasets: Vec<Arc<crate::domain::chart_dataset::ChartDataset>>,
     // END CUSTOM
+}
+
+impl std::ops::Deref for AccountingModuleBuilder {
+    type Target = ModuleBuilderExt;
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
+}
+
+impl std::ops::DerefMut for AccountingModuleBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 impl AccountingModuleBuilder {
@@ -340,10 +295,8 @@ impl AccountingModuleBuilder {
     pub fn new() -> Self {
         Self {
             db_pool: None,
+            ext: Default::default(),
             // <<< CUSTOM BUILDER DEFAULTS
-            deferred_tax: None,
-            budget_control: None,
-            chart_datasets: Vec::new(),
             // END CUSTOM
         }
     }
@@ -355,43 +308,6 @@ impl AccountingModuleBuilder {
     }
 
     // <<< CUSTOM - custom builder methods
-    /// Register a chart-of-accounts dataset installable through the chart install
-    /// engine. Datasets are data (commonly shipped by an l10n module); registering
-    /// one makes it listable via `GET /accounting/charts` and installable by the
-    /// host-mounted install verb.
-    pub fn with_chart_dataset(
-        mut self,
-        dataset: Arc<crate::domain::chart_dataset::ChartDataset>,
-    ) -> Self {
-        self.chart_datasets.push(dataset);
-        self
-    }
-
-    /// Wire the host's cash-basis tax deferral lookup: partial reconciliations
-    /// landing on receivable/payable lines flip deferred (on_payment) tax
-    /// pro-rata from the transition account onto the real tax account. Hosts
-    /// without a tax module leave it unset — no flips, everything else works.
-    pub fn with_deferred_tax(
-        mut self,
-        port: Arc<dyn crate::domain::repositories::DeferredTaxLookup>,
-    ) -> Self {
-        self.deferred_tax = Some(port);
-        self
-    }
-
-    /// Wire the host's budget control: postings through the GL-posting
-    /// chokepoint are checked against confirmed budget positions (account x
-    /// cost center x fiscal period) after the pure double-entry rules pass.
-    /// Warn-enforcement breaches log and proceed; block-enforcement breaches
-    /// refuse the posting. Hosts without a budget module leave it unset — no
-    /// check, everything else works (fail-open).
-    pub fn with_budget_control(
-        mut self,
-        port: Arc<dyn crate::domain::repositories::BudgetControlPort>,
-    ) -> Self {
-        self.budget_control = Some(port);
-        self
-    }
     // END CUSTOM
 
     /// Build the module with configured dependencies
@@ -464,64 +380,44 @@ impl AccountingModuleBuilder {
         let partial_reconcile_service = Arc::new(PartialReconcileService::with_repository(partial_reconcile_repository.clone()));
 
         // <<< CUSTOM
-        // Reconciliation write service: graph port + posting port (reversals of
-        // generated moves) over the shared pool; no FX account by default (fail-closed).
-        let reconcile_graph_repository = std::sync::Arc::new(
-            crate::infrastructure::persistence::reconcile_graph_repository::SqlxReconcileGraphRepository::new(),
-        );
-        let reconcile_posting_repository = std::sync::Arc::new(
-            crate::infrastructure::persistence::posting_repository::SqlxPostingRepository::new(
-                db_pool.clone(),
-            ),
-        );
-        let reconcile_write_service = std::sync::Arc::new(
-            crate::application::service::reconcile_write_service::ReconcileWriteService::new(
-                reconcile_graph_repository,
-                reconcile_posting_repository,
-                db_pool.clone(),
-                None,
-            )
-            .with_deferred_tax_if_set(self.deferred_tax.clone()),
-        );
-        // Chart install engine: datasets registered by the host drive idempotent
-        // chart installs onto fresh companies (provenance columns identify own rows).
-        let chart_install_service = std::sync::Arc::new(
-            crate::application::service::chart_install_service::ChartInstallService::new(
-                std::sync::Arc::new(
-                    crate::infrastructure::persistence::chart_install_repository::SqlxChartInstallRepository::new(),
-                ),
-                db_pool.clone(),
-                self.chart_datasets,
-            ),
-        );
-        // Financial reports: computed on the fly over the scoped ledger reads.
-        let reporting_service = std::sync::Arc::new(
-            crate::application::service::reporting_service::ReportingService::new(
-                std::sync::Arc::new(
-                    crate::infrastructure::persistence::reporting_repository::SqlxReportingRepository::new(
-                        db_pool.clone(),
-                    ),
-                ),
-            ),
-        );
-        // Check printing: per-bank-journal number sequences + the printed-check
-        // registry, all writes through the guarded verb set.
-        let check_printing_service = std::sync::Arc::new(
-            crate::application::service::check_printing_service::CheckPrintingService::new(
-                db_pool.clone(),
-            ),
-        );
-        // EMV(QRCPS)/QRIS display: merchant QR config + invoice payload render.
-        let emv_qr_service = std::sync::Arc::new(
-            crate::application::service::emv_qr_service::EmvQrService::new(db_pool.clone()),
-        );
-        // Tax-tag legal-change repair verb + its audit ledger read.
-        let tax_tag_repair_service = std::sync::Arc::new(
-            crate::application::service::tax_tag_repair_service::TaxTagRepairService::new(
-                db_pool.clone(),
-            ),
-        );
         // END CUSTOM
+
+        // The extension builds its own state from what the generated build made.
+        let ext = self.ext.build(&ModuleParts {
+            db_pool: &db_pool,
+            account_service: &account_service,
+            account_repository: &account_repository,
+            accounting_post_service: &accounting_post_service,
+            accounting_post_repository: &accounting_post_repository,
+            cost_center_service: &cost_center_service,
+            cost_center_repository: &cost_center_repository,
+            emv_qr_config_service: &emv_qr_config_service,
+            emv_qr_config_repository: &emv_qr_config_repository,
+            bank_check_sequence_service: &bank_check_sequence_service,
+            bank_check_sequence_repository: &bank_check_sequence_repository,
+            printed_check_service: &printed_check_service,
+            printed_check_repository: &printed_check_repository,
+            tax_tag_repair_run_service: &tax_tag_repair_run_service,
+            tax_tag_repair_run_repository: &tax_tag_repair_run_repository,
+            financial_statement_service: &financial_statement_service,
+            financial_statement_repository: &financial_statement_repository,
+            fiscal_period_service: &fiscal_period_service,
+            fiscal_period_repository: &fiscal_period_repository,
+            journal_service: &journal_service,
+            journal_repository: &journal_repository,
+            journal_line_service: &journal_line_service,
+            journal_line_repository: &journal_line_repository,
+            ledger_service: &ledger_service,
+            ledger_repository: &ledger_repository,
+            reconciliation_service: &reconciliation_service,
+            reconciliation_repository: &reconciliation_repository,
+            reconciliation_item_service: &reconciliation_item_service,
+            reconciliation_item_repository: &reconciliation_item_repository,
+            full_reconcile_service: &full_reconcile_service,
+            full_reconcile_repository: &full_reconcile_repository,
+            partial_reconcile_service: &partial_reconcile_service,
+            partial_reconcile_repository: &partial_reconcile_repository,
+        })?;
 
         Ok(AccountingModule {
             account_service,
@@ -540,16 +436,8 @@ impl AccountingModuleBuilder {
             reconciliation_item_service,
             full_reconcile_service,
             partial_reconcile_service,
+            ext,
             // <<< CUSTOM
-            db_pool,
-            reconcile_write_service,
-            deferred_tax: self.deferred_tax,
-            budget_control: self.budget_control,
-            chart_install_service,
-            reporting_service,
-            check_printing_service,
-            emv_qr_service,
-            tax_tag_repair_service,
             // END CUSTOM
         })
     }
