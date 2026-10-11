@@ -32,5 +32,3 @@ pub type CostCenterService = GenericCrudService<
     CostCenterRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

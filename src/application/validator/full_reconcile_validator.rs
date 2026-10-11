@@ -14,10 +14,6 @@ pub type FullReconcileValidator = EntityValidator<FullReconcile>;
 /// Build a validator for FullReconcile with all schema-defined field rules.
 pub fn full_reconcile_validator() -> FullReconcileValidator {
     EntityValidator::new()
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
         // No schema-derived rules — add custom rules above.
 }
 
-// <<< CUSTOM
-// END CUSTOM

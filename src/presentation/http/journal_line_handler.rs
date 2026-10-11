@@ -364,3 +364,4 @@ pub fn create_journal_line_history_route(pool: sqlx::PgPool) -> axum::Router {
         .route("/journal_lines/:id/history", axum::routing::get(journal_line_history))
         .with_state(pool)
 }
+

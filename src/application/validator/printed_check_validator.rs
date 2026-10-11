@@ -19,9 +19,5 @@ pub fn printed_check_validator() -> PrintedCheckValidator {
         .rule(RequiredString::new("check_number", |e: &PrintedCheck| &e.check_number))
         .rule(OptionalNotBlank::new("payee_name", |e: &PrintedCheck| e.payee_name.as_deref()))
         .rule(RequiredString::new("status", |e: &PrintedCheck| &e.status))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

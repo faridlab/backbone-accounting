@@ -32,5 +32,3 @@ pub type EmvQrConfigService = GenericCrudService<
     EmvQrConfigRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

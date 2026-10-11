@@ -22,9 +22,5 @@ pub fn journal_line_validator() -> JournalLineValidator {
         .rule(OptionalNotBlank::new("source_type", |e: &JournalLine| e.source_type.as_deref()))
         .rule(OptionalNotBlank::new("source_reference", |e: &JournalLine| e.source_reference.as_deref()))
         .rule(OptionalNotBlank::new("unit", |e: &JournalLine| e.unit.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

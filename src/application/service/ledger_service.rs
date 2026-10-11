@@ -32,5 +32,3 @@ pub type LedgerService = GenericCrudService<
     LedgerRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

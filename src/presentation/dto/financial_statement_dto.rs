@@ -910,7 +910,7 @@ impl backbone_core::ApplyUpdateDto<UpdateFinancialStatementDto> for FinancialSta
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to FinancialStatement here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

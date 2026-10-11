@@ -218,6 +218,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add FinancialStatement specific tests here
-// <<< CUSTOM TESTS END >>>

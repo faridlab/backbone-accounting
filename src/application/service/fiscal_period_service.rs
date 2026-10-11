@@ -32,5 +32,3 @@ pub type FiscalPeriodService = GenericCrudService<
     FiscalPeriodRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

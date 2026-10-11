@@ -18,5 +18,3 @@ use crate::domain::entity::AccountingPost;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type AccountingPostDomainPolicy = PermitAllPolicy<AccountingPost>;
 
-// <<< CUSTOM
-// END CUSTOM

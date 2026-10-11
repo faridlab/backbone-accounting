@@ -25,9 +25,5 @@ pub fn reconciliation_validator() -> ReconciliationValidator {
         .rule(OptionalNotBlank::new("statement_file_url", |e: &Reconciliation| e.statement_file_url.as_deref()))
         .rule(OptionalNotBlank::new("notes", |e: &Reconciliation| e.notes.as_deref()))
         .rule(OptionalNotBlank::new("discrepancy_notes", |e: &Reconciliation| e.discrepancy_notes.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

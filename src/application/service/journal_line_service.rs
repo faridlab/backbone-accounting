@@ -32,5 +32,3 @@ pub type JournalLineService = GenericCrudService<
     JournalLineRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

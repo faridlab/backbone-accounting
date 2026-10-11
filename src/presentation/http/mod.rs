@@ -22,8 +22,6 @@ pub mod reconciliation_item_handler;
 pub mod full_reconcile_handler;
 pub mod partial_reconcile_handler;
 
-// <<< CUSTOM
-// END CUSTOM
 
 // Re-exports
 pub use account_handler::{create_account_routes, create_account_read_routes, create_account_write_routes};
@@ -42,8 +40,6 @@ pub use reconciliation_handler::{create_reconciliation_routes, create_reconcilia
 pub use reconciliation_item_handler::{create_reconciliation_item_routes, create_reconciliation_item_read_routes, create_reconciliation_item_write_routes};
 pub use full_reconcile_handler::{create_full_reconcile_routes, create_full_reconcile_read_routes, create_full_reconcile_write_routes};
 pub use partial_reconcile_handler::{create_partial_reconcile_routes, create_partial_reconcile_read_routes, create_partial_reconcile_write_routes};
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

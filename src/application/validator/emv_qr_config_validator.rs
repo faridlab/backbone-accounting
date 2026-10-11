@@ -23,9 +23,5 @@ pub fn emv_qr_config_validator() -> EmvQrConfigValidator {
         .rule(RequiredString::new("merchant_identifier", |e: &EmvQrConfig| &e.merchant_identifier))
         .rule(RequiredString::new("currency", |e: &EmvQrConfig| &e.currency))
         .rule(RequiredString::new("initiation_method", |e: &EmvQrConfig| &e.initiation_method))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

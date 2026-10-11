@@ -328,8 +328,6 @@ impl AccountingPost {
         }
     }
 
-    // <<< CUSTOM METHODS START >>>
-    // <<< CUSTOM METHODS END >>>
 }
 
 impl super::Entity for AccountingPost {

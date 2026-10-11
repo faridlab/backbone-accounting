@@ -25,9 +25,5 @@ pub fn ledger_validator() -> LedgerValidator {
         .rule(RequiredString::new("currency", |e: &Ledger| &e.currency))
         .rule(OptionalNotBlank::new("source_type", |e: &Ledger| e.source_type.as_deref()))
         .rule(OptionalNotBlank::new("source_reference", |e: &Ledger| e.source_reference.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

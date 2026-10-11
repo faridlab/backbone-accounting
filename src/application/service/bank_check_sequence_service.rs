@@ -32,5 +32,3 @@ pub type BankCheckSequenceService = GenericCrudService<
     BankCheckSequenceRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

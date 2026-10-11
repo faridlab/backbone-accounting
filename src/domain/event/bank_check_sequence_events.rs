@@ -11,8 +11,6 @@ use crate::domain::entity::BankCheckSequence;
 /// enum containing a `Crud(CrudEvent<BankCheckSequence>)` variant.
 pub type BankCheckSequenceEvent = CrudEvent<BankCheckSequence>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

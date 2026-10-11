@@ -11,8 +11,6 @@ use crate::domain::entity::PrintedCheck;
 /// enum containing a `Crud(CrudEvent<PrintedCheck>)` variant.
 pub type PrintedCheckEvent = CrudEvent<PrintedCheck>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

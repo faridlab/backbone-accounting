@@ -759,7 +759,7 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalDto> for Journal {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to Journal here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

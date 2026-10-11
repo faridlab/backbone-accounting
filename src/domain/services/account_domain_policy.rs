@@ -18,5 +18,3 @@ use crate::domain::entity::Account;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type AccountDomainPolicy = PermitAllPolicy<Account>;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -188,3 +188,4 @@ pub fn create_protected_fiscal_period_routes<A: AuthMiddleware + Send + Sync + '
             }
         }))
 }
+

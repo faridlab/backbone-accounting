@@ -23,9 +23,5 @@ pub fn fiscal_period_validator() -> FiscalPeriodValidator {
         .rule(OptionalNotBlank::new("reopen_reason", |e: &FiscalPeriod| e.reopen_reason.as_deref()))
         .rule(NonNegative::new("journal_count", |e: &FiscalPeriod| e.journal_count as i64))
         .rule(OptionalNotBlank::new("notes", |e: &FiscalPeriod| e.notes.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

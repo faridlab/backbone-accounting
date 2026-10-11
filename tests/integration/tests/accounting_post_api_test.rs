@@ -142,6 +142,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add AccountingPost specific tests here
-// <<< CUSTOM TESTS END >>>

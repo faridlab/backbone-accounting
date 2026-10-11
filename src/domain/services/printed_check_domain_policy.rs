@@ -18,5 +18,3 @@ use crate::domain::entity::PrintedCheck;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type PrintedCheckDomainPolicy = PermitAllPolicy<PrintedCheck>;
 
-// <<< CUSTOM
-// END CUSTOM

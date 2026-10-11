@@ -18,5 +18,3 @@ use crate::domain::entity::FinancialStatement;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type FinancialStatementDomainPolicy = PermitAllPolicy<FinancialStatement>;
 
-// <<< CUSTOM
-// END CUSTOM

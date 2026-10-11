@@ -178,6 +178,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add FiscalPeriod specific tests here
-// <<< CUSTOM TESTS END >>>

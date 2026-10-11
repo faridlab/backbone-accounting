@@ -32,5 +32,3 @@ pub type AccountingPostService = GenericCrudService<
     AccountingPostRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

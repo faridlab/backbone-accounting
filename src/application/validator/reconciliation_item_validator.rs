@@ -26,9 +26,5 @@ pub fn reconciliation_item_validator() -> ReconciliationItemValidator {
         .rule(OptionalNotBlank::new("write_off_reason", |e: &ReconciliationItem| e.write_off_reason.as_deref()))
         .rule(OptionalNotBlank::new("outstanding_type", |e: &ReconciliationItem| e.outstanding_type.as_deref()))
         .rule(OptionalNotBlank::new("notes", |e: &ReconciliationItem| e.notes.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

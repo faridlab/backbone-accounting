@@ -32,5 +32,3 @@ pub type ReconciliationItemService = GenericCrudService<
     ReconciliationItemRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

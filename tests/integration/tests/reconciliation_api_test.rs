@@ -201,6 +201,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add Reconciliation specific tests here
-// <<< CUSTOM TESTS END >>>

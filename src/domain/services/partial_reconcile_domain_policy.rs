@@ -18,5 +18,3 @@ use crate::domain::entity::PartialReconcile;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type PartialReconcileDomainPolicy = PermitAllPolicy<PartialReconcile>;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -16,9 +16,5 @@ pub type BankCheckSequenceValidator = EntityValidator<BankCheckSequence>;
 pub fn bank_check_sequence_validator() -> BankCheckSequenceValidator {
     EntityValidator::new()
         .rule(RequiredString::new("numbering_mode", |e: &BankCheckSequence| &e.numbering_mode))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

@@ -19,9 +19,5 @@ pub fn cost_center_validator() -> CostCenterValidator {
         .rule(RequiredString::new("name", |e: &CostCenter| &e.name))
         .rule(OptionalNotBlank::new("description", |e: &CostCenter| e.description.as_deref()))
         .rule(NonNegative::new("level", |e: &CostCenter| e.level as i64))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

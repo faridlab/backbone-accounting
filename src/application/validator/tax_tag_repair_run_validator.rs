@@ -18,9 +18,5 @@ pub fn tax_tag_repair_run_validator() -> TaxTagRepairRunValidator {
         .rule(NonNegative::new("lines_examined", |e: &TaxTagRepairRun| e.lines_examined))
         .rule(NonNegative::new("lines_retagged", |e: &TaxTagRepairRun| e.lines_retagged))
         .rule(RequiredString::new("reason", |e: &TaxTagRepairRun| &e.reason))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

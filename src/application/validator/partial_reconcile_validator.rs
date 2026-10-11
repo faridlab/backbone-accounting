@@ -17,9 +17,5 @@ pub fn partial_reconcile_validator() -> PartialReconcileValidator {
     EntityValidator::new()
         .rule(RequiredString::new("currency", |e: &PartialReconcile| &e.currency))
         .rule(OptionalNotBlank::new("source_type", |e: &PartialReconcile| e.source_type.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

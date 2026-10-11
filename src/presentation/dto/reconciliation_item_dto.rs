@@ -645,7 +645,7 @@ impl backbone_core::ApplyUpdateDto<UpdateReconciliationItemDto> for Reconciliati
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to ReconciliationItem here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

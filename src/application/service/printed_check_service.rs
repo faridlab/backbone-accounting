@@ -32,5 +32,3 @@ pub type PrintedCheckService = GenericCrudService<
     PrintedCheckRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -364,3 +364,4 @@ pub fn create_accounting_post_history_route(pool: sqlx::PgPool) -> axum::Router 
         .route("/accounting_posts/:id/history", axum::routing::get(accounting_post_history))
         .with_state(pool)
 }
+

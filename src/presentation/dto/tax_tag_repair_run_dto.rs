@@ -351,7 +351,7 @@ impl backbone_core::ApplyUpdateDto<UpdateTaxTagRepairRunDto> for TaxTagRepairRun
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to TaxTagRepairRun here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

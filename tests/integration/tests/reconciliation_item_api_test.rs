@@ -175,6 +175,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add ReconciliationItem specific tests here
-// <<< CUSTOM TESTS END >>>

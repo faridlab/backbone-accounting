@@ -18,5 +18,3 @@ use crate::domain::entity::BankCheckSequence;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type BankCheckSequenceDomainPolicy = PermitAllPolicy<BankCheckSequence>;
 
-// <<< CUSTOM
-// END CUSTOM

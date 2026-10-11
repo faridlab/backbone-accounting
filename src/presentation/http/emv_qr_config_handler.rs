@@ -187,3 +187,4 @@ pub fn create_protected_emv_qr_config_routes<A: AuthMiddleware + Send + Sync + '
             }
         }))
 }
+

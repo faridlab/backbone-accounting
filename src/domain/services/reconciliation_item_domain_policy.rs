@@ -18,5 +18,3 @@ use crate::domain::entity::ReconciliationItem;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type ReconciliationItemDomainPolicy = PermitAllPolicy<ReconciliationItem>;
 
-// <<< CUSTOM
-// END CUSTOM

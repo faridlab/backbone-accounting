@@ -120,8 +120,6 @@ impl BankCheckSequence {
         }
     }
 
-    // <<< CUSTOM METHODS START >>>
-    // <<< CUSTOM METHODS END >>>
 }
 
 impl super::Entity for BankCheckSequence {

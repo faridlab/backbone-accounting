@@ -195,6 +195,4 @@ mod tests {
 // CUSTOM TESTS
 // ============================================================================
 
-// <<< CUSTOM TESTS START >>>
 // Add Ledger specific tests here
-// <<< CUSTOM TESTS END >>>

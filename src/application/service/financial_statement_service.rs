@@ -32,5 +32,3 @@ pub type FinancialStatementService = GenericCrudService<
     FinancialStatementRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

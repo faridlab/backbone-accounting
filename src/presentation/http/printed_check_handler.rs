@@ -188,3 +188,4 @@ pub fn create_protected_printed_check_routes<A: AuthMiddleware + Send + Sync + '
             }
         }))
 }
+

@@ -24,8 +24,6 @@ pub mod reconciliation_item_service;
 pub mod full_reconcile_service;
 pub mod partial_reconcile_service;
 
-// <<< CUSTOM
-// END CUSTOM
 
 pub use account_service::AccountService;
 pub use accounting_post_service::AccountingPostService;
@@ -43,8 +41,6 @@ pub use reconciliation_service::ReconciliationService;
 pub use reconciliation_item_service::ReconciliationItemService;
 pub use full_reconcile_service::FullReconcileService;
 pub use partial_reconcile_service::PartialReconcileService;
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

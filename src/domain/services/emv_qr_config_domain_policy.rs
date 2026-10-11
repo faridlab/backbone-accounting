@@ -18,5 +18,3 @@ use crate::domain::entity::EmvQrConfig;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type EmvQrConfigDomainPolicy = PermitAllPolicy<EmvQrConfig>;
 
-// <<< CUSTOM
-// END CUSTOM

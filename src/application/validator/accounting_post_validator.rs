@@ -22,9 +22,5 @@ pub fn accounting_post_validator() -> AccountingPostValidator {
         .rule(OptionalNotBlank::new("error_code", |e: &AccountingPost| e.error_code.as_deref()))
         .rule(OptionalNotBlank::new("error_message", |e: &AccountingPost| e.error_message.as_deref()))
         .rule(OptionalNotBlank::new("notes", |e: &AccountingPost| e.notes.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

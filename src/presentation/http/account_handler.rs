@@ -188,3 +188,4 @@ pub fn create_protected_account_routes<A: AuthMiddleware + Send + Sync + 'static
             }
         }))
 }
+

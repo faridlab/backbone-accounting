@@ -26,9 +26,5 @@ pub fn journal_validator() -> JournalValidator {
         .rule(OptionalNotBlank::new("reversal_reason", |e: &Journal| e.reversal_reason.as_deref()))
         .rule(OptionalNotBlank::new("rejection_reason", |e: &Journal| e.rejection_reason.as_deref()))
         .rule(OptionalNotBlank::new("void_reason", |e: &Journal| e.void_reason.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

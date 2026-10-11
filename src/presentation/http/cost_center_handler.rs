@@ -186,3 +186,4 @@ pub fn create_protected_cost_center_routes<A: AuthMiddleware + Send + Sync + 'st
             }
         }))
 }
+

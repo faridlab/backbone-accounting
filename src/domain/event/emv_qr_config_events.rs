@@ -11,8 +11,6 @@ use crate::domain::entity::EmvQrConfig;
 /// enum containing a `Crud(CrudEvent<EmvQrConfig>)` variant.
 pub type EmvQrConfigEvent = CrudEvent<EmvQrConfig>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

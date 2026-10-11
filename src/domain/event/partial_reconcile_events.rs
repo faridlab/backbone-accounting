@@ -11,8 +11,6 @@ use crate::domain::entity::PartialReconcile;
 /// enum containing a `Crud(CrudEvent<PartialReconcile>)` variant.
 pub type PartialReconcileEvent = CrudEvent<PartialReconcile>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

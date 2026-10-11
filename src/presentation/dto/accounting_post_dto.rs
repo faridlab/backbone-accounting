@@ -480,7 +480,7 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountingPostDto> for AccountingPost {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to AccountingPost here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

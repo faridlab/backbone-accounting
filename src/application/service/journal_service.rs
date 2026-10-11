@@ -32,5 +32,3 @@ pub type JournalService = GenericCrudService<
     JournalRepository,
 >;
 
-// <<< CUSTOM
-// END CUSTOM

@@ -36,8 +36,6 @@ pub use reconciliation_item_domain_policy::ReconciliationItemDomainPolicy;
 pub use full_reconcile_domain_policy::FullReconcileDomainPolicy;
 pub use partial_reconcile_domain_policy::PartialReconcileDomainPolicy;
 
-// <<< CUSTOM
-// END CUSTOM
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

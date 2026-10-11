@@ -21,9 +21,5 @@ pub fn financial_statement_validator() -> FinancialStatementValidator {
         .rule(OptionalNotBlank::new("pdf_url", |e: &FinancialStatement| e.pdf_url.as_deref()))
         .rule(OptionalNotBlank::new("excel_url", |e: &FinancialStatement| e.excel_url.as_deref()))
         .rule(RequiredString::new("currency", |e: &FinancialStatement| &e.currency))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

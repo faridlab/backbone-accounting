@@ -25,9 +25,5 @@ pub fn account_validator() -> AccountValidator {
         .rule(OptionalNotBlank::new("notes", |e: &Account| e.notes.as_deref()))
         .rule(OptionalNotBlank::new("chart_code", |e: &Account| e.chart_code.as_deref()))
         .rule(OptionalNotBlank::new("chart_version", |e: &Account| e.chart_version.as_deref()))
-    // <<< CUSTOM RULES
-    // END CUSTOM RULES
 }
 
-// <<< CUSTOM
-// END CUSTOM

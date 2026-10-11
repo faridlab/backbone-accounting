@@ -18,5 +18,3 @@ use crate::domain::entity::Ledger;
 /// service. `PermitAllPolicy` is the safe default until then.
 pub type LedgerDomainPolicy = PermitAllPolicy<Ledger>;
 
-// <<< CUSTOM
-// END CUSTOM

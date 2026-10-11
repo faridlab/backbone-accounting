@@ -262,7 +262,7 @@ impl backbone_core::ApplyUpdateDto<UpdateBankCheckSequenceDto> for BankCheckSequ
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to BankCheckSequence here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

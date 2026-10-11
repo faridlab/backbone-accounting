@@ -11,8 +11,6 @@ use crate::domain::entity::TaxTagRepairRun;
 /// enum containing a `Crud(CrudEvent<TaxTagRepairRun>)` variant.
 pub type TaxTagRepairRunEvent = CrudEvent<TaxTagRepairRun>;
 
-// <<< CUSTOM
-// END CUSTOM
 
 use backbone_messaging::{CrudEventPublisher, NoOpCrudEventPublisher};
 use std::sync::Arc;

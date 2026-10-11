@@ -188,3 +188,4 @@ pub fn create_protected_financial_statement_routes<A: AuthMiddleware + Send + Sy
             }
         }))
 }
+

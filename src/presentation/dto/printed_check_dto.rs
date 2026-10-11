@@ -342,7 +342,7 @@ impl backbone_core::ApplyUpdateDto<UpdatePrintedCheckDto> for PrintedCheck {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to PrintedCheck here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+

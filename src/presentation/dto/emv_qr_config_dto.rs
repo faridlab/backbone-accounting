@@ -357,7 +357,7 @@ impl backbone_core::ApplyUpdateDto<UpdateEmvQrConfigDto> for EmvQrConfig {
 // Custom DTOs
 // =============================================================================
 
-// <<< CUSTOM DTOs
 // Add custom DTOs specific to EmvQrConfig here.
 // This section will be preserved during regeneration.
 // >>> END CUSTOM DTOs
+
