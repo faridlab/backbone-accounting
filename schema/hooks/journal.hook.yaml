@@ -39,36 +39,43 @@ rules:
   - id: R1
     name: double_entry_balanced
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "sum(lines.debit) == sum(lines.credit)"
     error_code: unbalanced          # GC-5
   - id: R2
     name: minimum_two_lines
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "count(lines) >= 2"
     error_code: too_few_lines       # GC-9
   - id: R3
     name: postable_account
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "every line.account is_detail AND not is_header AND status == 'active'"
     error_code: non_postable_account # GC-11
   - id: R4a
     name: party_required_for_ar_ap
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "line.account.subtype in {accounts_receivable, accounts_payable} => line.party_id present"
     error_code: party_required      # GC-6
   - id: R4b
     name: party_only_on_ar_ap
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "line.party_id present => line.account.subtype in {accounts_receivable, accounts_payable}"
     error_code: party_not_allowed   # GC-7
   - id: R5
     name: period_open
     when: posting
+    enforced_by: "src/domain/services/posting_rules.rs::validate"
     assert: "fiscal_period(posting_date).status not in {closed, locked}"
     error_code: period_closed       # GC-10
   - id: R6
     name: idempotent_source
     when: posting
+    enforced_by: "src/application/service/posting_service.rs::post"
     unique_on: [company_id, source_type, source_id, posting_type]
     on_conflict: return_existing    # GC-8
 
