@@ -575,6 +575,7 @@ async fn gc5_unbalanced() {
     assert_rejected_no_write("GC-5", res, "unbalanced", &pool, &a).await;
 }
 
+/// GC-6, rule R4a (party_required_for_ar_ap): a receivable or payable line without a party is refused.
 #[tokio::test]
 async fn gc6_missing_party() {
     let _guard = DB_LOCK.lock().await;
@@ -601,6 +602,7 @@ async fn gc6_missing_party() {
     assert_rejected_no_write("GC-6", res, "party_required", &pool, &a).await;
 }
 
+/// GC-7, rule R4b (party_only_on_ar_ap): a party on a line of any other account is refused.
 #[tokio::test]
 async fn gc7_party_not_allowed() {
     let _guard = DB_LOCK.lock().await;
