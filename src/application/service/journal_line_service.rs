@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<JournalLine> for JournalLineRowRules
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `journal_id_required` (@required on JournalLine.journal_id)
         if (create || (update && r::changed(old.as_ref(), row, &["journal_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "journal_id")), r::not(r::is_empty(r::trim(r::field(row, "journal_id")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<JournalLine> for JournalLineRowRules
         }
         // `line_number_positive` (@positive on JournalLine.line_number)
         if (create || (update && r::changed(old.as_ref(), row, &["line_number"]))) && !r::holds(&r::gt(r::field(row, "line_number"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("line_number", "positive", "line_number must be positive"));
+            refuse.push(Violation::new("line_number", "positive", "line_number must be positive"));
         }
         // `account_id_required` (@required on JournalLine.account_id)
         if (create || (update && r::changed(old.as_ref(), row, &["account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_id")), r::not(r::is_empty(r::trim(r::field(row, "account_id")))))) {
@@ -76,7 +76,7 @@ impl backbone_core::write_guard::WriteGuard<JournalLine> for JournalLineRowRules
         }
         // `account_number_max_length` (@max(20) on JournalLine.account_number)
         if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::le(r::length(r::field(row, "account_number")), r::Val::Num(20.0_f64))) {
-            shadow.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
+            refuse.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
         }
         // `account_name_required` (@required on JournalLine.account_name)
         if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_name")), r::not(r::is_empty(r::trim(r::field(row, "account_name")))))) {
@@ -84,55 +84,55 @@ impl backbone_core::write_guard::WriteGuard<JournalLine> for JournalLineRowRules
         }
         // `account_name_max_length` (@max(100) on JournalLine.account_name)
         if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::le(r::length(r::field(row, "account_name")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("account_name", "max_length", "account_name must be at most 100 characters").with_param("max", 100_i64));
+            refuse.push(Violation::new("account_name", "max_length", "account_name must be at most 100 characters").with_param("max", 100_i64));
         }
         // `debit_amount_non_negative` (@non_negative on JournalLine.debit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["debit_amount"]))) && !r::holds(&r::ge(r::field(row, "debit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("debit_amount", "non_negative", "debit_amount must not be negative"));
+            refuse.push(Violation::new("debit_amount", "non_negative", "debit_amount must not be negative"));
         }
         // `credit_amount_non_negative` (@non_negative on JournalLine.credit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["credit_amount"]))) && !r::holds(&r::ge(r::field(row, "credit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("credit_amount", "non_negative", "credit_amount must not be negative"));
+            refuse.push(Violation::new("credit_amount", "non_negative", "credit_amount must not be negative"));
         }
         // `currency_length` (@length(3) on JournalLine.currency)
         if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+            refuse.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
         }
         // `exchange_rate_positive` (@positive on JournalLine.exchange_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["exchange_rate"]))) && !r::holds(&r::gt(r::field(row, "exchange_rate"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("exchange_rate", "positive", "exchange_rate must be positive"));
+            refuse.push(Violation::new("exchange_rate", "positive", "exchange_rate must be positive"));
         }
         // `base_debit_amount_non_negative` (@non_negative on JournalLine.base_debit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["base_debit_amount"]))) && !r::holds(&r::ge(r::field(row, "base_debit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("base_debit_amount", "non_negative", "base_debit_amount must not be negative"));
+            refuse.push(Violation::new("base_debit_amount", "non_negative", "base_debit_amount must not be negative"));
         }
         // `base_credit_amount_non_negative` (@non_negative on JournalLine.base_credit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["base_credit_amount"]))) && !r::holds(&r::ge(r::field(row, "base_credit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("base_credit_amount", "non_negative", "base_credit_amount must not be negative"));
+            refuse.push(Violation::new("base_credit_amount", "non_negative", "base_credit_amount must not be negative"));
         }
         // `description_max_length` (@max(255) on JournalLine.description)
         if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::le(r::length(r::field(row, "description")), r::Val::Num(255.0_f64))) {
-            shadow.push(Violation::new("description", "max_length", "description must be at most 255 characters").with_param("max", 255_i64));
+            refuse.push(Violation::new("description", "max_length", "description must be at most 255 characters").with_param("max", 255_i64));
         }
         // `source_type_max_length` (@max(50) on JournalLine.source_type)
         if (create || (update && r::changed(old.as_ref(), row, &["source_type"]))) && !r::holds(&r::le(r::length(r::field(row, "source_type")), r::Val::Num(50.0_f64))) {
-            shadow.push(Violation::new("source_type", "max_length", "source_type must be at most 50 characters").with_param("max", 50_i64));
+            refuse.push(Violation::new("source_type", "max_length", "source_type must be at most 50 characters").with_param("max", 50_i64));
         }
         // `source_reference_max_length` (@max(100) on JournalLine.source_reference)
         if (create || (update && r::changed(old.as_ref(), row, &["source_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "source_reference")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
+            refuse.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
         }
         // `tax_rate_range` (@range(0, 100) on JournalLine.tax_rate)
         if (create || (update && r::changed(old.as_ref(), row, &["tax_rate"]))) && !r::holds(&r::and(r::ge(r::field(row, "tax_rate"), r::Val::Num(0.0_f64)), r::le(r::field(row, "tax_rate"), r::Val::Num(100.0_f64)))) {
-            shadow.push(Violation::new("tax_rate", "range", "tax_rate must be between 0 and 100").with_param("min", 0_i64).with_param("max", 100_i64));
+            refuse.push(Violation::new("tax_rate", "range", "tax_rate must be between 0 and 100").with_param("min", 0_i64).with_param("max", 100_i64));
         }
         // `tax_base_amount_non_negative` (@non_negative on JournalLine.tax_base_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["tax_base_amount"]))) && !r::holds(&r::ge(r::field(row, "tax_base_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("tax_base_amount", "non_negative", "tax_base_amount must not be negative"));
+            refuse.push(Violation::new("tax_base_amount", "non_negative", "tax_base_amount must not be negative"));
         }
         // `unit_max_length` (@max(20) on JournalLine.unit)
         if (create || (update && r::changed(old.as_ref(), row, &["unit"]))) && !r::holds(&r::le(r::length(r::field(row, "unit")), r::Val::Num(20.0_f64))) {
-            shadow.push(Violation::new("unit", "max_length", "unit must be at most 20 characters").with_param("max", 20_i64));
+            refuse.push(Violation::new("unit", "max_length", "unit must be at most 20 characters").with_param("max", 20_i64));
         }
         GuardOutcome { refuse, shadow }
     }

@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `account_id_required` (@required on Ledger.account_id)
         if (create || (update && r::changed(old.as_ref(), row, &["account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_id")), r::not(r::is_empty(r::trim(r::field(row, "account_id")))))) {
@@ -68,7 +68,7 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         }
         // `account_number_max_length` (@max(20) on Ledger.account_number)
         if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::le(r::length(r::field(row, "account_number")), r::Val::Num(20.0_f64))) {
-            shadow.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
+            refuse.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
         }
         // `account_name_required` (@required on Ledger.account_name)
         if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_name")), r::not(r::is_empty(r::trim(r::field(row, "account_name")))))) {
@@ -76,7 +76,7 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         }
         // `account_name_max_length` (@max(100) on Ledger.account_name)
         if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::le(r::length(r::field(row, "account_name")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("account_name", "max_length", "account_name must be at most 100 characters").with_param("max", 100_i64));
+            refuse.push(Violation::new("account_name", "max_length", "account_name must be at most 100 characters").with_param("max", 100_i64));
         }
         // `journal_id_required` (@required on Ledger.journal_id)
         if (create || (update && r::changed(old.as_ref(), row, &["journal_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "journal_id")), r::not(r::is_empty(r::trim(r::field(row, "journal_id")))))) {
@@ -88,7 +88,7 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         }
         // `journal_number_max_length` (@max(30) on Ledger.journal_number)
         if (create || (update && r::changed(old.as_ref(), row, &["journal_number"]))) && !r::holds(&r::le(r::length(r::field(row, "journal_number")), r::Val::Num(30.0_f64))) {
-            shadow.push(Violation::new("journal_number", "max_length", "journal_number must be at most 30 characters").with_param("max", 30_i64));
+            refuse.push(Violation::new("journal_number", "max_length", "journal_number must be at most 30 characters").with_param("max", 30_i64));
         }
         // `journal_line_id_required` (@required on Ledger.journal_line_id)
         if (create || (update && r::changed(old.as_ref(), row, &["journal_line_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "journal_line_id")), r::not(r::is_empty(r::trim(r::field(row, "journal_line_id")))))) {
@@ -96,19 +96,19 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         }
         // `fiscal_year_min` (@min(2020) on Ledger.fiscal_year)
         if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::ge(r::field(row, "fiscal_year"), r::Val::Num(2020.0_f64))) {
-            shadow.push(Violation::new("fiscal_year", "min", "fiscal_year must be at least 2020").with_param("min", 2020_i64));
+            refuse.push(Violation::new("fiscal_year", "min", "fiscal_year must be at least 2020").with_param("min", 2020_i64));
         }
         // `fiscal_year_max` (@max(2100) on Ledger.fiscal_year)
         if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::le(r::field(row, "fiscal_year"), r::Val::Num(2100.0_f64))) {
-            shadow.push(Violation::new("fiscal_year", "max", "fiscal_year must be at most 2100").with_param("max", 2100_i64));
+            refuse.push(Violation::new("fiscal_year", "max", "fiscal_year must be at most 2100").with_param("max", 2100_i64));
         }
         // `fiscal_month_min` (@min(1) on Ledger.fiscal_month)
         if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::ge(r::field(row, "fiscal_month"), r::Val::Num(1.0_f64))) {
-            shadow.push(Violation::new("fiscal_month", "min", "fiscal_month must be at least 1").with_param("min", 1_i64));
+            refuse.push(Violation::new("fiscal_month", "min", "fiscal_month must be at least 1").with_param("min", 1_i64));
         }
         // `fiscal_month_max` (@max(12) on Ledger.fiscal_month)
         if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::le(r::field(row, "fiscal_month"), r::Val::Num(12.0_f64))) {
-            shadow.push(Violation::new("fiscal_month", "max", "fiscal_month must be at most 12").with_param("max", 12_i64));
+            refuse.push(Violation::new("fiscal_month", "max", "fiscal_month must be at most 12").with_param("max", 12_i64));
         }
         // `description_required` (@required on Ledger.description)
         if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "description")), r::not(r::is_empty(r::trim(r::field(row, "description")))))) {
@@ -116,35 +116,35 @@ impl backbone_core::write_guard::WriteGuard<Ledger> for LedgerRowRules {
         }
         // `description_max_length` (@max(500) on Ledger.description)
         if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::le(r::length(r::field(row, "description")), r::Val::Num(500.0_f64))) {
-            shadow.push(Violation::new("description", "max_length", "description must be at most 500 characters").with_param("max", 500_i64));
+            refuse.push(Violation::new("description", "max_length", "description must be at most 500 characters").with_param("max", 500_i64));
         }
-        // `reference_max_length` (@max(100) on Ledger.reference)
-        if (create || (update && r::changed(old.as_ref(), row, &["reference"]))) && !r::holds(&r::le(r::length(r::field(row, "reference")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("reference", "max_length", "reference must be at most 100 characters").with_param("max", 100_i64));
+        // `reference_max_length` (@max(255) on Ledger.reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["reference"]))) && !r::holds(&r::le(r::length(r::field(row, "reference")), r::Val::Num(255.0_f64))) {
+            refuse.push(Violation::new("reference", "max_length", "reference must be at most 255 characters").with_param("max", 255_i64));
         }
         // `currency_length` (@length(3) on Ledger.currency)
         if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
-            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+            refuse.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
         }
         // `debit_amount_non_negative` (@non_negative on Ledger.debit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["debit_amount"]))) && !r::holds(&r::ge(r::field(row, "debit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("debit_amount", "non_negative", "debit_amount must not be negative"));
+            refuse.push(Violation::new("debit_amount", "non_negative", "debit_amount must not be negative"));
         }
         // `credit_amount_non_negative` (@non_negative on Ledger.credit_amount)
         if (create || (update && r::changed(old.as_ref(), row, &["credit_amount"]))) && !r::holds(&r::ge(r::field(row, "credit_amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("credit_amount", "non_negative", "credit_amount must not be negative"));
+            refuse.push(Violation::new("credit_amount", "non_negative", "credit_amount must not be negative"));
         }
         // `sequence_number_positive` (@positive on Ledger.sequence_number)
         if (create || (update && r::changed(old.as_ref(), row, &["sequence_number"]))) && !r::holds(&r::gt(r::field(row, "sequence_number"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("sequence_number", "positive", "sequence_number must be positive"));
+            refuse.push(Violation::new("sequence_number", "positive", "sequence_number must be positive"));
         }
         // `source_type_max_length` (@max(50) on Ledger.source_type)
         if (create || (update && r::changed(old.as_ref(), row, &["source_type"]))) && !r::holds(&r::le(r::length(r::field(row, "source_type")), r::Val::Num(50.0_f64))) {
-            shadow.push(Violation::new("source_type", "max_length", "source_type must be at most 50 characters").with_param("max", 50_i64));
+            refuse.push(Violation::new("source_type", "max_length", "source_type must be at most 50 characters").with_param("max", 50_i64));
         }
         // `source_reference_max_length` (@max(100) on Ledger.source_reference)
         if (create || (update && r::changed(old.as_ref(), row, &["source_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "source_reference")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
+            refuse.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
         }
         GuardOutcome { refuse, shadow }
     }

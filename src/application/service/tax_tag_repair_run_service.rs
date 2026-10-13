@@ -56,15 +56,15 @@ impl backbone_core::write_guard::WriteGuard<TaxTagRepairRun> for TaxTagRepairRun
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `lines_examined_non_negative` (@non_negative on TaxTagRepairRun.lines_examined)
         if (create || (update && r::changed(old.as_ref(), row, &["lines_examined"]))) && !r::holds(&r::ge(r::field(row, "lines_examined"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("lines_examined", "non_negative", "lines_examined must not be negative"));
+            refuse.push(Violation::new("lines_examined", "non_negative", "lines_examined must not be negative"));
         }
         // `lines_retagged_non_negative` (@non_negative on TaxTagRepairRun.lines_retagged)
         if (create || (update && r::changed(old.as_ref(), row, &["lines_retagged"]))) && !r::holds(&r::ge(r::field(row, "lines_retagged"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("lines_retagged", "non_negative", "lines_retagged must not be negative"));
+            refuse.push(Violation::new("lines_retagged", "non_negative", "lines_retagged must not be negative"));
         }
         // `reason_required` (@required on TaxTagRepairRun.reason)
         if (create || (update && r::changed(old.as_ref(), row, &["reason"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "reason")), r::not(r::is_empty(r::trim(r::field(row, "reason")))))) {

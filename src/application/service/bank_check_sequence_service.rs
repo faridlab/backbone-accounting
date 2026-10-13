@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<BankCheckSequence> for BankCheckSequ
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `bank_account_id_required` (@required on BankCheckSequence.bank_account_id)
         if (create || (update && r::changed(old.as_ref(), row, &["bank_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bank_account_id")), r::not(r::is_empty(r::trim(r::field(row, "bank_account_id")))))) {
@@ -64,7 +64,7 @@ impl backbone_core::write_guard::WriteGuard<BankCheckSequence> for BankCheckSequ
         }
         // `next_number_positive` (@positive on BankCheckSequence.next_number)
         if (create || (update && r::changed(old.as_ref(), row, &["next_number"]))) && !r::holds(&r::gt(r::field(row, "next_number"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("next_number", "positive", "next_number must be positive"));
+            refuse.push(Violation::new("next_number", "positive", "next_number must be positive"));
         }
         GuardOutcome { refuse, shadow }
     }

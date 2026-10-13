@@ -56,7 +56,7 @@ impl backbone_core::write_guard::WriteGuard<PrintedCheck> for PrintedCheckRowRul
         };
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
-        let mut shadow = Vec::new();
+        let shadow = Vec::new();
         let mut refuse = Vec::new();
         // `bank_account_id_required` (@required on PrintedCheck.bank_account_id)
         if (create || (update && r::changed(old.as_ref(), row, &["bank_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bank_account_id")), r::not(r::is_empty(r::trim(r::field(row, "bank_account_id")))))) {
@@ -68,7 +68,7 @@ impl backbone_core::write_guard::WriteGuard<PrintedCheck> for PrintedCheckRowRul
         }
         // `payment_number_max_length` (@max(50) on PrintedCheck.payment_number)
         if (create || (update && r::changed(old.as_ref(), row, &["payment_number"]))) && !r::holds(&r::le(r::length(r::field(row, "payment_number")), r::Val::Num(50.0_f64))) {
-            shadow.push(Violation::new("payment_number", "max_length", "payment_number must be at most 50 characters").with_param("max", 50_i64));
+            refuse.push(Violation::new("payment_number", "max_length", "payment_number must be at most 50 characters").with_param("max", 50_i64));
         }
         // `check_number_required` (@required on PrintedCheck.check_number)
         if (create || (update && r::changed(old.as_ref(), row, &["check_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "check_number")), r::not(r::is_empty(r::trim(r::field(row, "check_number")))))) {
@@ -76,15 +76,15 @@ impl backbone_core::write_guard::WriteGuard<PrintedCheck> for PrintedCheckRowRul
         }
         // `check_number_max_length` (@max(20) on PrintedCheck.check_number)
         if (create || (update && r::changed(old.as_ref(), row, &["check_number"]))) && !r::holds(&r::le(r::length(r::field(row, "check_number")), r::Val::Num(20.0_f64))) {
-            shadow.push(Violation::new("check_number", "max_length", "check_number must be at most 20 characters").with_param("max", 20_i64));
+            refuse.push(Violation::new("check_number", "max_length", "check_number must be at most 20 characters").with_param("max", 20_i64));
         }
         // `amount_positive` (@positive on PrintedCheck.amount)
         if (create || (update && r::changed(old.as_ref(), row, &["amount"]))) && !r::holds(&r::gt(r::field(row, "amount"), r::Val::Num(0.0_f64))) {
-            shadow.push(Violation::new("amount", "positive", "amount must be positive"));
+            refuse.push(Violation::new("amount", "positive", "amount must be positive"));
         }
         // `payee_name_max_length` (@max(100) on PrintedCheck.payee_name)
         if (create || (update && r::changed(old.as_ref(), row, &["payee_name"]))) && !r::holds(&r::le(r::length(r::field(row, "payee_name")), r::Val::Num(100.0_f64))) {
-            shadow.push(Violation::new("payee_name", "max_length", "payee_name must be at most 100 characters").with_param("max", 100_i64));
+            refuse.push(Violation::new("payee_name", "max_length", "payee_name must be at most 100 characters").with_param("max", 100_i64));
         }
         GuardOutcome { refuse, shadow }
     }
