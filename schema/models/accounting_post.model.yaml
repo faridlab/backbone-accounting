@@ -43,7 +43,7 @@ models:
 
       source_reference:
         type: string?
-        attributes: ["@max(100)"]
+        attributes: ["@max(255)"]
         description: "Source reference number (e.g., ORD-20260301-0001)"
 
       # =======================================================================

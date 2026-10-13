@@ -6359,7 +6359,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         journal_id:
           nullable: true
           type: string
@@ -6462,7 +6462,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         journal_id:
           nullable: true
           type: string
@@ -6552,7 +6552,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         journal_id:
           nullable: true
           type: string
@@ -6631,7 +6631,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         journal_id:
           nullable: true
           type: string
@@ -9153,7 +9153,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         is_reversed:
           type: boolean
         reversed_by_id:
@@ -9341,7 +9341,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         is_reversed:
           type: boolean
         reversed_by_id:
@@ -9516,7 +9516,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         is_reversed:
           type: boolean
         reversed_by_id:
@@ -9673,7 +9673,7 @@ components:
         source_reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         is_reversed:
           type: boolean
         reversed_by_id:
@@ -10435,7 +10435,7 @@ components:
         reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         currency:
           type: string
         debit_amount:
@@ -10609,7 +10609,7 @@ components:
         reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         currency:
           type: string
         debit_amount:
@@ -10770,7 +10770,7 @@ components:
         reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         currency:
           type: string
         debit_amount:
@@ -10904,7 +10904,7 @@ components:
         reference:
           nullable: true
           type: string
-          maxLength: 100
+          maxLength: 255
         currency:
           type: string
         debit_amount:

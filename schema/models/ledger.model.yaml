@@ -107,7 +107,7 @@ models:
 
       reference:
         type: string?
-        attributes: ["@max(100)"]
+        attributes: ["@max(255)"]
         description: "External reference"
 
       # =======================================================================
