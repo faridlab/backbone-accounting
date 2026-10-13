@@ -32,3 +32,45 @@ pub type TaxTagRepairRunService = GenericCrudService<
     TaxTagRepairRunRepository,
 >;
 
+/// The rules the schema declares for TaxTagRepairRun, checked against the row a create or update
+/// would store. The generated build attaches it to [`TaxTagRepairRunService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct TaxTagRepairRunRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<TaxTagRepairRun> for TaxTagRepairRunRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, TaxTagRepairRun>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `lines_examined_non_negative` (@non_negative on TaxTagRepairRun.lines_examined)
+        if (create || (update && r::changed(old.as_ref(), row, &["lines_examined"]))) && !r::holds(&r::ge(r::field(row, "lines_examined"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("lines_examined", "non_negative", "lines_examined must not be negative"));
+        }
+        // `lines_retagged_non_negative` (@non_negative on TaxTagRepairRun.lines_retagged)
+        if (create || (update && r::changed(old.as_ref(), row, &["lines_retagged"]))) && !r::holds(&r::ge(r::field(row, "lines_retagged"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("lines_retagged", "non_negative", "lines_retagged must not be negative"));
+        }
+        // `reason_required` (@required on TaxTagRepairRun.reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["reason"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "reason")), r::not(r::is_empty(r::trim(r::field(row, "reason")))))) {
+            refuse.push(Violation::new("reason", "required", "reason is required"));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

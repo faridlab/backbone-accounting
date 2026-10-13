@@ -32,3 +32,61 @@ pub type PrintedCheckService = GenericCrudService<
     PrintedCheckRepository,
 >;
 
+/// The rules the schema declares for PrintedCheck, checked against the row a create or update
+/// would store. The generated build attaches it to [`PrintedCheckService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct PrintedCheckRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<PrintedCheck> for PrintedCheckRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, PrintedCheck>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `bank_account_id_required` (@required on PrintedCheck.bank_account_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["bank_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bank_account_id")), r::not(r::is_empty(r::trim(r::field(row, "bank_account_id")))))) {
+            refuse.push(Violation::new("bank_account_id", "required", "bank_account_id is required"));
+        }
+        // `payment_id_required` (@required on PrintedCheck.payment_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["payment_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "payment_id")), r::not(r::is_empty(r::trim(r::field(row, "payment_id")))))) {
+            refuse.push(Violation::new("payment_id", "required", "payment_id is required"));
+        }
+        // `payment_number_max_length` (@max(50) on PrintedCheck.payment_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["payment_number"]))) && !r::holds(&r::le(r::length(r::field(row, "payment_number")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("payment_number", "max_length", "payment_number must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `check_number_required` (@required on PrintedCheck.check_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["check_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "check_number")), r::not(r::is_empty(r::trim(r::field(row, "check_number")))))) {
+            refuse.push(Violation::new("check_number", "required", "check_number is required"));
+        }
+        // `check_number_max_length` (@max(20) on PrintedCheck.check_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["check_number"]))) && !r::holds(&r::le(r::length(r::field(row, "check_number")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("check_number", "max_length", "check_number must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `amount_positive` (@positive on PrintedCheck.amount)
+        if (create || (update && r::changed(old.as_ref(), row, &["amount"]))) && !r::holds(&r::gt(r::field(row, "amount"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("amount", "positive", "amount must be positive"));
+        }
+        // `payee_name_max_length` (@max(100) on PrintedCheck.payee_name)
+        if (create || (update && r::changed(old.as_ref(), row, &["payee_name"]))) && !r::holds(&r::le(r::length(r::field(row, "payee_name")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("payee_name", "max_length", "payee_name must be at most 100 characters").with_param("max", 100_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

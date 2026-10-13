@@ -32,3 +32,113 @@ pub type ReconciliationService = GenericCrudService<
     ReconciliationRepository,
 >;
 
+/// The rules the schema declares for Reconciliation, checked against the row a create or update
+/// would store. The generated build attaches it to [`ReconciliationService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct ReconciliationRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<Reconciliation> for ReconciliationRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, Reconciliation>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `reconciliation_number_required` (@required on Reconciliation.reconciliation_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["reconciliation_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "reconciliation_number")), r::not(r::is_empty(r::trim(r::field(row, "reconciliation_number")))))) {
+            refuse.push(Violation::new("reconciliation_number", "required", "reconciliation_number is required"));
+        }
+        // `reconciliation_number_max_length` (@max(30) on Reconciliation.reconciliation_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["reconciliation_number"]))) && !r::holds(&r::le(r::length(r::field(row, "reconciliation_number")), r::Val::Num(30.0_f64))) {
+            shadow.push(Violation::new("reconciliation_number", "max_length", "reconciliation_number must be at most 30 characters").with_param("max", 30_i64));
+        }
+        // `account_id_required` (@required on Reconciliation.account_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_id")), r::not(r::is_empty(r::trim(r::field(row, "account_id")))))) {
+            refuse.push(Violation::new("account_id", "required", "account_id is required"));
+        }
+        // `account_number_required` (@required on Reconciliation.account_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_number")), r::not(r::is_empty(r::trim(r::field(row, "account_number")))))) {
+            refuse.push(Violation::new("account_number", "required", "account_number is required"));
+        }
+        // `account_number_max_length` (@max(20) on Reconciliation.account_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::le(r::length(r::field(row, "account_number")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `account_name_required` (@required on Reconciliation.account_name)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_name")), r::not(r::is_empty(r::trim(r::field(row, "account_name")))))) {
+            refuse.push(Violation::new("account_name", "required", "account_name is required"));
+        }
+        // `account_name_max_length` (@max(100) on Reconciliation.account_name)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_name"]))) && !r::holds(&r::le(r::length(r::field(row, "account_name")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("account_name", "max_length", "account_name must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `total_matched_debits_non_negative` (@non_negative on Reconciliation.total_matched_debits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_matched_debits"]))) && !r::holds(&r::ge(r::field(row, "total_matched_debits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_matched_debits", "non_negative", "total_matched_debits must not be negative"));
+        }
+        // `total_matched_credits_non_negative` (@non_negative on Reconciliation.total_matched_credits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_matched_credits"]))) && !r::holds(&r::ge(r::field(row, "total_matched_credits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_matched_credits", "non_negative", "total_matched_credits must not be negative"));
+        }
+        // `matched_count_non_negative` (@non_negative on Reconciliation.matched_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["matched_count"]))) && !r::holds(&r::ge(r::field(row, "matched_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("matched_count", "non_negative", "matched_count must not be negative"));
+        }
+        // `total_unmatched_book_debits_non_negative` (@non_negative on Reconciliation.total_unmatched_book_debits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_unmatched_book_debits"]))) && !r::holds(&r::ge(r::field(row, "total_unmatched_book_debits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_unmatched_book_debits", "non_negative", "total_unmatched_book_debits must not be negative"));
+        }
+        // `total_unmatched_book_credits_non_negative` (@non_negative on Reconciliation.total_unmatched_book_credits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_unmatched_book_credits"]))) && !r::holds(&r::ge(r::field(row, "total_unmatched_book_credits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_unmatched_book_credits", "non_negative", "total_unmatched_book_credits must not be negative"));
+        }
+        // `unmatched_book_count_non_negative` (@non_negative on Reconciliation.unmatched_book_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["unmatched_book_count"]))) && !r::holds(&r::ge(r::field(row, "unmatched_book_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("unmatched_book_count", "non_negative", "unmatched_book_count must not be negative"));
+        }
+        // `total_unmatched_statement_debits_non_negative` (@non_negative on Reconciliation.total_unmatched_statement_debits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_unmatched_statement_debits"]))) && !r::holds(&r::ge(r::field(row, "total_unmatched_statement_debits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_unmatched_statement_debits", "non_negative", "total_unmatched_statement_debits must not be negative"));
+        }
+        // `total_unmatched_statement_credits_non_negative` (@non_negative on Reconciliation.total_unmatched_statement_credits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_unmatched_statement_credits"]))) && !r::holds(&r::ge(r::field(row, "total_unmatched_statement_credits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_unmatched_statement_credits", "non_negative", "total_unmatched_statement_credits must not be negative"));
+        }
+        // `unmatched_statement_count_non_negative` (@non_negative on Reconciliation.unmatched_statement_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["unmatched_statement_count"]))) && !r::holds(&r::ge(r::field(row, "unmatched_statement_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("unmatched_statement_count", "non_negative", "unmatched_statement_count must not be negative"));
+        }
+        // `statement_source_max_length` (@max(50) on Reconciliation.statement_source)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_source"]))) && !r::holds(&r::le(r::length(r::field(row, "statement_source")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("statement_source", "max_length", "statement_source must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `statement_file_url_max_length` (@max(500) on Reconciliation.statement_file_url)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_file_url"]))) && !r::holds(&r::le(r::length(r::field(row, "statement_file_url")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("statement_file_url", "max_length", "statement_file_url must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `notes_max_length` (@max(1000) on Reconciliation.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        // `discrepancy_notes_max_length` (@max(1000) on Reconciliation.discrepancy_notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["discrepancy_notes"]))) && !r::holds(&r::le(r::length(r::field(row, "discrepancy_notes")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("discrepancy_notes", "max_length", "discrepancy_notes must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

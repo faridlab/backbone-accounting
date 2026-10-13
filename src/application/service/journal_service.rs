@@ -32,9 +32,10 @@ pub type JournalService = GenericCrudService<
     JournalRepository,
 >;
 
-/// The row rules the schema declares for Journal, checked against the row a create or
-/// update would store. The generated build attaches it to [`JournalService`]. Every rule
-/// runs in shadow: a break is logged under `backbone::write_guard` and the write goes ahead.
+/// The rules the schema declares for Journal, checked against the row a create or update
+/// would store. The generated build attaches it to [`JournalService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
 pub struct JournalRowRules;
 
 #[async_trait::async_trait]
@@ -56,11 +57,88 @@ impl backbone_core::write_guard::WriteGuard<Journal> for JournalRowRules {
         let row = &row;
         let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
         let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
         // `status` belongs to a state machine: only its verbs move it
         if update && ctx.transition.is_none() && r::changed(old.as_ref(), row, &["status"]) {
             shadow.push(Violation::new("status", "state_field_verbs_only", "the state field moves only through its verbs"));
         }
-        GuardOutcome { refuse: Vec::new(), shadow }
+        // `journal_number_required` (@required on Journal.journal_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["journal_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "journal_number")), r::not(r::is_empty(r::trim(r::field(row, "journal_number")))))) {
+            refuse.push(Violation::new("journal_number", "required", "journal_number is required"));
+        }
+        // `journal_number_max_length` (@max(30) on Journal.journal_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["journal_number"]))) && !r::holds(&r::le(r::length(r::field(row, "journal_number")), r::Val::Num(30.0_f64))) {
+            shadow.push(Violation::new("journal_number", "max_length", "journal_number must be at most 30 characters").with_param("max", 30_i64));
+        }
+        // `reference_number_max_length` (@max(50) on Journal.reference_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["reference_number"]))) && !r::holds(&r::le(r::length(r::field(row, "reference_number")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("reference_number", "max_length", "reference_number must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `fiscal_year_min` (@min(2020) on Journal.fiscal_year)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::ge(r::field(row, "fiscal_year"), r::Val::Num(2020.0_f64))) {
+            shadow.push(Violation::new("fiscal_year", "min", "fiscal_year must be at least 2020").with_param("min", 2020_i64));
+        }
+        // `fiscal_year_max` (@max(2100) on Journal.fiscal_year)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::le(r::field(row, "fiscal_year"), r::Val::Num(2100.0_f64))) {
+            shadow.push(Violation::new("fiscal_year", "max", "fiscal_year must be at most 2100").with_param("max", 2100_i64));
+        }
+        // `fiscal_month_min` (@min(1) on Journal.fiscal_month)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::ge(r::field(row, "fiscal_month"), r::Val::Num(1.0_f64))) {
+            shadow.push(Violation::new("fiscal_month", "min", "fiscal_month must be at least 1").with_param("min", 1_i64));
+        }
+        // `fiscal_month_max` (@max(12) on Journal.fiscal_month)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::le(r::field(row, "fiscal_month"), r::Val::Num(12.0_f64))) {
+            shadow.push(Violation::new("fiscal_month", "max", "fiscal_month must be at most 12").with_param("max", 12_i64));
+        }
+        // `description_required` (@required on Journal.description)
+        if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "description")), r::not(r::is_empty(r::trim(r::field(row, "description")))))) {
+            refuse.push(Violation::new("description", "required", "description is required"));
+        }
+        // `description_max_length` (@max(500) on Journal.description)
+        if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::le(r::length(r::field(row, "description")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("description", "max_length", "description must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `notes_max_length` (@max(1000) on Journal.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        // `currency_length` (@length(3) on Journal.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        // `total_debit_non_negative` (@non_negative on Journal.total_debit)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_debit"]))) && !r::holds(&r::ge(r::field(row, "total_debit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_debit", "non_negative", "total_debit must not be negative"));
+        }
+        // `total_credit_non_negative` (@non_negative on Journal.total_credit)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_credit"]))) && !r::holds(&r::ge(r::field(row, "total_credit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_credit", "non_negative", "total_credit must not be negative"));
+        }
+        // `line_count_non_negative` (@non_negative on Journal.line_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["line_count"]))) && !r::holds(&r::ge(r::field(row, "line_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("line_count", "non_negative", "line_count must not be negative"));
+        }
+        // `source_type_max_length` (@max(50) on Journal.source_type)
+        if (create || (update && r::changed(old.as_ref(), row, &["source_type"]))) && !r::holds(&r::le(r::length(r::field(row, "source_type")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("source_type", "max_length", "source_type must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `source_reference_max_length` (@max(100) on Journal.source_reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["source_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "source_reference")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `reversal_reason_max_length` (@max(255) on Journal.reversal_reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["reversal_reason"]))) && !r::holds(&r::le(r::length(r::field(row, "reversal_reason")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("reversal_reason", "max_length", "reversal_reason must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `rejection_reason_max_length` (@max(500) on Journal.rejection_reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["rejection_reason"]))) && !r::holds(&r::le(r::length(r::field(row, "rejection_reason")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("rejection_reason", "max_length", "rejection_reason must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `void_reason_max_length` (@max(500) on Journal.void_reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["void_reason"]))) && !r::holds(&r::le(r::length(r::field(row, "void_reason")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("void_reason", "max_length", "void_reason must be at most 500 characters").with_param("max", 500_i64));
+        }
+        GuardOutcome { refuse, shadow }
     }
 }
 

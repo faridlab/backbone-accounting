@@ -32,3 +32,93 @@ pub type FiscalPeriodService = GenericCrudService<
     FiscalPeriodRepository,
 >;
 
+/// The rules the schema declares for FiscalPeriod, checked against the row a create or update
+/// would store. The generated build attaches it to [`FiscalPeriodService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct FiscalPeriodRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<FiscalPeriod> for FiscalPeriodRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, FiscalPeriod>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `period_code_required` (@required on FiscalPeriod.period_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["period_code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "period_code")), r::not(r::is_empty(r::trim(r::field(row, "period_code")))))) {
+            refuse.push(Violation::new("period_code", "required", "period_code is required"));
+        }
+        // `period_code_max_length` (@max(20) on FiscalPeriod.period_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["period_code"]))) && !r::holds(&r::le(r::length(r::field(row, "period_code")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("period_code", "max_length", "period_code must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `name_required` (@required on FiscalPeriod.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
+            refuse.push(Violation::new("name", "required", "name is required"));
+        }
+        // `name_max_length` (@max(50) on FiscalPeriod.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("name", "max_length", "name must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `fiscal_year_min` (@min(2020) on FiscalPeriod.fiscal_year)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::ge(r::field(row, "fiscal_year"), r::Val::Num(2020.0_f64))) {
+            shadow.push(Violation::new("fiscal_year", "min", "fiscal_year must be at least 2020").with_param("min", 2020_i64));
+        }
+        // `fiscal_year_max` (@max(2100) on FiscalPeriod.fiscal_year)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::le(r::field(row, "fiscal_year"), r::Val::Num(2100.0_f64))) {
+            shadow.push(Violation::new("fiscal_year", "max", "fiscal_year must be at most 2100").with_param("max", 2100_i64));
+        }
+        // `fiscal_quarter_min` (@min(1) on FiscalPeriod.fiscal_quarter)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_quarter"]))) && !r::holds(&r::ge(r::field(row, "fiscal_quarter"), r::Val::Num(1.0_f64))) {
+            shadow.push(Violation::new("fiscal_quarter", "min", "fiscal_quarter must be at least 1").with_param("min", 1_i64));
+        }
+        // `fiscal_quarter_max` (@max(4) on FiscalPeriod.fiscal_quarter)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_quarter"]))) && !r::holds(&r::le(r::field(row, "fiscal_quarter"), r::Val::Num(4.0_f64))) {
+            shadow.push(Violation::new("fiscal_quarter", "max", "fiscal_quarter must be at most 4").with_param("max", 4_i64));
+        }
+        // `fiscal_month_min` (@min(1) on FiscalPeriod.fiscal_month)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::ge(r::field(row, "fiscal_month"), r::Val::Num(1.0_f64))) {
+            shadow.push(Violation::new("fiscal_month", "min", "fiscal_month must be at least 1").with_param("min", 1_i64));
+        }
+        // `fiscal_month_max` (@max(12) on FiscalPeriod.fiscal_month)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::le(r::field(row, "fiscal_month"), r::Val::Num(12.0_f64))) {
+            shadow.push(Violation::new("fiscal_month", "max", "fiscal_month must be at most 12").with_param("max", 12_i64));
+        }
+        // `level_non_negative` (@non_negative on FiscalPeriod.level)
+        if (create || (update && r::changed(old.as_ref(), row, &["level"]))) && !r::holds(&r::ge(r::field(row, "level"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("level", "non_negative", "level must not be negative"));
+        }
+        // `total_debits_non_negative` (@non_negative on FiscalPeriod.total_debits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_debits"]))) && !r::holds(&r::ge(r::field(row, "total_debits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_debits", "non_negative", "total_debits must not be negative"));
+        }
+        // `total_credits_non_negative` (@non_negative on FiscalPeriod.total_credits)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_credits"]))) && !r::holds(&r::ge(r::field(row, "total_credits"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_credits", "non_negative", "total_credits must not be negative"));
+        }
+        // `journal_count_non_negative` (@non_negative on FiscalPeriod.journal_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["journal_count"]))) && !r::holds(&r::ge(r::field(row, "journal_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("journal_count", "non_negative", "journal_count must not be negative"));
+        }
+        // `notes_max_length` (@max(1000) on FiscalPeriod.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

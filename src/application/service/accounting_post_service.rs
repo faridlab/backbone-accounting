@@ -32,3 +32,73 @@ pub type AccountingPostService = GenericCrudService<
     AccountingPostRepository,
 >;
 
+/// The rules the schema declares for AccountingPost, checked against the row a create or update
+/// would store. The generated build attaches it to [`AccountingPostService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct AccountingPostRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<AccountingPost> for AccountingPostRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, AccountingPost>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `source_id_required` (@required on AccountingPost.source_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["source_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "source_id")), r::not(r::is_empty(r::trim(r::field(row, "source_id")))))) {
+            refuse.push(Violation::new("source_id", "required", "source_id is required"));
+        }
+        // `source_reference_max_length` (@max(100) on AccountingPost.source_reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["source_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "source_reference")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("source_reference", "max_length", "source_reference must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `currency_length` (@length(3) on AccountingPost.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        // `total_debit_non_negative` (@non_negative on AccountingPost.total_debit)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_debit"]))) && !r::holds(&r::ge(r::field(row, "total_debit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_debit", "non_negative", "total_debit must not be negative"));
+        }
+        // `total_credit_non_negative` (@non_negative on AccountingPost.total_credit)
+        if (create || (update && r::changed(old.as_ref(), row, &["total_credit"]))) && !r::holds(&r::ge(r::field(row, "total_credit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("total_credit", "non_negative", "total_credit must not be negative"));
+        }
+        // `retry_count_non_negative` (@non_negative on AccountingPost.retry_count)
+        if (create || (update && r::changed(old.as_ref(), row, &["retry_count"]))) && !r::holds(&r::ge(r::field(row, "retry_count"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("retry_count", "non_negative", "retry_count must not be negative"));
+        }
+        // `max_retries_non_negative` (@non_negative on AccountingPost.max_retries)
+        if (create || (update && r::changed(old.as_ref(), row, &["max_retries"]))) && !r::holds(&r::ge(r::field(row, "max_retries"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("max_retries", "non_negative", "max_retries must not be negative"));
+        }
+        // `error_code_max_length` (@max(50) on AccountingPost.error_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["error_code"]))) && !r::holds(&r::le(r::length(r::field(row, "error_code")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("error_code", "max_length", "error_code must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `error_message_max_length` (@max(1000) on AccountingPost.error_message)
+        if (create || (update && r::changed(old.as_ref(), row, &["error_message"]))) && !r::holds(&r::le(r::length(r::field(row, "error_message")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("error_message", "max_length", "error_message must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        // `notes_max_length` (@max(500) on AccountingPost.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 500 characters").with_param("max", 500_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

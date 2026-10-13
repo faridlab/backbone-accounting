@@ -32,3 +32,109 @@ pub type ReconciliationItemService = GenericCrudService<
     ReconciliationItemRepository,
 >;
 
+/// The rules the schema declares for ReconciliationItem, checked against the row a create or update
+/// would store. The generated build attaches it to [`ReconciliationItemService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct ReconciliationItemRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<ReconciliationItem> for ReconciliationItemRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, ReconciliationItem>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `reconciliation_id_required` (@required on ReconciliationItem.reconciliation_id)
+        if (create || (update && r::changed(old.as_ref(), row, &["reconciliation_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "reconciliation_id")), r::not(r::is_empty(r::trim(r::field(row, "reconciliation_id")))))) {
+            refuse.push(Violation::new("reconciliation_id", "required", "reconciliation_id is required"));
+        }
+        // `item_number_positive` (@positive on ReconciliationItem.item_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["item_number"]))) && !r::holds(&r::gt(r::field(row, "item_number"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("item_number", "positive", "item_number must be positive"));
+        }
+        // `source_required` (@required on ReconciliationItem.source)
+        if (create || (update && r::changed(old.as_ref(), row, &["source"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "source")), r::not(r::is_empty(r::trim(r::field(row, "source")))))) {
+            refuse.push(Violation::new("source", "required", "source is required"));
+        }
+        // `source_max_length` (@max(20) on ReconciliationItem.source)
+        if (create || (update && r::changed(old.as_ref(), row, &["source"]))) && !r::holds(&r::le(r::length(r::field(row, "source")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("source", "max_length", "source must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `book_reference_max_length` (@max(100) on ReconciliationItem.book_reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["book_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "book_reference")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("book_reference", "max_length", "book_reference must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `book_description_max_length` (@max(255) on ReconciliationItem.book_description)
+        if (create || (update && r::changed(old.as_ref(), row, &["book_description"]))) && !r::holds(&r::le(r::length(r::field(row, "book_description")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("book_description", "max_length", "book_description must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `book_debit_non_negative` (@non_negative on ReconciliationItem.book_debit)
+        if (create || (update && r::changed(old.as_ref(), row, &["book_debit"]))) && !r::holds(&r::ge(r::field(row, "book_debit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("book_debit", "non_negative", "book_debit must not be negative"));
+        }
+        // `book_credit_non_negative` (@non_negative on ReconciliationItem.book_credit)
+        if (create || (update && r::changed(old.as_ref(), row, &["book_credit"]))) && !r::holds(&r::ge(r::field(row, "book_credit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("book_credit", "non_negative", "book_credit must not be negative"));
+        }
+        // `statement_reference_max_length` (@max(100) on ReconciliationItem.statement_reference)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_reference"]))) && !r::holds(&r::le(r::length(r::field(row, "statement_reference")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("statement_reference", "max_length", "statement_reference must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `statement_description_max_length` (@max(255) on ReconciliationItem.statement_description)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_description"]))) && !r::holds(&r::le(r::length(r::field(row, "statement_description")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("statement_description", "max_length", "statement_description must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `statement_debit_non_negative` (@non_negative on ReconciliationItem.statement_debit)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_debit"]))) && !r::holds(&r::ge(r::field(row, "statement_debit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("statement_debit", "non_negative", "statement_debit must not be negative"));
+        }
+        // `statement_credit_non_negative` (@non_negative on ReconciliationItem.statement_credit)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_credit"]))) && !r::holds(&r::ge(r::field(row, "statement_credit"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("statement_credit", "non_negative", "statement_credit must not be negative"));
+        }
+        // `match_method_max_length` (@max(30) on ReconciliationItem.match_method)
+        if (create || (update && r::changed(old.as_ref(), row, &["match_method"]))) && !r::holds(&r::le(r::length(r::field(row, "match_method")), r::Val::Num(30.0_f64))) {
+            shadow.push(Violation::new("match_method", "max_length", "match_method must be at most 30 characters").with_param("max", 30_i64));
+        }
+        // `match_confidence_range` (@range(0, 100) on ReconciliationItem.match_confidence)
+        if (create || (update && r::changed(old.as_ref(), row, &["match_confidence"]))) && !r::holds(&r::and(r::ge(r::field(row, "match_confidence"), r::Val::Num(0.0_f64)), r::le(r::field(row, "match_confidence"), r::Val::Num(100.0_f64)))) {
+            shadow.push(Violation::new("match_confidence", "range", "match_confidence must be between 0 and 100").with_param("min", 0_i64).with_param("max", 100_i64));
+        }
+        // `difference_reason_max_length` (@max(255) on ReconciliationItem.difference_reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["difference_reason"]))) && !r::holds(&r::le(r::length(r::field(row, "difference_reason")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("difference_reason", "max_length", "difference_reason must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `adjustment_type_max_length` (@max(50) on ReconciliationItem.adjustment_type)
+        if (create || (update && r::changed(old.as_ref(), row, &["adjustment_type"]))) && !r::holds(&r::le(r::length(r::field(row, "adjustment_type")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("adjustment_type", "max_length", "adjustment_type must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `write_off_reason_max_length` (@max(255) on ReconciliationItem.write_off_reason)
+        if (create || (update && r::changed(old.as_ref(), row, &["write_off_reason"]))) && !r::holds(&r::le(r::length(r::field(row, "write_off_reason")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("write_off_reason", "max_length", "write_off_reason must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `outstanding_type_max_length` (@max(50) on ReconciliationItem.outstanding_type)
+        if (create || (update && r::changed(old.as_ref(), row, &["outstanding_type"]))) && !r::holds(&r::le(r::length(r::field(row, "outstanding_type")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("outstanding_type", "max_length", "outstanding_type must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `notes_max_length` (@max(500) on ReconciliationItem.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 500 characters").with_param("max", 500_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

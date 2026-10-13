@@ -32,3 +32,85 @@ pub type AccountService = GenericCrudService<
     AccountRepository,
 >;
 
+/// The rules the schema declares for Account, checked against the row a create or update
+/// would store. The generated build attaches it to [`AccountService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct AccountRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<Account> for AccountRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, Account>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `account_number_required` (@required on Account.account_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_number")), r::not(r::is_empty(r::trim(r::field(row, "account_number")))))) {
+            refuse.push(Violation::new("account_number", "required", "account_number is required"));
+        }
+        // `account_number_max_length` (@max(20) on Account.account_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_number"]))) && !r::holds(&r::le(r::length(r::field(row, "account_number")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("account_number", "max_length", "account_number must be at most 20 characters").with_param("max", 20_i64));
+        }
+        // `account_code_required` (@required on Account.account_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "account_code")), r::not(r::is_empty(r::trim(r::field(row, "account_code")))))) {
+            refuse.push(Violation::new("account_code", "required", "account_code is required"));
+        }
+        // `account_code_max_length` (@max(30) on Account.account_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["account_code"]))) && !r::holds(&r::le(r::length(r::field(row, "account_code")), r::Val::Num(30.0_f64))) {
+            shadow.push(Violation::new("account_code", "max_length", "account_code must be at most 30 characters").with_param("max", 30_i64));
+        }
+        // `name_required` (@required on Account.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
+            refuse.push(Violation::new("name", "required", "name is required"));
+        }
+        // `name_max_length` (@max(100) on Account.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("name", "max_length", "name must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `description_max_length` (@max(500) on Account.description)
+        if (create || (update && r::changed(old.as_ref(), row, &["description"]))) && !r::holds(&r::le(r::length(r::field(row, "description")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("description", "max_length", "description must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `level_non_negative` (@non_negative on Account.level)
+        if (create || (update && r::changed(old.as_ref(), row, &["level"]))) && !r::holds(&r::ge(r::field(row, "level"), r::Val::Num(0.0_f64))) {
+            shadow.push(Violation::new("level", "non_negative", "level must not be negative"));
+        }
+        // `path_max_length` (@max(255) on Account.path)
+        if (create || (update && r::changed(old.as_ref(), row, &["path"]))) && !r::holds(&r::le(r::length(r::field(row, "path")), r::Val::Num(255.0_f64))) {
+            shadow.push(Violation::new("path", "max_length", "path must be at most 255 characters").with_param("max", 255_i64));
+        }
+        // `currency_length` (@length(3) on Account.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        // `notes_max_length` (@max(1000) on Account.notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(1000.0_f64))) {
+            shadow.push(Violation::new("notes", "max_length", "notes must be at most 1000 characters").with_param("max", 1000_i64));
+        }
+        // `chart_code_max_length` (@max(50) on Account.chart_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["chart_code"]))) && !r::holds(&r::le(r::length(r::field(row, "chart_code")), r::Val::Num(50.0_f64))) {
+            shadow.push(Violation::new("chart_code", "max_length", "chart_code must be at most 50 characters").with_param("max", 50_i64));
+        }
+        // `chart_version_max_length` (@max(20) on Account.chart_version)
+        if (create || (update && r::changed(old.as_ref(), row, &["chart_version"]))) && !r::holds(&r::le(r::length(r::field(row, "chart_version")), r::Val::Num(20.0_f64))) {
+            shadow.push(Violation::new("chart_version", "max_length", "chart_version must be at most 20 characters").with_param("max", 20_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

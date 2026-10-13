@@ -32,3 +32,73 @@ pub type FinancialStatementService = GenericCrudService<
     FinancialStatementRepository,
 >;
 
+/// The rules the schema declares for FinancialStatement, checked against the row a create or update
+/// would store. The generated build attaches it to [`FinancialStatementService`]. A refusing rule's
+/// break answers 422; a rule in shadow is logged under `backbone::write_guard` and the
+/// write goes ahead.
+pub struct FinancialStatementRowRules;
+
+#[async_trait::async_trait]
+impl backbone_core::write_guard::WriteGuard<FinancialStatement> for FinancialStatementRowRules {
+    async fn check(
+        &self,
+        ctx: &backbone_core::write_guard::WriteCtx<'_, FinancialStatement>,
+    ) -> backbone_core::write_guard::GuardOutcome {
+        use backbone_core::row_rule as r;
+        use backbone_core::violation::Violation;
+        use backbone_core::write_guard::{GuardOutcome, WriteKind};
+        let (create, update) = (ctx.kind == WriteKind::Create, ctx.kind == WriteKind::Update);
+        let Some(after) = ctx.after.filter(|_| create || update) else {
+            return GuardOutcome::allow();
+        };
+        let Ok(row) = serde_json::to_value(after) else {
+            return GuardOutcome::allow();
+        };
+        let row = &row;
+        let old = ctx.before.and_then(|b| serde_json::to_value(b).ok());
+        let mut shadow = Vec::new();
+        let mut refuse = Vec::new();
+        // `statement_number_required` (@required on FinancialStatement.statement_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_number"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "statement_number")), r::not(r::is_empty(r::trim(r::field(row, "statement_number")))))) {
+            refuse.push(Violation::new("statement_number", "required", "statement_number is required"));
+        }
+        // `statement_number_max_length` (@max(30) on FinancialStatement.statement_number)
+        if (create || (update && r::changed(old.as_ref(), row, &["statement_number"]))) && !r::holds(&r::le(r::length(r::field(row, "statement_number")), r::Val::Num(30.0_f64))) {
+            shadow.push(Violation::new("statement_number", "max_length", "statement_number must be at most 30 characters").with_param("max", 30_i64));
+        }
+        // `name_required` (@required on FinancialStatement.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "name")), r::not(r::is_empty(r::trim(r::field(row, "name")))))) {
+            refuse.push(Violation::new("name", "required", "name is required"));
+        }
+        // `name_max_length` (@max(100) on FinancialStatement.name)
+        if (create || (update && r::changed(old.as_ref(), row, &["name"]))) && !r::holds(&r::le(r::length(r::field(row, "name")), r::Val::Num(100.0_f64))) {
+            shadow.push(Violation::new("name", "max_length", "name must be at most 100 characters").with_param("max", 100_i64));
+        }
+        // `fiscal_year_range` (@range(2020, 2100) on FinancialStatement.fiscal_year)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_year"]))) && !r::holds(&r::and(r::ge(r::field(row, "fiscal_year"), r::Val::Num(2020.0_f64)), r::le(r::field(row, "fiscal_year"), r::Val::Num(2100.0_f64)))) {
+            shadow.push(Violation::new("fiscal_year", "range", "fiscal_year must be between 2020 and 2100").with_param("min", 2020_i64).with_param("max", 2100_i64));
+        }
+        // `fiscal_month_range` (@range(1, 12) on FinancialStatement.fiscal_month)
+        if (create || (update && r::changed(old.as_ref(), row, &["fiscal_month"]))) && !r::holds(&r::and(r::ge(r::field(row, "fiscal_month"), r::Val::Num(1.0_f64)), r::le(r::field(row, "fiscal_month"), r::Val::Num(12.0_f64)))) {
+            shadow.push(Violation::new("fiscal_month", "range", "fiscal_month must be between 1 and 12").with_param("min", 1_i64).with_param("max", 12_i64));
+        }
+        // `management_notes_max_length` (@max(2000) on FinancialStatement.management_notes)
+        if (create || (update && r::changed(old.as_ref(), row, &["management_notes"]))) && !r::holds(&r::le(r::length(r::field(row, "management_notes")), r::Val::Num(2000.0_f64))) {
+            shadow.push(Violation::new("management_notes", "max_length", "management_notes must be at most 2000 characters").with_param("max", 2000_i64));
+        }
+        // `pdf_url_max_length` (@max(500) on FinancialStatement.pdf_url)
+        if (create || (update && r::changed(old.as_ref(), row, &["pdf_url"]))) && !r::holds(&r::le(r::length(r::field(row, "pdf_url")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("pdf_url", "max_length", "pdf_url must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `excel_url_max_length` (@max(500) on FinancialStatement.excel_url)
+        if (create || (update && r::changed(old.as_ref(), row, &["excel_url"]))) && !r::holds(&r::le(r::length(r::field(row, "excel_url")), r::Val::Num(500.0_f64))) {
+            shadow.push(Violation::new("excel_url", "max_length", "excel_url must be at most 500 characters").with_param("max", 500_i64));
+        }
+        // `currency_length` (@length(3) on FinancialStatement.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
+            shadow.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        GuardOutcome { refuse, shadow }
+    }
+}
+

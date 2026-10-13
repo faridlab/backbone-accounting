@@ -41,7 +41,21 @@ pub use reconciliation_service::ReconciliationService;
 pub use reconciliation_item_service::ReconciliationItemService;
 pub use full_reconcile_service::FullReconcileService;
 pub use partial_reconcile_service::PartialReconcileService;
+pub use account_service::AccountRowRules;
+pub use accounting_post_service::AccountingPostRowRules;
+pub use cost_center_service::CostCenterRowRules;
+pub use emv_qr_config_service::EmvQrConfigRowRules;
+pub use bank_check_sequence_service::BankCheckSequenceRowRules;
+pub use printed_check_service::PrintedCheckRowRules;
+pub use tax_tag_repair_run_service::TaxTagRepairRunRowRules;
+pub use financial_statement_service::FinancialStatementRowRules;
+pub use fiscal_period_service::FiscalPeriodRowRules;
 pub use journal_service::JournalRowRules;
+pub use journal_line_service::JournalLineRowRules;
+pub use ledger_service::LedgerRowRules;
+pub use reconciliation_service::ReconciliationRowRules;
+pub use reconciliation_item_service::ReconciliationItemRowRules;
+pub use partial_reconcile_service::PartialReconcileRowRules;
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");
