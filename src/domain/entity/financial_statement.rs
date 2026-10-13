@@ -778,6 +778,9 @@ impl backbone_orm::EntityRepoMeta for FinancialStatement {
     fn search_fields() -> &'static [&'static str] {
         &["statement_number", "name", "currency"]
     }
+    fn relations() -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("fiscalPeriod", "fiscal_periods", "fiscalPeriodId"), ("comparativePeriod", "fiscal_periods", "comparativePeriodId")]
+    }
 }
 
 /// Builder for FinancialStatement entity

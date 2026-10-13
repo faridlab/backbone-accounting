@@ -1,0 +1,12 @@
+-- Down: drop the declared foreign keys for accounting module
+ALTER TABLE IF EXISTS accounting.partial_reconciles DROP CONSTRAINT IF EXISTS fk_partial_reconciles_credit_move_id;
+ALTER TABLE IF EXISTS accounting.partial_reconciles DROP CONSTRAINT IF EXISTS fk_partial_reconciles_debit_move_id;
+ALTER TABLE IF EXISTS accounting.reconciliation_items DROP CONSTRAINT IF EXISTS fk_reconciliation_items_reconciliation_id;
+ALTER TABLE IF EXISTS accounting.reconciliations DROP CONSTRAINT IF EXISTS fk_reconciliations_account_id;
+ALTER TABLE IF EXISTS accounting.ledgers DROP CONSTRAINT IF EXISTS fk_ledgers_journal_line_id;
+ALTER TABLE IF EXISTS accounting.ledgers DROP CONSTRAINT IF EXISTS fk_ledgers_journal_id;
+ALTER TABLE IF EXISTS accounting.ledgers DROP CONSTRAINT IF EXISTS fk_ledgers_account_id;
+ALTER TABLE IF EXISTS accounting.journal_lines DROP CONSTRAINT IF EXISTS fk_journal_lines_account_id;
+ALTER TABLE IF EXISTS accounting.journal_lines DROP CONSTRAINT IF EXISTS fk_journal_lines_journal_id;
+ALTER TABLE IF EXISTS accounting.financial_statements DROP CONSTRAINT IF EXISTS fk_financial_statements_comparative_period_id;
+ALTER TABLE IF EXISTS accounting.financial_statements DROP CONSTRAINT IF EXISTS fk_financial_statements_fiscal_period_id;
