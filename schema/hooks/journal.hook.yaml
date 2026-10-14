@@ -23,6 +23,8 @@ state_machines:
       - { from: draft,            to: pending_approval, on: submit }
       - { from: pending_approval, to: approved,         on: approve }
       - { from: pending_approval, to: rejected,         on: reject }
+      # the reject verb also turns a draft back before it is ever submitted
+      - { from: draft,            to: rejected,         on: reject }
       - { from: approved,         to: posted,           on: post,   guard: balanced }
       - { from: draft,            to: posted,           on: post,   guard: "balanced && !requires_approval" }
       - { from: posted,           to: voided,           on: void }
