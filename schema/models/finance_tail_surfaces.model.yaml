@@ -278,10 +278,10 @@ models:
         attributes: ["@default(false)"]
         description: "True when the run counted and reported without writing"
 
-      closed_periods_overridden:
+      overridden_closed_periods:
         type: json
         attributes: ["@default('[]')"]
-        description: "The closed periods the run crossed with the override armed (audit copy; column name overridden_closed_periods)"
+        description: "The closed periods the run crossed with the override armed (audit copy)"
 
       actor:
         type: uuid?

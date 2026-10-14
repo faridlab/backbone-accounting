@@ -57,5 +57,133 @@ pub use reconciliation_service::ReconciliationRowRules;
 pub use reconciliation_item_service::ReconciliationItemRowRules;
 pub use partial_reconcile_service::PartialReconcileRowRules;
 
+/// A `AccountService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_account_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::AccountRepository>,
+) -> AccountService {
+    AccountService::with_repository(repository).with_guard(std::sync::Arc::new(AccountRowRules))
+}
+
+/// A `AccountingPostService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_accounting_post_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::AccountingPostRepository>,
+) -> AccountingPostService {
+    AccountingPostService::with_repository(repository).with_guard(std::sync::Arc::new(AccountingPostRowRules))
+}
+
+/// A `CostCenterService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_cost_center_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::CostCenterRepository>,
+) -> CostCenterService {
+    CostCenterService::with_repository(repository).with_guard(std::sync::Arc::new(CostCenterRowRules))
+}
+
+/// A `EmvQrConfigService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_emv_qr_config_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::EmvQrConfigRepository>,
+) -> EmvQrConfigService {
+    EmvQrConfigService::with_repository(repository).with_guard(std::sync::Arc::new(EmvQrConfigRowRules))
+}
+
+/// A `BankCheckSequenceService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_bank_check_sequence_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::BankCheckSequenceRepository>,
+) -> BankCheckSequenceService {
+    BankCheckSequenceService::with_repository(repository).with_guard(std::sync::Arc::new(BankCheckSequenceRowRules))
+}
+
+/// A `PrintedCheckService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_printed_check_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::PrintedCheckRepository>,
+) -> PrintedCheckService {
+    PrintedCheckService::with_repository(repository).with_guard(std::sync::Arc::new(PrintedCheckRowRules))
+}
+
+/// A `TaxTagRepairRunService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_tax_tag_repair_run_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::TaxTagRepairRunRepository>,
+) -> TaxTagRepairRunService {
+    TaxTagRepairRunService::with_repository(repository).with_guard(std::sync::Arc::new(TaxTagRepairRunRowRules))
+}
+
+/// A `FinancialStatementService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_financial_statement_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::FinancialStatementRepository>,
+) -> FinancialStatementService {
+    FinancialStatementService::with_repository(repository).with_guard(std::sync::Arc::new(FinancialStatementRowRules))
+}
+
+/// A `FiscalPeriodService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_fiscal_period_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::FiscalPeriodRepository>,
+) -> FiscalPeriodService {
+    FiscalPeriodService::with_repository(repository).with_guard(std::sync::Arc::new(FiscalPeriodRowRules))
+}
+
+/// A `JournalService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_journal_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::JournalRepository>,
+) -> JournalService {
+    JournalService::with_repository(repository).with_guard(std::sync::Arc::new(JournalRowRules))
+}
+
+/// A `JournalLineService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_journal_line_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::JournalLineRepository>,
+) -> JournalLineService {
+    JournalLineService::with_repository(repository).with_guard(std::sync::Arc::new(JournalLineRowRules))
+}
+
+/// A `LedgerService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_ledger_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::LedgerRepository>,
+) -> LedgerService {
+    LedgerService::with_repository(repository).with_guard(std::sync::Arc::new(LedgerRowRules))
+}
+
+/// A `ReconciliationService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_reconciliation_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ReconciliationRepository>,
+) -> ReconciliationService {
+    ReconciliationService::with_repository(repository).with_guard(std::sync::Arc::new(ReconciliationRowRules))
+}
+
+/// A `ReconciliationItemService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_reconciliation_item_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::ReconciliationItemRepository>,
+) -> ReconciliationItemService {
+    ReconciliationItemService::with_repository(repository).with_guard(std::sync::Arc::new(ReconciliationItemRowRules))
+}
+
+/// A `FullReconcileService` over `repository`: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_full_reconcile_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::FullReconcileRepository>,
+) -> FullReconcileService {
+    FullReconcileService::with_repository(repository)
+}
+
+/// A `PartialReconcileService` over `repository` with its write guard attached: the way to build it, so its writes are
+/// served only with the rules the schema declares.
+pub fn build_partial_reconcile_service(
+    repository: std::sync::Arc<crate::infrastructure::persistence::PartialReconcileRepository>,
+) -> PartialReconcileService {
+    PartialReconcileService::with_repository(repository).with_guard(std::sync::Arc::new(PartialReconcileRowRules))
+}
+
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

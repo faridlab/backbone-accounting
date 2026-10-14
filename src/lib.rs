@@ -299,67 +299,67 @@ impl AccountingModuleBuilder {
 
         // Account service
         let account_repository = Arc::new(AccountRepository::new(db_pool.clone()));
-        let account_service = Arc::new(AccountService::with_repository(account_repository.clone()).with_guard(Arc::new(crate::application::service::AccountRowRules)));
+        let account_service = Arc::new(crate::application::service::build_account_service(account_repository.clone()));
 
         // AccountingPost service
         let accounting_post_repository = Arc::new(AccountingPostRepository::new(db_pool.clone()));
-        let accounting_post_service = Arc::new(AccountingPostService::with_repository(accounting_post_repository.clone()).with_guard(Arc::new(crate::application::service::AccountingPostRowRules)));
+        let accounting_post_service = Arc::new(crate::application::service::build_accounting_post_service(accounting_post_repository.clone()));
 
         // CostCenter service
         let cost_center_repository = Arc::new(CostCenterRepository::new(db_pool.clone()));
-        let cost_center_service = Arc::new(CostCenterService::with_repository(cost_center_repository.clone()).with_guard(Arc::new(crate::application::service::CostCenterRowRules)));
+        let cost_center_service = Arc::new(crate::application::service::build_cost_center_service(cost_center_repository.clone()));
 
         // EmvQrConfig service
         let emv_qr_config_repository = Arc::new(EmvQrConfigRepository::new(db_pool.clone()));
-        let emv_qr_config_service = Arc::new(EmvQrConfigService::with_repository(emv_qr_config_repository.clone()).with_guard(Arc::new(crate::application::service::EmvQrConfigRowRules)));
+        let emv_qr_config_service = Arc::new(crate::application::service::build_emv_qr_config_service(emv_qr_config_repository.clone()));
 
         // BankCheckSequence service
         let bank_check_sequence_repository = Arc::new(BankCheckSequenceRepository::new(db_pool.clone()));
-        let bank_check_sequence_service = Arc::new(BankCheckSequenceService::with_repository(bank_check_sequence_repository.clone()).with_guard(Arc::new(crate::application::service::BankCheckSequenceRowRules)));
+        let bank_check_sequence_service = Arc::new(crate::application::service::build_bank_check_sequence_service(bank_check_sequence_repository.clone()));
 
         // PrintedCheck service
         let printed_check_repository = Arc::new(PrintedCheckRepository::new(db_pool.clone()));
-        let printed_check_service = Arc::new(PrintedCheckService::with_repository(printed_check_repository.clone()).with_guard(Arc::new(crate::application::service::PrintedCheckRowRules)));
+        let printed_check_service = Arc::new(crate::application::service::build_printed_check_service(printed_check_repository.clone()));
 
         // TaxTagRepairRun service
         let tax_tag_repair_run_repository = Arc::new(TaxTagRepairRunRepository::new(db_pool.clone()));
-        let tax_tag_repair_run_service = Arc::new(TaxTagRepairRunService::with_repository(tax_tag_repair_run_repository.clone()).with_guard(Arc::new(crate::application::service::TaxTagRepairRunRowRules)));
+        let tax_tag_repair_run_service = Arc::new(crate::application::service::build_tax_tag_repair_run_service(tax_tag_repair_run_repository.clone()));
 
         // FinancialStatement service
         let financial_statement_repository = Arc::new(FinancialStatementRepository::new(db_pool.clone()));
-        let financial_statement_service = Arc::new(FinancialStatementService::with_repository(financial_statement_repository.clone()).with_guard(Arc::new(crate::application::service::FinancialStatementRowRules)));
+        let financial_statement_service = Arc::new(crate::application::service::build_financial_statement_service(financial_statement_repository.clone()));
 
         // FiscalPeriod service
         let fiscal_period_repository = Arc::new(FiscalPeriodRepository::new(db_pool.clone()));
-        let fiscal_period_service = Arc::new(FiscalPeriodService::with_repository(fiscal_period_repository.clone()).with_guard(Arc::new(crate::application::service::FiscalPeriodRowRules)));
+        let fiscal_period_service = Arc::new(crate::application::service::build_fiscal_period_service(fiscal_period_repository.clone()));
 
         // Journal service
         let journal_repository = Arc::new(JournalRepository::new(db_pool.clone()));
-        let journal_service = Arc::new(JournalService::with_repository(journal_repository.clone()).with_guard(Arc::new(crate::application::service::JournalRowRules)));
+        let journal_service = Arc::new(crate::application::service::build_journal_service(journal_repository.clone()));
 
         // JournalLine service
         let journal_line_repository = Arc::new(JournalLineRepository::new(db_pool.clone()));
-        let journal_line_service = Arc::new(JournalLineService::with_repository(journal_line_repository.clone()).with_guard(Arc::new(crate::application::service::JournalLineRowRules)));
+        let journal_line_service = Arc::new(crate::application::service::build_journal_line_service(journal_line_repository.clone()));
 
         // Ledger service
         let ledger_repository = Arc::new(LedgerRepository::new(db_pool.clone()));
-        let ledger_service = Arc::new(LedgerService::with_repository(ledger_repository.clone()).with_guard(Arc::new(crate::application::service::LedgerRowRules)));
+        let ledger_service = Arc::new(crate::application::service::build_ledger_service(ledger_repository.clone()));
 
         // Reconciliation service
         let reconciliation_repository = Arc::new(ReconciliationRepository::new(db_pool.clone()));
-        let reconciliation_service = Arc::new(ReconciliationService::with_repository(reconciliation_repository.clone()).with_guard(Arc::new(crate::application::service::ReconciliationRowRules)));
+        let reconciliation_service = Arc::new(crate::application::service::build_reconciliation_service(reconciliation_repository.clone()));
 
         // ReconciliationItem service
         let reconciliation_item_repository = Arc::new(ReconciliationItemRepository::new(db_pool.clone()));
-        let reconciliation_item_service = Arc::new(ReconciliationItemService::with_repository(reconciliation_item_repository.clone()).with_guard(Arc::new(crate::application::service::ReconciliationItemRowRules)));
+        let reconciliation_item_service = Arc::new(crate::application::service::build_reconciliation_item_service(reconciliation_item_repository.clone()));
 
         // FullReconcile service
         let full_reconcile_repository = Arc::new(FullReconcileRepository::new(db_pool.clone()));
-        let full_reconcile_service = Arc::new(FullReconcileService::with_repository(full_reconcile_repository.clone()));
+        let full_reconcile_service = Arc::new(crate::application::service::build_full_reconcile_service(full_reconcile_repository.clone()));
 
         // PartialReconcile service
         let partial_reconcile_repository = Arc::new(PartialReconcileRepository::new(db_pool.clone()));
-        let partial_reconcile_service = Arc::new(PartialReconcileService::with_repository(partial_reconcile_repository.clone()).with_guard(Arc::new(crate::application::service::PartialReconcileRowRules)));
+        let partial_reconcile_service = Arc::new(crate::application::service::build_partial_reconcile_service(partial_reconcile_repository.clone()));
 
 
         // The extension builds its own state from what the generated build made.

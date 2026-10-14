@@ -469,7 +469,7 @@ pub struct TaxTagRepairRunDto {
     pub lines_examined: i64,
     pub lines_retagged: i64,
     pub dry_run: bool,
-    pub closed_periods_overridden: serde_json::Value,
+    pub overridden_closed_periods: serde_json::Value,
     pub actor: Option<Uuid>,
     pub reason: String,
     pub ran_at: DateTime<Utc>,

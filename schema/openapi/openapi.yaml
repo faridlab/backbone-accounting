@@ -7392,7 +7392,7 @@ components:
         - lines_examined
         - lines_retagged
         - dry_run
-        - closed_periods_overridden
+        - overridden_closed_periods
         - reason
         - ran_at
         - created_at
@@ -7418,7 +7418,7 @@ components:
           format: int64
         dry_run:
           type: boolean
-        closed_periods_overridden:
+        overridden_closed_periods:
           type: object
         actor:
           nullable: true
@@ -7460,7 +7460,7 @@ components:
         - lines_examined
         - lines_retagged
         - dry_run
-        - closed_periods_overridden
+        - overridden_closed_periods
         - reason
         - ran_at
         - metadata
@@ -7481,7 +7481,7 @@ components:
           format: int64
         dry_run:
           type: boolean
-        closed_periods_overridden:
+        overridden_closed_periods:
           type: object
         actor:
           nullable: true
@@ -7504,7 +7504,7 @@ components:
         - lines_examined
         - lines_retagged
         - dry_run
-        - closed_periods_overridden
+        - overridden_closed_periods
         - reason
         - ran_at
         - metadata
@@ -7525,7 +7525,7 @@ components:
           format: int64
         dry_run:
           type: boolean
-        closed_periods_overridden:
+        overridden_closed_periods:
           type: object
         actor:
           nullable: true
@@ -7558,7 +7558,7 @@ components:
           format: int64
         dry_run:
           type: boolean
-        closed_periods_overridden:
+        overridden_closed_periods:
           type: object
         actor:
           nullable: true

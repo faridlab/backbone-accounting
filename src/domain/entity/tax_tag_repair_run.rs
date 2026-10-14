@@ -53,7 +53,7 @@ pub struct TaxTagRepairRun {
     pub lines_examined: i64,
     pub lines_retagged: i64,
     pub dry_run: bool,
-    pub closed_periods_overridden: serde_json::Value,
+    pub overridden_closed_periods: serde_json::Value,
     pub actor: Option<Uuid>,
     pub reason: String,
     pub ran_at: DateTime<Utc>,
@@ -69,7 +69,7 @@ impl TaxTagRepairRun {
     }
 
     /// Create a new TaxTagRepairRun with required fields
-    pub fn new(date_from: NaiveDate, date_to: NaiveDate, rules: serde_json::Value, lines_examined: i64, lines_retagged: i64, dry_run: bool, closed_periods_overridden: serde_json::Value, reason: String, ran_at: DateTime<Utc>, metadata: serde_json::Value) -> Self {
+    pub fn new(date_from: NaiveDate, date_to: NaiveDate, rules: serde_json::Value, lines_examined: i64, lines_retagged: i64, dry_run: bool, overridden_closed_periods: serde_json::Value, reason: String, ran_at: DateTime<Utc>, metadata: serde_json::Value) -> Self {
         Self {
             id: Uuid::new_v4(),
             date_from,
@@ -78,7 +78,7 @@ impl TaxTagRepairRun {
             lines_examined,
             lines_retagged,
             dry_run,
-            closed_periods_overridden,
+            overridden_closed_periods,
             actor: None,
             reason,
             ran_at,
@@ -145,8 +145,8 @@ impl TaxTagRepairRun {
                 "dry_run" => {
                     if let Ok(v) = serde_json::from_value(value) { self.dry_run = v; }
                 }
-                "closed_periods_overridden" => {
-                    if let Ok(v) = serde_json::from_value(value) { self.closed_periods_overridden = v; }
+                "overridden_closed_periods" => {
+                    if let Ok(v) = serde_json::from_value(value) { self.overridden_closed_periods = v; }
                 }
                 "actor" => {
                     if let Ok(v) = serde_json::from_value(value) { self.actor = v; }
@@ -239,7 +239,7 @@ pub struct TaxTagRepairRunBuilder {
     lines_examined: Option<i64>,
     lines_retagged: Option<i64>,
     dry_run: Option<bool>,
-    closed_periods_overridden: Option<serde_json::Value>,
+    overridden_closed_periods: Option<serde_json::Value>,
     actor: Option<Uuid>,
     reason: Option<String>,
     ran_at: Option<DateTime<Utc>>,
@@ -283,9 +283,9 @@ impl TaxTagRepairRunBuilder {
         self
     }
 
-    /// Set the closed_periods_overridden field (default: `serde_json::json!([])`)
-    pub fn closed_periods_overridden(mut self, value: serde_json::Value) -> Self {
-        self.closed_periods_overridden = Some(value);
+    /// Set the overridden_closed_periods field (default: `serde_json::json!([])`)
+    pub fn overridden_closed_periods(mut self, value: serde_json::Value) -> Self {
+        self.overridden_closed_periods = Some(value);
         self
     }
 
@@ -332,7 +332,7 @@ impl TaxTagRepairRunBuilder {
             lines_examined,
             lines_retagged,
             dry_run: self.dry_run.unwrap_or(false),
-            closed_periods_overridden: self.closed_periods_overridden.unwrap_or(serde_json::json!([])),
+            overridden_closed_periods: self.overridden_closed_periods.unwrap_or(serde_json::json!([])),
             actor: self.actor,
             reason,
             ran_at: self.ran_at.unwrap_or(Utc::now()),

@@ -43,8 +43,8 @@ pub struct CreateTaxTagRepairRunDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "dry_run")]
     pub dry_run: bool,
-    #[serde(alias = "closed_periods_overridden")]
-    pub closed_periods_overridden: serde_json::Value,
+    #[serde(alias = "overridden_closed_periods")]
+    pub overridden_closed_periods: serde_json::Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -82,8 +82,8 @@ pub struct UpdateTaxTagRepairRunDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "dry_run")]
     pub dry_run: bool,
-    #[serde(alias = "closed_periods_overridden")]
-    pub closed_periods_overridden: serde_json::Value,
+    #[serde(alias = "overridden_closed_periods")]
+    pub overridden_closed_periods: serde_json::Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -122,8 +122,8 @@ pub struct PatchTaxTagRepairRunDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "dry_run")]
     pub dry_run: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "closed_periods_overridden")]
-    pub closed_periods_overridden: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "overridden_closed_periods")]
+    pub overridden_closed_periods: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
@@ -137,7 +137,7 @@ pub struct PatchTaxTagRepairRunDto {
 impl PatchTaxTagRepairRunDto {
     /// Check if any field is set
     pub fn has_changes(&self) -> bool {
-        self.date_from.is_some() || self.date_to.is_some() || self.rules.is_some() || self.lines_examined.is_some() || self.lines_retagged.is_some() || self.dry_run.is_some() || self.closed_periods_overridden.is_some() || self.actor.is_some() || self.reason.is_some() || self.ran_at.is_some()
+        self.date_from.is_some() || self.date_to.is_some() || self.rules.is_some() || self.lines_examined.is_some() || self.lines_retagged.is_some() || self.dry_run.is_some() || self.overridden_closed_periods.is_some() || self.actor.is_some() || self.reason.is_some() || self.ran_at.is_some()
     }
 }
 
@@ -166,7 +166,7 @@ pub struct TaxTagRepairRunResponseDto {
     pub lines_retagged: i64,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     pub dry_run: bool,
-    pub closed_periods_overridden: serde_json::Value,
+    pub overridden_closed_periods: serde_json::Value,
     pub actor: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub reason: String,
@@ -253,7 +253,7 @@ impl From<TaxTagRepairRun> for TaxTagRepairRunResponseDto {
             lines_examined: entity.lines_examined,
             lines_retagged: entity.lines_retagged,
             dry_run: entity.dry_run,
-            closed_periods_overridden: entity.closed_periods_overridden,
+            overridden_closed_periods: entity.overridden_closed_periods,
             actor: entity.actor,
             reason: entity.reason,
             ran_at: entity.ran_at,
@@ -286,7 +286,7 @@ impl From<CreateTaxTagRepairRunDto> for TaxTagRepairRun {
             lines_examined: dto.lines_examined,
             lines_retagged: dto.lines_retagged,
             dry_run: dto.dry_run,
-            closed_periods_overridden: dto.closed_periods_overridden,
+            overridden_closed_periods: dto.overridden_closed_periods,
             actor: dto.actor,
             reason: dto.reason,
             ran_at: dto.ran_at,
@@ -307,7 +307,7 @@ impl From<&TaxTagRepairRun> for TaxTagRepairRunResponseDto {
             lines_examined: entity.lines_examined.clone(),
             lines_retagged: entity.lines_retagged.clone(),
             dry_run: entity.dry_run.clone(),
-            closed_periods_overridden: entity.closed_periods_overridden.clone(),
+            overridden_closed_periods: entity.overridden_closed_periods.clone(),
             actor: entity.actor.clone(),
             reason: entity.reason.clone(),
             ran_at: entity.ran_at.clone(),
@@ -333,7 +333,7 @@ impl backbone_core::ApplyUpdateDto<UpdateTaxTagRepairRunDto> for TaxTagRepairRun
         self.lines_examined = dto.lines_examined;
         self.lines_retagged = dto.lines_retagged;
         self.dry_run = dto.dry_run;
-        self.closed_periods_overridden = dto.closed_periods_overridden;
+        self.overridden_closed_periods = dto.overridden_closed_periods;
         self.actor = dto.actor;
         self.reason = dto.reason;
         self.ran_at = dto.ran_at;
