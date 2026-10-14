@@ -156,6 +156,7 @@ Feature: Post financial effects to the General Ledger
     Then the posting is rejected with error code "too_few_lines"
     And no journal, journal line, or ledger entry is written
 
+  # The open-period rule (R5)
   @edge @module:accounting @gc-10
   Scenario: A posting into a closed fiscal period is rejected
     Given the fiscal period covering the posting date is closed
