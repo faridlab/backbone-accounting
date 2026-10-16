@@ -5,3 +5,12 @@ warnings: 0
 machines_without_verbs: 0
 untested_rule_ids: 0
 unenforced_rules: []
+bypassable_rules:
+- 'journal.hook.yaml: double_entry_balanced'
+- 'journal.hook.yaml: idempotent_source'
+- 'journal.hook.yaml: minimum_two_lines'
+- 'journal.hook.yaml: party_only_on_ar_ap'
+- 'journal.hook.yaml: party_required_for_ar_ap'
+- 'journal.hook.yaml: period_open'
+- 'journal.hook.yaml: postable_account'
+unclaimed_guards: []

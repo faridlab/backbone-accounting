@@ -25,8 +25,8 @@ state_machines:
       - { from: pending_approval, to: rejected,         on: reject }
       # the reject verb also turns a draft back before it is ever submitted
       - { from: draft,            to: rejected,         on: reject }
-      - { from: approved,         to: posted,           on: post,   guard: balanced }
-      - { from: draft,            to: posted,           on: post,   guard: "balanced && !requires_approval" }
+      # post_journal posts an approved journal only, after validating its lines (balance included)
+      - { from: approved,         to: posted,           on: post,   guard: balanced, enforced_by: "src/application/service/posting_service.rs::post_journal" }
       - { from: posted,           to: voided,           on: void }
     guards:
       balanced: "total_debit == total_credit"     # R1 double-entry invariant
