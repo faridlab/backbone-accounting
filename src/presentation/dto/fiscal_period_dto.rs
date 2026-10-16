@@ -70,25 +70,6 @@ pub struct CreateFiscalPeriodDto {
     pub allow_adjustments: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjustment_deadline")]
     pub adjustment_deadline: Option<NaiveDate>,
-    #[serde(alias = "total_debits")]
-    pub total_debits: Decimal,
-    #[serde(alias = "total_credits")]
-    pub total_credits: Decimal,
-    #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "journal_count")]
-    pub journal_count: i32,
-    #[serde(alias = "total_revenue")]
-    pub total_revenue: Decimal,
-    #[serde(alias = "total_expenses")]
-    pub total_expenses: Decimal,
-    #[serde(alias = "net_income")]
-    pub net_income: Decimal,
-    #[serde(alias = "total_assets")]
-    pub total_assets: Decimal,
-    #[serde(alias = "total_liabilities")]
-    pub total_liabilities: Decimal,
-    #[serde(alias = "total_equity")]
-    pub total_equity: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "balance_sheet_generated")]
     pub balance_sheet_generated: bool,
@@ -543,15 +524,15 @@ impl From<CreateFiscalPeriodDto> for FiscalPeriod {
             reopen_reason: None,
             allow_adjustments: dto.allow_adjustments,
             adjustment_deadline: dto.adjustment_deadline,
-            total_debits: dto.total_debits,
-            total_credits: dto.total_credits,
-            journal_count: dto.journal_count,
-            total_revenue: dto.total_revenue,
-            total_expenses: dto.total_expenses,
-            net_income: dto.net_income,
-            total_assets: dto.total_assets,
-            total_liabilities: dto.total_liabilities,
-            total_equity: dto.total_equity,
+            total_debits: Decimal::from(0_i64),
+            total_credits: Decimal::from(0_i64),
+            journal_count: 0,
+            total_revenue: Decimal::from(0_i64),
+            total_expenses: Decimal::from(0_i64),
+            net_income: Decimal::from(0_i64),
+            total_assets: Decimal::from(0_i64),
+            total_liabilities: Decimal::from(0_i64),
+            total_equity: Decimal::from(0_i64),
             balance_sheet_generated: dto.balance_sheet_generated,
             income_statement_generated: dto.income_statement_generated,
             statements_generated_at: dto.statements_generated_at,

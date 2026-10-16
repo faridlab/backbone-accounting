@@ -468,7 +468,7 @@ impl super::Entity for FiscalPeriod {
 
 impl backbone_core::PersistentEntity for FiscalPeriod {
     fn write_protected_fields() -> &'static [&'static str] {
-        &["status", "closing_started_at", "closing_started_by", "closed_at", "closed_by", "locked_at", "locked_by", "lock_reason", "reopened_at", "reopened_by", "reopen_reason"]
+        &["status", "closing_started_at", "closing_started_by", "closed_at", "closed_by", "locked_at", "locked_by", "lock_reason", "reopened_at", "reopened_by", "reopen_reason", "total_debits", "total_credits", "journal_count", "total_revenue", "total_expenses", "net_income", "total_assets", "total_liabilities", "total_equity"]
     }
     fn entity_id(&self) -> String {
         self.id.to_string()

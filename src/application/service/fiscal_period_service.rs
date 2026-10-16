@@ -102,18 +102,6 @@ impl backbone_core::write_guard::WriteGuard<FiscalPeriod> for FiscalPeriodRowRul
         if (create || (update && r::changed(old.as_ref(), row, &["level"]))) && !r::holds(&r::ge(r::field(row, "level"), r::Val::Num(0.0_f64))) {
             refuse.push(Violation::new("level", "non_negative", "level must not be negative"));
         }
-        // `total_debits_non_negative` (@non_negative on FiscalPeriod.total_debits)
-        if (create || (update && r::changed(old.as_ref(), row, &["total_debits"]))) && !r::holds(&r::ge(r::field(row, "total_debits"), r::Val::Num(0.0_f64))) {
-            refuse.push(Violation::new("total_debits", "non_negative", "total_debits must not be negative"));
-        }
-        // `total_credits_non_negative` (@non_negative on FiscalPeriod.total_credits)
-        if (create || (update && r::changed(old.as_ref(), row, &["total_credits"]))) && !r::holds(&r::ge(r::field(row, "total_credits"), r::Val::Num(0.0_f64))) {
-            refuse.push(Violation::new("total_credits", "non_negative", "total_credits must not be negative"));
-        }
-        // `journal_count_non_negative` (@non_negative on FiscalPeriod.journal_count)
-        if (create || (update && r::changed(old.as_ref(), row, &["journal_count"]))) && !r::holds(&r::ge(r::field(row, "journal_count"), r::Val::Num(0.0_f64))) {
-            refuse.push(Violation::new("journal_count", "non_negative", "journal_count must not be negative"));
-        }
         // `notes_max_length` (@max(1000) on FiscalPeriod.notes)
         if (create || (update && r::changed(old.as_ref(), row, &["notes"]))) && !r::holds(&r::le(r::length(r::field(row, "notes")), r::Val::Num(1000.0_f64))) {
             refuse.push(Violation::new("notes", "max_length", "notes must be at most 1000 characters").with_param("max", 1000_i64));

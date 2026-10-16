@@ -241,54 +241,72 @@ models:
         description: "Deadline for adjustments"
 
       # =======================================================================
-      # Summary Balances (cached for quick access)
+      # Summary Balances and Financial Summary
       # =======================================================================
+      # Nothing computes these: the period's totals live in its financial statements. They are
+      # projections no generic write may set, so they stay at zero until they are dropped at the
+      # next breaking release.
       total_debits:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        lifecycle:
+          shape: projection
         description: "Total debits in period"
 
       total_credits:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)", "@non_negative"]
+        lifecycle:
+          shape: projection
         description: "Total credits in period"
 
       journal_count:
         type: int
         attributes: ["@default(0)", "@non_negative"]
+        lifecycle:
+          shape: projection
         description: "Number of journal entries"
 
-      # =======================================================================
-      # Financial Summary (cached)
-      # =======================================================================
       total_revenue:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Total revenue for period"
 
       total_expenses:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Total expenses for period"
 
       net_income:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Net income (revenue - expenses)"
 
       total_assets:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Total assets at period end"
 
       total_liabilities:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Total liabilities at period end"
 
       total_equity:
         type: decimal
         attributes: ["@default(0)", "@precision(18,2)"]
+        lifecycle:
+          shape: projection
         description: "Total equity at period end"
 
       # =======================================================================
