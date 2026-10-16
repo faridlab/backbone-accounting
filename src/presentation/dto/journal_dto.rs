@@ -91,7 +91,6 @@ pub struct CreateJournalDto {
     pub auto_reverse: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "auto_reverse_date")]
     pub auto_reverse_date: Option<NaiveDate>,
-    pub status: JournalStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "requires_approval")]
     pub requires_approval: bool,
@@ -585,7 +584,7 @@ impl From<CreateJournalDto> for Journal {
             is_reversing: dto.is_reversing,
             auto_reverse: dto.auto_reverse,
             auto_reverse_date: dto.auto_reverse_date,
-            status: dto.status,
+            status: JournalStatus::Draft,
             requires_approval: dto.requires_approval,
             approval_threshold: dto.approval_threshold,
             submitted_at: dto.submitted_at,

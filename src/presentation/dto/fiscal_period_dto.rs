@@ -55,7 +55,6 @@ pub struct CreateFiscalPeriodDto {
     pub parent_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     pub level: i32,
-    pub status: PeriodStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "is_current")]
     pub is_current: bool,
@@ -66,26 +65,6 @@ pub struct CreateFiscalPeriodDto {
     pub opening_balance_date: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
     pub opening_balance_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_at")]
-    pub closing_started_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closing_started_by")]
-    pub closing_started_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closed_at")]
-    pub closed_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "closed_by")]
-    pub closed_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "locked_at")]
-    pub locked_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "locked_by")]
-    pub locked_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "lock_reason")]
-    pub lock_reason: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_at")]
-    pub reopened_at: Option<DateTime<Utc>>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopened_by")]
-    pub reopened_by: Option<Uuid>,
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "reopen_reason")]
-    pub reopen_reason: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(alias = "allow_adjustments")]
     pub allow_adjustments: bool,
@@ -547,21 +526,21 @@ impl From<CreateFiscalPeriodDto> for FiscalPeriod {
             fiscal_month: dto.fiscal_month,
             parent_id: dto.parent_id,
             level: dto.level,
-            status: dto.status,
+            status: PeriodStatus::Open,
             is_current: dto.is_current,
             opening_balance_set: dto.opening_balance_set,
             opening_balance_date: dto.opening_balance_date,
             opening_balance_by: dto.opening_balance_by,
-            closing_started_at: dto.closing_started_at,
-            closing_started_by: dto.closing_started_by,
-            closed_at: dto.closed_at,
-            closed_by: dto.closed_by,
-            locked_at: dto.locked_at,
-            locked_by: dto.locked_by,
-            lock_reason: dto.lock_reason,
-            reopened_at: dto.reopened_at,
-            reopened_by: dto.reopened_by,
-            reopen_reason: dto.reopen_reason,
+            closing_started_at: None,
+            closing_started_by: None,
+            closed_at: None,
+            closed_by: None,
+            locked_at: None,
+            locked_by: None,
+            lock_reason: None,
+            reopened_at: None,
+            reopened_by: None,
+            reopen_reason: None,
             allow_adjustments: dto.allow_adjustments,
             adjustment_deadline: dto.adjustment_deadline,
             total_debits: dto.total_debits,
