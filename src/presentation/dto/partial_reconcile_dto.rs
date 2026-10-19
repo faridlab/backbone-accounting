@@ -45,15 +45,25 @@ pub struct CreatePartialReconcileDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "credit_amount_currency")]
     pub credit_amount_currency: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_partial_reconcile_currency")]
     pub currency: String,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "max_date")]
     pub max_date: NaiveDate,
+    #[serde(default = "default_create_partial_reconcile_origin")]
     pub origin: ReconcileOrigin,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
+}
+
+fn default_create_partial_reconcile_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_partial_reconcile_origin() -> ReconcileOrigin {
+    ReconcileOrigin::Manual
 }
 
 // =============================================================================
@@ -113,16 +123,16 @@ pub struct PatchPartialReconcileDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "credit_move_id")]
     pub credit_move_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
-    pub full_reconcile_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "exchange_move_id")]
-    pub exchange_move_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "full_reconcile_id")]
+    pub full_reconcile_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "exchange_move_id")]
+    pub exchange_move_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "debit_amount_currency")]
-    pub debit_amount_currency: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "credit_amount_currency")]
-    pub credit_amount_currency: Option<Decimal>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "debit_amount_currency")]
+    pub debit_amount_currency: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "credit_amount_currency")]
+    pub credit_amount_currency: Option<Option<Decimal>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
@@ -131,10 +141,10 @@ pub struct PatchPartialReconcileDto {
     pub max_date: Option<NaiveDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin: Option<ReconcileOrigin>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
-    pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
-    pub source_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_type")]
+    pub source_type: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_id")]
+    pub source_id: Option<Option<Uuid>>,
 }
 
 impl PatchPartialReconcileDto {
@@ -350,12 +360,4 @@ impl backbone_core::ApplyUpdateDto<UpdatePartialReconcileDto> for PartialReconci
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to PartialReconcile here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

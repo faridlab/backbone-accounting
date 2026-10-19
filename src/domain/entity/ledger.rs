@@ -456,6 +456,19 @@ impl super::Entity for Ledger {
 }
 
 impl backbone_core::PersistentEntity for Ledger {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("account_id", "accounting.accounts", "id"),
+            backbone_core::Reference::new("journal_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("journal_line_id", "accounting.journal_lines", "id"),
+            backbone_core::Reference::new("fiscal_period_id", "accounting.fiscal_periods", "id"),
+            backbone_core::Reference::new("reconciliation_id", "accounting.reconciliations", "id"),
+            backbone_core::Reference::new("reversed_by_id", "accounting.ledgers", "id"),
+            backbone_core::Reference::new("reverses_id", "accounting.ledgers", "id"),
+            backbone_core::Reference::new("cost_center_id", "accounting.cost_centers", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

@@ -24,22 +24,22 @@ pub mod partial_reconcile_handler;
 
 
 // Re-exports
-pub use account_handler::{create_account_routes, create_account_read_routes, create_account_write_routes};
-pub use accounting_post_handler::{create_accounting_post_routes, create_accounting_post_read_routes, create_accounting_post_write_routes, create_accounting_post_history_route};
-pub use cost_center_handler::{create_cost_center_routes, create_cost_center_read_routes, create_cost_center_write_routes};
-pub use emv_qr_config_handler::{create_emv_qr_config_routes, create_emv_qr_config_read_routes, create_emv_qr_config_write_routes};
-pub use bank_check_sequence_handler::{create_bank_check_sequence_routes, create_bank_check_sequence_read_routes, create_bank_check_sequence_write_routes};
-pub use printed_check_handler::{create_printed_check_routes, create_printed_check_read_routes, create_printed_check_write_routes};
-pub use tax_tag_repair_run_handler::{create_tax_tag_repair_run_routes, create_tax_tag_repair_run_read_routes, create_tax_tag_repair_run_write_routes};
-pub use financial_statement_handler::{create_financial_statement_routes, create_financial_statement_read_routes, create_financial_statement_write_routes};
-pub use fiscal_period_handler::{create_fiscal_period_routes, create_fiscal_period_read_routes, create_fiscal_period_write_routes};
-pub use journal_handler::{create_journal_routes, create_journal_read_routes, create_journal_write_routes, create_journal_history_route};
-pub use journal_line_handler::{create_journal_line_routes, create_journal_line_read_routes, create_journal_line_write_routes, create_journal_line_history_route};
-pub use ledger_handler::{create_ledger_routes, create_ledger_read_routes, create_ledger_write_routes};
-pub use reconciliation_handler::{create_reconciliation_routes, create_reconciliation_read_routes, create_reconciliation_write_routes};
-pub use reconciliation_item_handler::{create_reconciliation_item_routes, create_reconciliation_item_read_routes, create_reconciliation_item_write_routes};
-pub use full_reconcile_handler::{create_full_reconcile_routes, create_full_reconcile_read_routes, create_full_reconcile_write_routes};
-pub use partial_reconcile_handler::{create_partial_reconcile_routes, create_partial_reconcile_read_routes, create_partial_reconcile_write_routes};
+pub use account_handler::{create_account_routes, create_account_read_routes, create_account_write_routes, account_permissions};
+pub use accounting_post_handler::{create_accounting_post_routes, create_accounting_post_read_routes, create_accounting_post_write_routes, accounting_post_permissions, create_accounting_post_history_route};
+pub use cost_center_handler::{create_cost_center_routes, create_cost_center_read_routes, create_cost_center_write_routes, cost_center_permissions};
+pub use emv_qr_config_handler::{create_emv_qr_config_routes, create_emv_qr_config_read_routes, create_emv_qr_config_write_routes, emv_qr_config_permissions};
+pub use bank_check_sequence_handler::{create_bank_check_sequence_routes, create_bank_check_sequence_read_routes, create_bank_check_sequence_write_routes, bank_check_sequence_permissions};
+pub use printed_check_handler::{create_printed_check_routes, create_printed_check_read_routes, create_printed_check_write_routes, printed_check_permissions};
+pub use tax_tag_repair_run_handler::{create_tax_tag_repair_run_routes, create_tax_tag_repair_run_read_routes, create_tax_tag_repair_run_write_routes, tax_tag_repair_run_permissions};
+pub use financial_statement_handler::{create_financial_statement_routes, create_financial_statement_read_routes, create_financial_statement_write_routes, financial_statement_permissions};
+pub use fiscal_period_handler::{create_fiscal_period_routes, create_fiscal_period_read_routes, create_fiscal_period_write_routes, fiscal_period_permissions};
+pub use journal_handler::{create_journal_routes, create_journal_read_routes, create_journal_write_routes, journal_permissions, create_journal_history_route};
+pub use journal_line_handler::{create_journal_line_routes, create_journal_line_read_routes, create_journal_line_write_routes, journal_line_permissions, create_journal_line_history_route};
+pub use ledger_handler::{create_ledger_routes, create_ledger_read_routes, create_ledger_write_routes, ledger_permissions};
+pub use reconciliation_handler::{create_reconciliation_routes, create_reconciliation_read_routes, create_reconciliation_write_routes, reconciliation_permissions};
+pub use reconciliation_item_handler::{create_reconciliation_item_routes, create_reconciliation_item_read_routes, create_reconciliation_item_write_routes, reconciliation_item_permissions};
+pub use full_reconcile_handler::{create_full_reconcile_routes, create_full_reconcile_read_routes, create_full_reconcile_write_routes, full_reconcile_permissions};
+pub use partial_reconcile_handler::{create_partial_reconcile_routes, create_partial_reconcile_read_routes, create_partial_reconcile_write_routes, partial_reconcile_permissions};
 
 // This directory's extension (hand-written; ADR-0031).
 include!("mod.ext.rs");

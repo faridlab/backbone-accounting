@@ -414,6 +414,17 @@ impl super::Entity for ReconciliationItem {
 }
 
 impl backbone_core::PersistentEntity for ReconciliationItem {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("reconciliation_id", "accounting.reconciliations", "id"),
+            backbone_core::Reference::new("ledger_id", "accounting.ledgers", "id"),
+            backbone_core::Reference::new("journal_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("matched_with_id", "accounting.reconciliation_items", "id"),
+            backbone_core::Reference::new("adjustment_journal_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("write_off_approved_by", "users", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

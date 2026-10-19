@@ -41,17 +41,25 @@ pub struct CreateTaxTagRepairRunDto {
     #[serde(alias = "lines_retagged")]
     pub lines_retagged: i64,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "dry_run")]
+    #[serde(default, alias = "dry_run")]
     pub dry_run: bool,
-    #[serde(alias = "overridden_closed_periods")]
+    #[serde(default = "default_create_tax_tag_repair_run_overridden_closed_periods", alias = "overridden_closed_periods")]
     pub overridden_closed_periods: serde_json::Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub reason: String,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
-    #[serde(alias = "ran_at")]
+    #[serde(default = "default_create_tax_tag_repair_run_ran_at", alias = "ran_at")]
     pub ran_at: DateTime<Utc>,
+}
+
+fn default_create_tax_tag_repair_run_overridden_closed_periods() -> serde_json::Value {
+    serde_json::json!([])
+}
+
+fn default_create_tax_tag_repair_run_ran_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 // =============================================================================
@@ -124,8 +132,8 @@ pub struct PatchTaxTagRepairRunDto {
     pub dry_run: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "overridden_closed_periods")]
     pub overridden_closed_periods: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub actor: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub actor: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
@@ -340,12 +348,4 @@ impl backbone_core::ApplyUpdateDto<UpdateTaxTagRepairRunDto> for TaxTagRepairRun
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to TaxTagRepairRun here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

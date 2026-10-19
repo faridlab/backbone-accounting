@@ -74,6 +74,10 @@ impl backbone_core::write_guard::WriteGuard<EmvQrConfig> for EmvQrConfigRowRules
         if (create || (update && r::changed(old.as_ref(), row, &["merchant_city"]))) && !r::holds(&r::le(r::length(r::field(row, "merchant_city")), r::Val::Num(15.0_f64))) {
             refuse.push(Violation::new("merchant_city", "max_length", "merchant_city must be at most 15 characters").with_param("max", 15_i64));
         }
+        // `country_code_required` (@required on EmvQrConfig.country_code)
+        if (create || (update && r::changed(old.as_ref(), row, &["country_code"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "country_code")), r::not(r::is_empty(r::trim(r::field(row, "country_code")))))) {
+            refuse.push(Violation::new("country_code", "required", "country_code is required"));
+        }
         // `country_code_max_length` (@max(2) on EmvQrConfig.country_code)
         if (create || (update && r::changed(old.as_ref(), row, &["country_code"]))) && !r::holds(&r::le(r::length(r::field(row, "country_code")), r::Val::Num(2.0_f64))) {
             refuse.push(Violation::new("country_code", "max_length", "country_code must be at most 2 characters").with_param("max", 2_i64));
@@ -85,6 +89,10 @@ impl backbone_core::write_guard::WriteGuard<EmvQrConfig> for EmvQrConfigRowRules
         // `mcc_length` (@length(4) on EmvQrConfig.mcc)
         if (create || (update && r::changed(old.as_ref(), row, &["mcc"]))) && !r::holds(&r::eq(r::length(r::field(row, "mcc")), r::Val::Num(4.0_f64))) {
             refuse.push(Violation::new("mcc", "length", "mcc must be exactly 4 characters").with_param("length", 4_i64));
+        }
+        // `gui_required` (@required on EmvQrConfig.gui)
+        if (create || (update && r::changed(old.as_ref(), row, &["gui"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "gui")), r::not(r::is_empty(r::trim(r::field(row, "gui")))))) {
+            refuse.push(Violation::new("gui", "required", "gui is required"));
         }
         // `gui_max_length` (@max(32) on EmvQrConfig.gui)
         if (create || (update && r::changed(old.as_ref(), row, &["gui"]))) && !r::holds(&r::le(r::length(r::field(row, "gui")), r::Val::Num(32.0_f64))) {
@@ -98,9 +106,17 @@ impl backbone_core::write_guard::WriteGuard<EmvQrConfig> for EmvQrConfigRowRules
         if (create || (update && r::changed(old.as_ref(), row, &["merchant_identifier"]))) && !r::holds(&r::le(r::length(r::field(row, "merchant_identifier")), r::Val::Num(32.0_f64))) {
             refuse.push(Violation::new("merchant_identifier", "max_length", "merchant_identifier must be at most 32 characters").with_param("max", 32_i64));
         }
+        // `currency_required` (@required on EmvQrConfig.currency)
+        if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "currency")), r::not(r::is_empty(r::trim(r::field(row, "currency")))))) {
+            refuse.push(Violation::new("currency", "required", "currency is required"));
+        }
         // `currency_length` (@length(3) on EmvQrConfig.currency)
         if (create || (update && r::changed(old.as_ref(), row, &["currency"]))) && !r::holds(&r::eq(r::length(r::field(row, "currency")), r::Val::Num(3.0_f64))) {
             refuse.push(Violation::new("currency", "length", "currency must be exactly 3 characters").with_param("length", 3_i64));
+        }
+        // `initiation_method_required` (@required on EmvQrConfig.initiation_method)
+        if (create || (update && r::changed(old.as_ref(), row, &["initiation_method"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "initiation_method")), r::not(r::is_empty(r::trim(r::field(row, "initiation_method")))))) {
+            refuse.push(Violation::new("initiation_method", "required", "initiation_method is required"));
         }
         GuardOutcome { refuse, shadow }
     }

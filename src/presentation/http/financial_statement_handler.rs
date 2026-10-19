@@ -82,6 +82,13 @@ impl axum::response::IntoResponse for FinancialStatementError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `financial_statement:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn financial_statement_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("financial_statement")
+        .in_module("accounting")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for FinancialStatement.
 ///
 /// # Routes
@@ -111,21 +118,23 @@ impl axum::response::IntoResponse for FinancialStatementError {
 /// let router = create_financial_statement_routes(service);
 /// ```
 pub fn create_financial_statement_routes(service: Arc<FinancialStatementService>) -> Router {
-    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::routes(
+    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::routes_guarded(
         service,
         "/financial_statements",
+        financial_statement_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for FinancialStatement.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_financial_statement_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_financial_statement_read_routes(service: Arc<FinancialStatementService>) -> Router {
-    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::read_routes(
+    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::read_routes_guarded(
         service,
         "/financial_statements",
+        financial_statement_permissions(),
     )
 }
 
@@ -141,9 +150,10 @@ pub fn create_financial_statement_read_routes(service: Arc<FinancialStatementSer
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_financial_statement_write_routes(service: Arc<FinancialStatementService>) -> Router {
-    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::write_routes(
+    BackboneCrudHandler::<FinancialStatementService, FinancialStatement, CreateFinancialStatementDto, UpdateFinancialStatementDto, FinancialStatementResponseDto>::write_routes_guarded(
         service,
         "/financial_statements",
+        financial_statement_permissions(),
     )
 }
 

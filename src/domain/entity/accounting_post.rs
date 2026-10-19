@@ -343,6 +343,14 @@ impl super::Entity for AccountingPost {
 }
 
 impl backbone_core::PersistentEntity for AccountingPost {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("journal_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("reverses_post_id", "accounting.accounting_posts", "id"),
+            backbone_core::Reference::new("reversed_by_post_id", "accounting.accounting_posts", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

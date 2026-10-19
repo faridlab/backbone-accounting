@@ -68,3 +68,5 @@ pub use full_reconcile_event_handlers::FullReconcileEventHandler;
 pub use partial_reconcile_events::{PartialReconcileEvent, PartialReconcileEventPublisher, NoopPartialReconcileEventPublisher};
 pub use partial_reconcile_event_handlers::PartialReconcileEventHandler;
 
+pub mod declared;
+

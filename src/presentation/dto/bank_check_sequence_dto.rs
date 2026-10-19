@@ -31,11 +31,19 @@ pub struct CreateBankCheckSequenceDto {
     #[serde(alias = "bank_account_id")]
     pub bank_account_id: Uuid,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
-    #[serde(alias = "numbering_mode")]
+    #[serde(default = "default_create_bank_check_sequence_numbering_mode", alias = "numbering_mode")]
     pub numbering_mode: String,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "next_number")]
+    #[serde(default = "default_create_bank_check_sequence_next_number", alias = "next_number")]
     pub next_number: i64,
+}
+
+fn default_create_bank_check_sequence_numbering_mode() -> String {
+    "auto".to_string()
+}
+
+fn default_create_bank_check_sequence_next_number() -> i64 {
+    1
 }
 
 // =============================================================================
@@ -251,12 +259,4 @@ impl backbone_core::ApplyUpdateDto<UpdateBankCheckSequenceDto> for BankCheckSequ
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to BankCheckSequence here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -435,6 +435,18 @@ impl super::Entity for JournalLine {
 }
 
 impl backbone_core::PersistentEntity for JournalLine {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("journal_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("account_id", "accounting.accounts", "id"),
+            backbone_core::Reference::new("related_line_id", "accounting.journal_lines", "id"),
+            backbone_core::Reference::new("reconciliation_id", "accounting.reconciliations", "id"),
+            backbone_core::Reference::new("full_reconcile_id", "accounting.full_reconciles", "id"),
+            backbone_core::Reference::new("ledger_id", "accounting.ledgers", "id"),
+            backbone_core::Reference::new("cost_center_id", "accounting.cost_centers", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

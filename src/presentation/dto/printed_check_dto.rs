@@ -43,12 +43,21 @@ pub struct CreatePrintedCheckDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "payee_name")]
     pub payee_name: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_printed_check_status")]
     pub status: String,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
-    #[serde(alias = "printed_at")]
+    #[serde(default = "default_create_printed_check_printed_at", alias = "printed_at")]
     pub printed_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "printed_by")]
     pub printed_by: Option<Uuid>,
+}
+
+fn default_create_printed_check_status() -> String {
+    "printed".to_string()
+}
+
+fn default_create_printed_check_printed_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 // =============================================================================
@@ -104,23 +113,23 @@ pub struct PatchPrintedCheckDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "payment_id")]
     pub payment_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "payment_number")]
-    pub payment_number: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "payment_number")]
+    pub payment_number: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "check_number")]
     pub check_number: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "payee_name")]
-    pub payee_name: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "payee_name")]
+    pub payee_name: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "printed_at")]
     pub printed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "printed_by")]
-    pub printed_by: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "printed_by")]
+    pub printed_by: Option<Option<Uuid>>,
 }
 
 impl PatchPrintedCheckDto {
@@ -322,12 +331,4 @@ impl backbone_core::ApplyUpdateDto<UpdatePrintedCheckDto> for PrintedCheck {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to PrintedCheck here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

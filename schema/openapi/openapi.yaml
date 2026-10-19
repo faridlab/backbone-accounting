@@ -2995,30 +2995,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Create FiscalPeriod
-      description: Create a new FiscalPeriod
-      operationId: createFiscalPeriod
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateFiscalPeriodRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriod'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/v1/accounting/fiscal_periods/{id}:
     parameters:
       - $ref: '#/components/parameters/IdParam'
@@ -3038,181 +3014,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-    put:
-      tags:
-        - FiscalPeriods
-      summary: Update FiscalPeriod (full)
-      operationId: updateFiscalPeriod
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateFiscalPeriodRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriod'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      tags:
-        - FiscalPeriods
-      summary: Update FiscalPeriod (partial)
-      operationId: patchFiscalPeriod
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchFiscalPeriodRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriod'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - FiscalPeriods
-      summary: Delete FiscalPeriod (soft)
-      operationId: deleteFiscalPeriod
-      responses:
-        '204':
-          description: Deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/accounting/fiscal_periods/bulk:
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Bulk create FiscalPeriods
-      operationId: bulkCreateFiscalPeriods
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CreateFiscalPeriodRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FiscalPeriod'
-    put:
-      tags:
-        - FiscalPeriods
-      summary: Bulk update FiscalPeriods (full, atomic)
-      operationId: bulkUpdateFiscalPeriods
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                allOf:
-                  - type: object
-                    required: [id]
-                    properties:
-                      id:
-                        type: string
-                  - $ref: '#/components/schemas/UpdateFiscalPeriodRequest'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriodBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    patch:
-      tags:
-        - FiscalPeriods
-      summary: Bulk partial-update FiscalPeriods (atomic)
-      operationId: bulkPatchFiscalPeriods
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-                - type: object
-                  required: [ids, patch]
-                  properties:
-                    ids:
-                      type: array
-                      items: { type: string }
-                    patch:
-                      type: object
-                      additionalProperties: true
-                - type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [id, patch]
-                        properties:
-                          id: { type: string }
-                          patch: { type: object, additionalProperties: true }
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriodBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/accounting/fiscal_periods/upsert:
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Upsert FiscalPeriod
-      operationId: upsertFiscalPeriod
-      parameters:
-        - name: key_field
-          in: query
-          schema:
-            type: string
-        - name: key_value
-          in: query
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateFiscalPeriodRequest'
-      responses:
-        '200':
-          description: Upserted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriod'
-
   /api/v1/accounting/fiscal_periods/trash:
     get:
       tags:
@@ -3229,115 +3030,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FiscalPeriodList'
-
-  /api/v1/accounting/fiscal_periods/{id}/restore:
-    parameters:
-      - $ref: '#/components/parameters/IdParam'
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Restore deleted FiscalPeriod
-      operationId: restoreFiscalPeriod
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriod'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /api/v1/accounting/fiscal_periods/empty:
-    delete:
-      tags:
-        - FiscalPeriods
-      summary: Empty trash for FiscalPeriods
-      operationId: emptyTrashFiscalPeriods
-      responses:
-        '200':
-          description: Trash emptied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  deleted_count:
-                    type: integer
-
-  /api/v1/accounting/fiscal_periods/delete/bulk:
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Bulk soft-delete FiscalPeriods by ids (atomic)
-      operationId: bulkDeleteFiscalPeriods
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  soft_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/accounting/fiscal_periods/restore/bulk:
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Bulk restore FiscalPeriods by ids (atomic)
-      operationId: bulkRestoreFiscalPeriods
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FiscalPeriodBulkResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /api/v1/accounting/fiscal_periods/restore/all:
-    post:
-      tags:
-        - FiscalPeriods
-      summary: Restore all soft-deleted FiscalPeriods
-      operationId: restoreAllFiscalPeriods
-      responses:
-        '200':
-          description: Restored
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  restored: { type: integer }
-
-  /api/v1/accounting/fiscal_periods/trash/bulk:
-    delete:
-      tags:
-        - FiscalPeriods
-      summary: Bulk permanently-delete FiscalPeriods from trash by ids (atomic)
-      operationId: bulkPermanentDeleteFiscalPeriods
-      requestBody:
-        $ref: '#/components/requestBodies/BatchIds'
-      responses:
-        '200':
-          description: Permanently deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  permanently_deleted: { type: integer }
-        '400':
-          $ref: '#/components/responses/BadRequest'
 
   /api/v1/accounting/journals:
     get:
@@ -6034,20 +5726,6 @@ components:
         - account_type
         - account_subtype
         - normal_balance
-        - level
-        - is_header
-        - is_detail
-        - currency
-        - opening_balance
-        - current_balance
-        - is_reconcilable
-        - has_budget
-        - sort_order
-        - show_in_reports
-        - status
-        - is_system
-        - is_cloned
-        - metadata
       properties:
         account_number:
           type: string
@@ -6127,8 +5805,6 @@ components:
           nullable: true
           type: string
           maxLength: 20
-        metadata:
-          type: object
 
     UpdateAccountRequest:
       type: object
@@ -6152,7 +5828,6 @@ components:
         - status
         - is_system
         - is_cloned
-        - metadata
       properties:
         account_number:
           type: string
@@ -6232,8 +5907,6 @@ components:
           nullable: true
           type: string
           maxLength: 20
-        metadata:
-          type: object
 
     PatchAccountRequest:
       type: object
@@ -6316,8 +5989,6 @@ components:
           nullable: true
           type: string
           maxLength: 20
-        metadata:
-          type: object
 
     AccountList:
       type: object
@@ -6441,14 +6112,6 @@ components:
       required:
         - source_type
         - source_id
-        - posting_type
-        - posting_status
-        - currency
-        - total_debit
-        - total_credit
-        - retry_count
-        - max_retries
-        - metadata
       properties:
         branch_id:
           nullable: true
@@ -6523,8 +6186,6 @@ components:
           nullable: true
           type: string
           maxLength: 500
-        metadata:
-          type: object
 
     UpdateAccountingPostRequest:
       type: object
@@ -6538,7 +6199,6 @@ components:
         - total_credit
         - retry_count
         - max_retries
-        - metadata
       properties:
         branch_id:
           nullable: true
@@ -6613,8 +6273,6 @@ components:
           nullable: true
           type: string
           maxLength: 500
-        metadata:
-          type: object
 
     PatchAccountingPostRequest:
       type: object
@@ -6692,8 +6350,6 @@ components:
           nullable: true
           type: string
           maxLength: 500
-        metadata:
-          type: object
 
     AccountingPostList:
       type: object
@@ -6769,11 +6425,6 @@ components:
       required:
         - code
         - name
-        - level
-        - is_group
-        - status
-        - sort_order
-        - metadata
       properties:
         code:
           type: string
@@ -6803,8 +6454,6 @@ components:
         sort_order:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     UpdateCostCenterRequest:
       type: object
@@ -6815,7 +6464,6 @@ components:
         - is_group
         - status
         - sort_order
-        - metadata
       properties:
         code:
           type: string
@@ -6845,8 +6493,6 @@ components:
         sort_order:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     PatchCostCenterRequest:
       type: object
@@ -6879,8 +6525,6 @@ components:
         sort_order:
           type: integer
           format: int32
-        metadata:
-          type: object
 
     CostCenterList:
       type: object
@@ -6963,13 +6607,8 @@ components:
       required:
         - merchant_name
         - merchant_city
-        - country_code
         - mcc
-        - gui
         - merchant_identifier
-        - currency
-        - initiation_method
-        - metadata
       properties:
         merchant_name:
           type: string
@@ -6996,8 +6635,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateEmvQrConfigRequest:
       type: object
@@ -7010,7 +6647,6 @@ components:
         - merchant_identifier
         - currency
         - initiation_method
-        - metadata
       properties:
         merchant_name:
           type: string
@@ -7037,8 +6673,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchEmvQrConfigRequest:
       type: object
@@ -7068,8 +6702,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     EmvQrConfigList:
       type: object
@@ -7129,9 +6761,6 @@ components:
       type: object
       required:
         - bank_account_id
-        - numbering_mode
-        - next_number
-        - metadata
       properties:
         bank_account_id:
           type: string
@@ -7141,8 +6770,6 @@ components:
         next_number:
           type: integer
           format: int64
-        metadata:
-          type: object
 
     UpdateBankCheckSequenceRequest:
       type: object
@@ -7150,7 +6777,6 @@ components:
         - bank_account_id
         - numbering_mode
         - next_number
-        - metadata
       properties:
         bank_account_id:
           type: string
@@ -7160,8 +6786,6 @@ components:
         next_number:
           type: integer
           format: int64
-        metadata:
-          type: object
 
     PatchBankCheckSequenceRequest:
       type: object
@@ -7174,8 +6798,6 @@ components:
         next_number:
           type: integer
           format: int64
-        metadata:
-          type: object
 
     BankCheckSequenceList:
       type: object
@@ -7261,9 +6883,6 @@ components:
         - payment_id
         - check_number
         - amount
-        - status
-        - printed_at
-        - metadata
       properties:
         bank_account_id:
           type: string
@@ -7293,8 +6912,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdatePrintedCheckRequest:
       type: object
@@ -7305,7 +6922,6 @@ components:
         - amount
         - status
         - printed_at
-        - metadata
       properties:
         bank_account_id:
           type: string
@@ -7335,8 +6951,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchPrintedCheckRequest:
       type: object
@@ -7369,8 +6983,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PrintedCheckList:
       type: object
@@ -7459,11 +7071,7 @@ components:
         - rules
         - lines_examined
         - lines_retagged
-        - dry_run
-        - overridden_closed_periods
         - reason
-        - ran_at
-        - metadata
       properties:
         date_from:
           type: string
@@ -7492,8 +7100,6 @@ components:
         ran_at:
           type: string
           format: date-time
-        metadata:
-          type: object
 
     UpdateTaxTagRepairRunRequest:
       type: object
@@ -7507,7 +7113,6 @@ components:
         - overridden_closed_periods
         - reason
         - ran_at
-        - metadata
       properties:
         date_from:
           type: string
@@ -7536,8 +7141,6 @@ components:
         ran_at:
           type: string
           format: date-time
-        metadata:
-          type: object
 
     PatchTaxTagRepairRunRequest:
       type: object
@@ -7569,8 +7172,6 @@ components:
         ran_at:
           type: string
           format: date-time
-        metadata:
-          type: object
 
     TaxTagRepairRunList:
       type: object
@@ -7815,17 +7416,6 @@ components:
         - name
         - fiscal_year
         - as_of_date
-        - is_comparative
-        - status
-        - balance_check
-        - trial_balance_check
-        - line_items
-        - comparative_data
-        - variance_data
-        - notes
-        - generation_parameters
-        - currency
-        - metadata
       properties:
         statement_number:
           type: string
@@ -8012,8 +7602,6 @@ components:
           maxLength: 500
         currency:
           type: string
-        metadata:
-          type: object
 
     UpdateFinancialStatementRequest:
       type: object
@@ -8033,7 +7621,6 @@ components:
         - notes
         - generation_parameters
         - currency
-        - metadata
       properties:
         statement_number:
           type: string
@@ -8220,8 +7807,6 @@ components:
           maxLength: 500
         currency:
           type: string
-        metadata:
-          type: object
 
     PatchFinancialStatementRequest:
       type: object
@@ -8411,8 +7996,6 @@ components:
           maxLength: 500
         currency:
           type: string
-        metadata:
-          type: object
 
     FinancialStatementList:
       type: object
@@ -8605,27 +8188,9 @@ components:
       required:
         - period_code
         - name
-        - period_type
         - start_date
         - end_date
         - fiscal_year
-        - level
-        - status
-        - is_current
-        - opening_balance_set
-        - allow_adjustments
-        - total_debits
-        - total_credits
-        - journal_count
-        - total_revenue
-        - total_expenses
-        - net_income
-        - total_assets
-        - total_liabilities
-        - total_equity
-        - balance_sheet_generated
-        - income_statement_generated
-        - metadata
       properties:
         period_code:
           type: string
@@ -8665,8 +8230,6 @@ components:
         level:
           type: integer
           format: int32
-        status:
-          type: string
         is_current:
           type: boolean
         opening_balance_set:
@@ -8679,71 +8242,12 @@ components:
           nullable: true
           type: string
           format: uuid
-        closing_started_at:
-          nullable: true
-          type: string
-          format: date-time
-        closing_started_by:
-          nullable: true
-          type: string
-          format: uuid
-        closed_at:
-          nullable: true
-          type: string
-          format: date-time
-        closed_by:
-          nullable: true
-          type: string
-          format: uuid
-        locked_at:
-          nullable: true
-          type: string
-          format: date-time
-        locked_by:
-          nullable: true
-          type: string
-          format: uuid
-        lock_reason:
-          nullable: true
-          type: string
-          maxLength: 255
-        reopened_at:
-          nullable: true
-          type: string
-          format: date-time
-        reopened_by:
-          nullable: true
-          type: string
-          format: uuid
-        reopen_reason:
-          nullable: true
-          type: string
-          maxLength: 255
         allow_adjustments:
           type: boolean
         adjustment_deadline:
           nullable: true
           type: string
           format: date
-        total_debits:
-          type: string
-        total_credits:
-          type: string
-        journal_count:
-          type: integer
-          format: int32
-        total_revenue:
-          type: string
-        total_expenses:
-          type: string
-        net_income:
-          type: string
-        total_assets:
-          type: string
-        total_liabilities:
-          type: string
-        total_equity:
-          type: string
         balance_sheet_generated:
           type: boolean
         income_statement_generated:
@@ -8756,8 +8260,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     UpdateFiscalPeriodRequest:
       type: object
@@ -8784,7 +8286,6 @@ components:
         - total_equity
         - balance_sheet_generated
         - income_statement_generated
-        - metadata
       properties:
         period_code:
           type: string
@@ -8915,8 +8416,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     PatchFiscalPeriodRequest:
       type: object
@@ -9050,8 +8549,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     FiscalPeriodList:
       type: object
@@ -9259,22 +8756,8 @@ components:
       type: object
       required:
         - journal_number
-        - journal_type
         - transaction_date
         - description
-        - currency
-        - total_debit
-        - total_credit
-        - line_count
-        - source
-        - is_reversed
-        - is_reversing
-        - auto_reverse
-        - status
-        - requires_approval
-        - is_voided
-        - attachments
-        - metadata
       properties:
         journal_number:
           type: string
@@ -9368,8 +8851,6 @@ components:
           nullable: true
           type: string
           format: date
-        status:
-          type: string
         requires_approval:
           type: boolean
         approval_threshold:
@@ -9426,8 +8907,6 @@ components:
           type: string
           maxLength: 500
         attachments:
-          type: object
-        metadata:
           type: object
 
     UpdateJournalRequest:
@@ -9449,7 +8928,6 @@ components:
         - requires_approval
         - is_voided
         - attachments
-        - metadata
       properties:
         journal_number:
           type: string
@@ -9601,8 +9079,6 @@ components:
           type: string
           maxLength: 500
         attachments:
-          type: object
-        metadata:
           type: object
 
     PatchJournalRequest:
@@ -9758,8 +9234,6 @@ components:
           type: string
           maxLength: 500
         attachments:
-          type: object
-        metadata:
           type: object
 
     JournalList:
@@ -9940,18 +9414,6 @@ components:
         - account_id
         - account_number
         - account_name
-        - debit_amount
-        - credit_amount
-        - currency
-        - exchange_rate
-        - base_debit_amount
-        - base_credit_amount
-        - is_tax_line
-        - has_quantity
-        - is_reconciled
-        - is_posted
-        - tags
-        - data
       properties:
         journal_id:
           type: string
@@ -10547,19 +10009,10 @@ components:
         - fiscal_year
         - fiscal_month
         - description
-        - currency
-        - debit_amount
-        - credit_amount
         - balance_before
         - balance_after
         - balance_change
         - sequence_number
-        - is_reconciled
-        - is_opening_balance
-        - is_closing_entry
-        - is_adjustment
-        - is_reversed
-        - metadata
       properties:
         account_id:
           type: string
@@ -10689,8 +10142,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     UpdateLedgerRequest:
       type: object
@@ -10720,7 +10171,6 @@ components:
         - is_closing_entry
         - is_adjustment
         - is_reversed
-        - metadata
       properties:
         account_id:
           type: string
@@ -10850,8 +10300,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     PatchLedgerRequest:
       type: object
@@ -10984,8 +10432,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          type: object
 
     LedgerList:
       type: object
@@ -11192,7 +10638,6 @@ components:
         - account_id
         - account_number
         - account_name
-        - reconciliation_type
         - period_start
         - period_end
         - statement_date
@@ -11200,28 +10645,6 @@ components:
         - opening_statement_balance
         - closing_book_balance
         - closing_statement_balance
-        - total_matched_debits
-        - total_matched_credits
-        - matched_count
-        - total_unmatched_book_debits
-        - total_unmatched_book_credits
-        - unmatched_book_count
-        - total_unmatched_statement_debits
-        - total_unmatched_statement_credits
-        - unmatched_statement_count
-        - outstanding_deposits
-        - outstanding_checks
-        - deposits_in_transit
-        - bank_charges
-        - bank_interest
-        - nsf_checks
-        - other_adjustments
-        - difference
-        - is_balanced
-        - status
-        - has_adjusting_entries
-        - adjusting_journal_ids
-        - metadata
       properties:
         reconciliation_number:
           type: string
@@ -11353,8 +10776,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     UpdateReconciliationRequest:
       type: object
@@ -11392,7 +10813,6 @@ components:
         - status
         - has_adjusting_entries
         - adjusting_journal_ids
-        - metadata
       properties:
         reconciliation_number:
           type: string
@@ -11524,8 +10944,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     PatchReconciliationRequest:
       type: object
@@ -11660,8 +11078,6 @@ components:
           nullable: true
           type: string
           maxLength: 1000
-        metadata:
-          type: object
 
     ReconciliationList:
       type: object
@@ -11829,17 +11245,6 @@ components:
         - reconciliation_id
         - item_number
         - source
-        - book_debit
-        - book_credit
-        - statement_debit
-        - statement_credit
-        - status
-        - has_difference
-        - difference_amount
-        - requires_adjustment
-        - is_written_off
-        - is_outstanding
-        - data
       properties:
         reconciliation_id:
           type: string
@@ -12259,18 +11664,12 @@ components:
 
     CreateFullReconcileRequest:
       type: object
-      required:
-        - exchange_total
-        - reconciled_at
       properties:
         exchange_total:
           type: string
         reconciled_at:
           type: string
           format: date-time
-        metadata:
-          nullable: true
-          type: object
 
     UpdateFullReconcileRequest:
       type: object
@@ -12283,9 +11682,6 @@ components:
         reconciled_at:
           type: string
           format: date-time
-        metadata:
-          nullable: true
-          type: object
 
     PatchFullReconcileRequest:
       type: object
@@ -12295,9 +11691,6 @@ components:
         reconciled_at:
           type: string
           format: date-time
-        metadata:
-          nullable: true
-          type: object
 
     FullReconcileList:
       type: object
@@ -12392,9 +11785,7 @@ components:
         - debit_move_id
         - credit_move_id
         - amount
-        - currency
         - max_date
-        - origin
       properties:
         debit_move_id:
           type: string
@@ -12434,9 +11825,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          nullable: true
-          type: object
 
     UpdatePartialReconcileRequest:
       type: object
@@ -12486,9 +11874,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          nullable: true
-          type: object
 
     PatchPartialReconcileRequest:
       type: object
@@ -12531,9 +11916,6 @@ components:
           nullable: true
           type: string
           format: uuid
-        metadata:
-          nullable: true
-          type: object
 
     PartialReconcileList:
       type: object

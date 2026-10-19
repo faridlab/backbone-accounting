@@ -52,52 +52,71 @@ pub struct CreateAccountDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "parent_id")]
     pub parent_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(default)]
     pub level: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_header")]
+    #[serde(default, alias = "is_header")]
     pub is_header: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_detail")]
+    #[serde(default = "default_create_account_is_detail", alias = "is_detail")]
     pub is_detail: bool,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_account_currency")]
     pub currency: String,
-    #[serde(alias = "opening_balance")]
+    #[serde(default, alias = "opening_balance")]
     pub opening_balance: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
     pub opening_balance_date: Option<NaiveDate>,
-    #[serde(alias = "current_balance")]
+    #[serde(default, alias = "current_balance")]
     pub current_balance: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reconcilable")]
+    #[serde(default, alias = "is_reconcilable")]
     pub is_reconcilable: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "has_budget")]
+    #[serde(default, alias = "has_budget")]
     pub has_budget: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "budget_amount")]
     pub budget_amount: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "sort_order")]
+    #[serde(default, alias = "sort_order")]
     pub sort_order: i32,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "show_in_reports")]
+    #[serde(default = "default_create_account_show_in_reports", alias = "show_in_reports")]
     pub show_in_reports: bool,
+    #[serde(default = "default_create_account_status")]
     pub status: AccountStatus,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_system")]
+    #[serde(default, alias = "is_system")]
     pub is_system: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_cloned")]
+    #[serde(default, alias = "is_cloned")]
     pub is_cloned: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_code")]
     pub chart_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "chart_version")]
     pub chart_version: Option<String>,
+}
+
+fn default_create_account_is_detail() -> bool {
+    true
+}
+
+fn default_create_account_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_account_show_in_reports() -> bool {
+    true
+}
+
+fn default_create_account_status() -> AccountStatus {
+    AccountStatus::Active
 }
 
 // =============================================================================
@@ -200,21 +219,21 @@ pub struct PatchAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub description: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "account_type")]
     pub account_type: Option<AccountType>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "account_subtype")]
     pub account_subtype: Option<AccountSubtype>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "normal_balance")]
     pub normal_balance: Option<NormalBalance>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "parent_id")]
-    pub parent_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "parent_id")]
+    pub parent_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub path: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_header")]
     pub is_header: Option<bool>,
@@ -226,8 +245,8 @@ pub struct PatchAccountDto {
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance")]
     pub opening_balance: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
-    pub opening_balance_date: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "opening_balance_date")]
+    pub opening_balance_date: Option<Option<NaiveDate>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "current_balance")]
     pub current_balance: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
@@ -236,8 +255,8 @@ pub struct PatchAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "has_budget")]
     pub has_budget: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "budget_amount")]
-    pub budget_amount: Option<Decimal>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "budget_amount")]
+    pub budget_amount: Option<Option<Decimal>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "sort_order")]
     pub sort_order: Option<i32>,
@@ -249,17 +268,17 @@ pub struct PatchAccountDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_system")]
     pub is_system: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
-    pub source_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_id")]
+    pub source_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_cloned")]
     pub is_cloned: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "chart_code")]
-    pub chart_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "chart_version")]
-    pub chart_version: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "chart_code")]
+    pub chart_code: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "chart_version")]
+    pub chart_version: Option<Option<String>>,
 }
 
 impl PatchAccountDto {
@@ -554,12 +573,4 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountDto> for Account {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Account here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

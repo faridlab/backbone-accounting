@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for TaxTagRepairRunError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `tax_tag_repair_run:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn tax_tag_repair_run_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("tax_tag_repair_run")
+        .in_module("accounting")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for TaxTagRepairRun.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for TaxTagRepairRunError {
 /// let router = create_tax_tag_repair_run_routes(service);
 /// ```
 pub fn create_tax_tag_repair_run_routes(service: Arc<TaxTagRepairRunService>) -> Router {
-    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::routes(
+    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::routes_guarded(
         service,
         "/tax_tag_repair_runs",
+        tax_tag_repair_run_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for TaxTagRepairRun.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_tax_tag_repair_run_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_tax_tag_repair_run_read_routes(service: Arc<TaxTagRepairRunService>) -> Router {
-    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::read_routes(
+    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::read_routes_guarded(
         service,
         "/tax_tag_repair_runs",
+        tax_tag_repair_run_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_tax_tag_repair_run_read_routes(service: Arc<TaxTagRepairRunService
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_tax_tag_repair_run_write_routes(service: Arc<TaxTagRepairRunService>) -> Router {
-    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::write_routes(
+    BackboneCrudHandler::<TaxTagRepairRunService, TaxTagRepairRun, CreateTaxTagRepairRunDto, UpdateTaxTagRepairRunDto, TaxTagRepairRunResponseDto>::write_routes_guarded(
         service,
         "/tax_tag_repair_runs",
+        tax_tag_repair_run_permissions(),
     )
 }
 

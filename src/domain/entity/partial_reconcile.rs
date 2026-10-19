@@ -232,6 +232,14 @@ impl backbone_core::PersistentEntity for PartialReconcile {
     fn write_protected_fields() -> &'static [&'static str] {
         &["created_at"]
     }
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("debit_move_id", "accounting.journal_lines", "id"),
+            backbone_core::Reference::new("credit_move_id", "accounting.journal_lines", "id"),
+            backbone_core::Reference::new("full_reconcile_id", "accounting.full_reconciles", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

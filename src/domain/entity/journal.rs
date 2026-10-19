@@ -548,6 +548,21 @@ impl super::Entity for Journal {
 }
 
 impl backbone_core::PersistentEntity for Journal {
+    fn state_fields() -> &'static [&'static str] {
+        &["status"]
+    }
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("fiscal_period_id", "accounting.fiscal_periods", "id"),
+            backbone_core::Reference::new("reversed_by_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("reverses_id", "accounting.journals", "id"),
+            backbone_core::Reference::new("submitted_by", "users", "id"),
+            backbone_core::Reference::new("approved_by", "users", "id"),
+            backbone_core::Reference::new("posted_by", "users", "id"),
+            backbone_core::Reference::new("voided_by", "users", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

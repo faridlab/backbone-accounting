@@ -62,6 +62,10 @@ impl backbone_core::write_guard::WriteGuard<BankCheckSequence> for BankCheckSequ
         if (create || (update && r::changed(old.as_ref(), row, &["bank_account_id"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "bank_account_id")), r::not(r::is_empty(r::trim(r::field(row, "bank_account_id")))))) {
             refuse.push(Violation::new("bank_account_id", "required", "bank_account_id is required"));
         }
+        // `numbering_mode_required` (@required on BankCheckSequence.numbering_mode)
+        if (create || (update && r::changed(old.as_ref(), row, &["numbering_mode"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "numbering_mode")), r::not(r::is_empty(r::trim(r::field(row, "numbering_mode")))))) {
+            refuse.push(Violation::new("numbering_mode", "required", "numbering_mode is required"));
+        }
         // `next_number_positive` (@positive on BankCheckSequence.next_number)
         if (create || (update && r::changed(old.as_ref(), row, &["next_number"]))) && !r::holds(&r::gt(r::field(row, "next_number"), r::Val::Num(0.0_f64))) {
             refuse.push(Violation::new("next_number", "positive", "next_number must be positive"));

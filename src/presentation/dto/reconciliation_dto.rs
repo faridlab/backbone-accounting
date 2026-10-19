@@ -43,7 +43,7 @@ pub struct CreateReconciliationDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "account_name")]
     pub account_name: String,
-    #[serde(alias = "reconciliation_type")]
+    #[serde(default = "default_create_reconciliation_reconciliation_type", alias = "reconciliation_type")]
     pub reconciliation_type: ReconciliationType,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "period_start")]
@@ -64,49 +64,51 @@ pub struct CreateReconciliationDto {
     pub closing_book_balance: Decimal,
     #[serde(alias = "closing_statement_balance")]
     pub closing_statement_balance: Decimal,
-    #[serde(alias = "total_matched_debits")]
+    #[serde(default, alias = "total_matched_debits")]
     pub total_matched_debits: Decimal,
-    #[serde(alias = "total_matched_credits")]
+    #[serde(default, alias = "total_matched_credits")]
     pub total_matched_credits: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "matched_count")]
+    #[serde(default, alias = "matched_count")]
     pub matched_count: i32,
-    #[serde(alias = "total_unmatched_book_debits")]
+    #[serde(default, alias = "total_unmatched_book_debits")]
     pub total_unmatched_book_debits: Decimal,
-    #[serde(alias = "total_unmatched_book_credits")]
+    #[serde(default, alias = "total_unmatched_book_credits")]
     pub total_unmatched_book_credits: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "unmatched_book_count")]
+    #[serde(default, alias = "unmatched_book_count")]
     pub unmatched_book_count: i32,
-    #[serde(alias = "total_unmatched_statement_debits")]
+    #[serde(default, alias = "total_unmatched_statement_debits")]
     pub total_unmatched_statement_debits: Decimal,
-    #[serde(alias = "total_unmatched_statement_credits")]
+    #[serde(default, alias = "total_unmatched_statement_credits")]
     pub total_unmatched_statement_credits: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "unmatched_statement_count")]
+    #[serde(default, alias = "unmatched_statement_count")]
     pub unmatched_statement_count: i32,
-    #[serde(alias = "outstanding_deposits")]
+    #[serde(default, alias = "outstanding_deposits")]
     pub outstanding_deposits: Decimal,
-    #[serde(alias = "outstanding_checks")]
+    #[serde(default, alias = "outstanding_checks")]
     pub outstanding_checks: Decimal,
-    #[serde(alias = "deposits_in_transit")]
+    #[serde(default, alias = "deposits_in_transit")]
     pub deposits_in_transit: Decimal,
-    #[serde(alias = "bank_charges")]
+    #[serde(default, alias = "bank_charges")]
     pub bank_charges: Decimal,
-    #[serde(alias = "bank_interest")]
+    #[serde(default, alias = "bank_interest")]
     pub bank_interest: Decimal,
-    #[serde(alias = "nsf_checks")]
+    #[serde(default, alias = "nsf_checks")]
     pub nsf_checks: Decimal,
-    #[serde(alias = "other_adjustments")]
+    #[serde(default, alias = "other_adjustments")]
     pub other_adjustments: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_book_balance")]
     pub adjusted_book_balance: Option<Decimal>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjusted_statement_balance")]
     pub adjusted_statement_balance: Option<Decimal>,
+    #[serde(default)]
     pub difference: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_balanced")]
+    #[serde(default, alias = "is_balanced")]
     pub is_balanced: bool,
+    #[serde(default = "default_create_reconciliation_status")]
     pub status: ReconciliationStatus,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "started_at")]
     pub started_at: Option<DateTime<Utc>>,
@@ -121,9 +123,9 @@ pub struct CreateReconciliationDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
     pub reviewed_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "has_adjusting_entries")]
+    #[serde(default, alias = "has_adjusting_entries")]
     pub has_adjusting_entries: bool,
-    #[serde(alias = "adjusting_journal_ids")]
+    #[serde(default = "default_create_reconciliation_adjusting_journal_ids", alias = "adjusting_journal_ids")]
     pub adjusting_journal_ids: serde_json::Value,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "statement_source")]
     pub statement_source: Option<String>,
@@ -135,6 +137,18 @@ pub struct CreateReconciliationDto {
     pub notes: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "discrepancy_notes")]
     pub discrepancy_notes: Option<String>,
+}
+
+fn default_create_reconciliation_reconciliation_type() -> ReconciliationType {
+    ReconciliationType::Bank
+}
+
+fn default_create_reconciliation_status() -> ReconciliationStatus {
+    ReconciliationStatus::InProgress
+}
+
+fn default_create_reconciliation_adjusting_journal_ids() -> serde_json::Value {
+    serde_json::json!([])
 }
 
 // =============================================================================
@@ -294,8 +308,8 @@ pub struct PatchReconciliationDto {
     pub opening_book_balance: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_statement_balance")]
     pub opening_statement_balance: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "previous_reconciliation_id")]
-    pub previous_reconciliation_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "previous_reconciliation_id")]
+    pub previous_reconciliation_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "closing_book_balance")]
     pub closing_book_balance: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "closing_statement_balance")]
@@ -335,10 +349,10 @@ pub struct PatchReconciliationDto {
     pub nsf_checks: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "other_adjustments")]
     pub other_adjustments: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "adjusted_book_balance")]
-    pub adjusted_book_balance: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "adjusted_statement_balance")]
-    pub adjusted_statement_balance: Option<Decimal>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "adjusted_book_balance")]
+    pub adjusted_book_balance: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "adjusted_statement_balance")]
+    pub adjusted_statement_balance: Option<Option<Decimal>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub difference: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
@@ -346,33 +360,33 @@ pub struct PatchReconciliationDto {
     pub is_balanced: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<ReconciliationStatus>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "started_at")]
-    pub started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "started_by")]
-    pub started_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "completed_at")]
-    pub completed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "completed_by")]
-    pub completed_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reviewed_at")]
-    pub reviewed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reviewed_by")]
-    pub reviewed_by: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "started_at")]
+    pub started_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "started_by")]
+    pub started_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "completed_at")]
+    pub completed_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "completed_by")]
+    pub completed_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reviewed_at")]
+    pub reviewed_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reviewed_by")]
+    pub reviewed_by: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "has_adjusting_entries")]
     pub has_adjusting_entries: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "adjusting_journal_ids")]
     pub adjusting_journal_ids: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "statement_source")]
-    pub statement_source: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "statement_file_url")]
-    pub statement_file_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "import_date")]
-    pub import_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "discrepancy_notes")]
-    pub discrepancy_notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "statement_source")]
+    pub statement_source: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "statement_file_url")]
+    pub statement_file_url: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "import_date")]
+    pub import_date: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "discrepancy_notes")]
+    pub discrepancy_notes: Option<Option<String>>,
 }
 
 impl PatchReconciliationDto {
@@ -761,12 +775,4 @@ impl backbone_core::ApplyUpdateDto<UpdateReconciliationDto> for Reconciliation {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Reconciliation here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -38,16 +38,22 @@ pub struct CreateCostCenterDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "parent_id")]
     pub parent_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(default)]
     pub level: i32,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_group")]
+    #[serde(default, alias = "is_group")]
     pub is_group: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
+    #[serde(default = "default_create_cost_center_status")]
     pub status: CostCenterStatus,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "sort_order")]
+    #[serde(default, alias = "sort_order")]
     pub sort_order: i32,
+}
+
+fn default_create_cost_center_status() -> CostCenterStatus {
+    CostCenterStatus::Active
 }
 
 // =============================================================================
@@ -101,18 +107,18 @@ pub struct PatchCostCenterDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "parent_id")]
-    pub parent_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "parent_id")]
+    pub parent_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level: Option<i32>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_group")]
     pub is_group: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
-    pub branch_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "branch_id")]
+    pub branch_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<CostCenterStatus>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
@@ -309,12 +315,4 @@ impl backbone_core::ApplyUpdateDto<UpdateCostCenterDto> for CostCenter {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to CostCenter here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

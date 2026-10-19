@@ -73,10 +73,11 @@ pub struct CreateLedgerDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_ledger_currency")]
     pub currency: String,
-    #[serde(alias = "debit_amount")]
+    #[serde(default, alias = "debit_amount")]
     pub debit_amount: Decimal,
-    #[serde(alias = "credit_amount")]
+    #[serde(default, alias = "credit_amount")]
     pub credit_amount: Decimal,
     #[serde(alias = "balance_before")]
     pub balance_before: Decimal,
@@ -108,28 +109,32 @@ pub struct CreateLedgerDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reconciled")]
+    #[serde(default, alias = "is_reconciled")]
     pub is_reconciled: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
     pub reconciliation_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
     pub reconciled_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_opening_balance")]
+    #[serde(default, alias = "is_opening_balance")]
     pub is_opening_balance: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_closing_entry")]
+    #[serde(default, alias = "is_closing_entry")]
     pub is_closing_entry: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_adjustment")]
+    #[serde(default, alias = "is_adjustment")]
     pub is_adjustment: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reversed")]
+    #[serde(default, alias = "is_reversed")]
     pub is_reversed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
     pub reversed_by_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
     pub reverses_id: Option<Uuid>,
+}
+
+fn default_create_ledger_currency() -> String {
+    "IDR".to_string()
 }
 
 // =============================================================================
@@ -284,8 +289,8 @@ pub struct PatchLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "posting_date")]
     pub posting_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
-    pub fiscal_period_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_period_id")]
+    pub fiscal_period_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_year")]
     pub fiscal_year: Option<i32>,
@@ -295,8 +300,8 @@ pub struct PatchLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reference: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub reference: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
@@ -313,33 +318,33 @@ pub struct PatchLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "sequence_number")]
     pub sequence_number: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
-    pub branch_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_type")]
-    pub party_type: Option<PartyType>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_id")]
-    pub party_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "cost_center_id")]
-    pub cost_center_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "project_id")]
-    pub project_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "department_id")]
-    pub department_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dimensions: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
-    pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
-    pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_reference")]
-    pub source_reference: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "branch_id")]
+    pub branch_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_type")]
+    pub party_type: Option<Option<PartyType>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_id")]
+    pub party_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "cost_center_id")]
+    pub cost_center_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "project_id")]
+    pub project_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "department_id")]
+    pub department_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub dimensions: Option<Option<serde_json::Value>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_type")]
+    pub source_type: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_id")]
+    pub source_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_reference")]
+    pub source_reference: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reconciled")]
     pub is_reconciled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
-    pub reconciliation_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
-    pub reconciled_at: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reconciliation_id")]
+    pub reconciliation_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reconciled_at")]
+    pub reconciled_at: Option<Option<DateTime<Utc>>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_opening_balance")]
     pub is_opening_balance: Option<bool>,
@@ -352,10 +357,10 @@ pub struct PatchLedgerDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reversed")]
     pub is_reversed: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
-    pub reversed_by_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reverses_id")]
-    pub reverses_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reversed_by_id")]
+    pub reversed_by_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reverses_id")]
+    pub reverses_id: Option<Option<Uuid>>,
 }
 
 impl PatchLedgerDto {
@@ -720,12 +725,4 @@ impl backbone_core::ApplyUpdateDto<UpdateLedgerDto> for Ledger {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Ledger here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

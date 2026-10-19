@@ -470,6 +470,15 @@ impl backbone_core::PersistentEntity for FiscalPeriod {
     fn write_protected_fields() -> &'static [&'static str] {
         &["status", "closing_started_at", "closing_started_by", "closed_at", "closed_by", "locked_at", "locked_by", "lock_reason", "reopened_at", "reopened_by", "reopen_reason", "total_debits", "total_credits", "journal_count", "total_revenue", "total_expenses", "net_income", "total_assets", "total_liabilities", "total_equity"]
     }
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("parent_id", "accounting.fiscal_periods", "id"),
+            backbone_core::Reference::new("opening_balance_by", "users", "id"),
+            backbone_core::Reference::new("closed_by", "users", "id"),
+            backbone_core::Reference::new("locked_by", "users", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

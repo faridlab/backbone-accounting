@@ -729,6 +729,16 @@ impl super::Entity for FinancialStatement {
 }
 
 impl backbone_core::PersistentEntity for FinancialStatement {
+    fn references() -> &'static [backbone_core::Reference] {
+        const REFERENCES: &[backbone_core::Reference] = &[
+            backbone_core::Reference::new("generated_by", "users", "id"),
+            backbone_core::Reference::new("reviewed_by", "users", "id"),
+            backbone_core::Reference::new("approved_by", "users", "id"),
+            backbone_core::Reference::new("fiscal_period_id", "accounting.fiscal_periods", "id"),
+            backbone_core::Reference::new("comparative_period_id", "accounting.fiscal_periods", "id"),
+        ];
+        REFERENCES
+    }
     fn entity_id(&self) -> String {
         self.id.to_string()
     }

@@ -86,6 +86,10 @@ impl backbone_core::write_guard::WriteGuard<PrintedCheck> for PrintedCheckRowRul
         if (create || (update && r::changed(old.as_ref(), row, &["payee_name"]))) && !r::holds(&r::le(r::length(r::field(row, "payee_name")), r::Val::Num(100.0_f64))) {
             refuse.push(Violation::new("payee_name", "max_length", "payee_name must be at most 100 characters").with_param("max", 100_i64));
         }
+        // `status_required` (@required on PrintedCheck.status)
+        if (create || (update && r::changed(old.as_ref(), row, &["status"]))) && !r::holds(&r::and(r::is_not_null(r::field(row, "status")), r::not(r::is_empty(r::trim(r::field(row, "status")))))) {
+            refuse.push(Violation::new("status", "required", "status is required"));
+        }
         GuardOutcome { refuse, shadow }
     }
 }

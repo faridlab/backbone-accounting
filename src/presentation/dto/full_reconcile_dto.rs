@@ -28,11 +28,15 @@ use crate::domain::entity::FullReconcile;
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFullReconcileDto {
-    #[serde(alias = "exchange_total")]
+    #[serde(default, alias = "exchange_total")]
     pub exchange_total: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01T00:00:00Z"))]
-    #[serde(alias = "reconciled_at")]
+    #[serde(default = "default_create_full_reconcile_reconciled_at", alias = "reconciled_at")]
     pub reconciled_at: DateTime<Utc>,
+}
+
+fn default_create_full_reconcile_reconciled_at() -> DateTime<Utc> {
+    Utc::now()
 }
 
 // =============================================================================
@@ -231,12 +235,4 @@ impl backbone_core::ApplyUpdateDto<UpdateFullReconcileDto> for FullReconcile {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to FullReconcile here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -36,7 +36,7 @@ pub struct CreateFiscalPeriodDto {
     pub period_code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub name: String,
-    #[serde(alias = "period_type")]
+    #[serde(default = "default_create_fiscal_period_period_type", alias = "period_type")]
     pub period_type: PeriodType,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(alias = "start_date")]
@@ -54,32 +54,37 @@ pub struct CreateFiscalPeriodDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "parent_id")]
     pub parent_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
+    #[serde(default)]
     pub level: i32,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_current")]
+    #[serde(default, alias = "is_current")]
     pub is_current: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "opening_balance_set")]
+    #[serde(default, alias = "opening_balance_set")]
     pub opening_balance_set: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
     pub opening_balance_date: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
     pub opening_balance_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "allow_adjustments")]
+    #[serde(default, alias = "allow_adjustments")]
     pub allow_adjustments: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "adjustment_deadline")]
     pub adjustment_deadline: Option<NaiveDate>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "balance_sheet_generated")]
+    #[serde(default, alias = "balance_sheet_generated")]
     pub balance_sheet_generated: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "income_statement_generated")]
+    #[serde(default, alias = "income_statement_generated")]
     pub income_statement_generated: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "statements_generated_at")]
     pub statements_generated_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+}
+
+fn default_create_fiscal_period_period_type() -> PeriodType {
+    PeriodType::Monthly
 }
 
 // =============================================================================
@@ -214,12 +219,12 @@ pub struct PatchFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_year")]
     pub fiscal_year: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_quarter")]
-    pub fiscal_quarter: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
-    pub fiscal_month: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "parent_id")]
-    pub parent_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_quarter")]
+    pub fiscal_quarter: Option<Option<i32>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_month")]
+    pub fiscal_month: Option<Option<i32>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "parent_id")]
+    pub parent_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level: Option<i32>,
@@ -231,35 +236,35 @@ pub struct PatchFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_set")]
     pub opening_balance_set: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_date")]
-    pub opening_balance_date: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "opening_balance_by")]
-    pub opening_balance_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "closing_started_at")]
-    pub closing_started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "closing_started_by")]
-    pub closing_started_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "closed_at")]
-    pub closed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "closed_by")]
-    pub closed_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "locked_at")]
-    pub locked_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "locked_by")]
-    pub locked_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "lock_reason")]
-    pub lock_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reopened_at")]
-    pub reopened_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reopened_by")]
-    pub reopened_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reopen_reason")]
-    pub reopen_reason: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "opening_balance_date")]
+    pub opening_balance_date: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "opening_balance_by")]
+    pub opening_balance_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "closing_started_at")]
+    pub closing_started_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "closing_started_by")]
+    pub closing_started_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "closed_at")]
+    pub closed_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "closed_by")]
+    pub closed_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "locked_at")]
+    pub locked_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "locked_by")]
+    pub locked_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "lock_reason")]
+    pub lock_reason: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reopened_at")]
+    pub reopened_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reopened_by")]
+    pub reopened_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reopen_reason")]
+    pub reopen_reason: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "allow_adjustments")]
     pub allow_adjustments: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "adjustment_deadline")]
-    pub adjustment_deadline: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "adjustment_deadline")]
+    pub adjustment_deadline: Option<Option<NaiveDate>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_debits")]
     pub total_debits: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_credits")]
@@ -285,10 +290,10 @@ pub struct PatchFiscalPeriodDto {
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "income_statement_generated")]
     pub income_statement_generated: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "statements_generated_at")]
-    pub statements_generated_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "statements_generated_at")]
+    pub statements_generated_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
 }
 
 impl PatchFiscalPeriodDto {
@@ -642,12 +647,4 @@ impl backbone_core::ApplyUpdateDto<UpdateFiscalPeriodDto> for FiscalPeriod {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to FiscalPeriod here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

@@ -81,6 +81,13 @@ impl axum::response::IntoResponse for BankCheckSequenceError {
 // Route Configuration
 // =============================================================================
 
+/// The permissions this entity's generic routes require: `bank_check_sequence:<action>` for `read`, `create`,
+/// `update`, `delete`, `restore` and `purge`, with any rename the schema's `requires:` declares.
+pub fn bank_check_sequence_permissions() -> backbone_core::http::CrudPermissions {
+    backbone_core::http::CrudPermissions::new("bank_check_sequence")
+        .in_module("accounting")
+}
+
 /// Create Axum router with all 16 Backbone endpoints for BankCheckSequence.
 ///
 /// # Routes
@@ -110,21 +117,23 @@ impl axum::response::IntoResponse for BankCheckSequenceError {
 /// let router = create_bank_check_sequence_routes(service);
 /// ```
 pub fn create_bank_check_sequence_routes(service: Arc<BankCheckSequenceService>) -> Router {
-    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::routes(
+    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::routes_guarded(
         service,
         "/bank_check_sequences",
+        bank_check_sequence_permissions(),
     )
 }
 
 /// Create Axum router with only the read (GET) endpoints for BankCheckSequence.
 ///
-/// Safe for public, unauthenticated exposure (e.g., reference data).
+/// Each route requires the entity's `read` permission, so it needs an authenticated caller.
 /// Mutations must be served separately via `create_bank_check_sequence_write_routes`,
 /// typically wrapped in an auth middleware layer.
 pub fn create_bank_check_sequence_read_routes(service: Arc<BankCheckSequenceService>) -> Router {
-    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::read_routes(
+    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::read_routes_guarded(
         service,
         "/bank_check_sequences",
+        bank_check_sequence_permissions(),
     )
 }
 
@@ -140,9 +149,10 @@ pub fn create_bank_check_sequence_read_routes(service: Arc<BankCheckSequenceServ
 /// service (e.g. a command router over its domain engine), serve THAT instead
 /// for any mutation that must respect domain rules.
 pub fn create_bank_check_sequence_write_routes(service: Arc<BankCheckSequenceService>) -> Router {
-    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::write_routes(
+    BackboneCrudHandler::<BankCheckSequenceService, BankCheckSequence, CreateBankCheckSequenceDto, UpdateBankCheckSequenceDto, BankCheckSequenceResponseDto>::write_routes_guarded(
         service,
         "/bank_check_sequences",
+        bank_check_sequence_permissions(),
     )
 }
 

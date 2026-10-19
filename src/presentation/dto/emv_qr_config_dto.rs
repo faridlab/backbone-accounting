@@ -34,22 +34,40 @@ pub struct CreateEmvQrConfigDto {
     #[serde(alias = "merchant_city")]
     pub merchant_city: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
-    #[serde(alias = "country_code")]
+    #[serde(default = "default_create_emv_qr_config_country_code", alias = "country_code")]
     pub country_code: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     pub mcc: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_emv_qr_config_gui")]
     pub gui: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "merchant_identifier")]
     pub merchant_identifier: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_emv_qr_config_currency")]
     pub currency: String,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
-    #[serde(alias = "initiation_method")]
+    #[serde(default = "default_create_emv_qr_config_initiation_method", alias = "initiation_method")]
     pub initiation_method: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "bank_account_id")]
     pub bank_account_id: Option<Uuid>,
+}
+
+fn default_create_emv_qr_config_country_code() -> String {
+    "ID".to_string()
+}
+
+fn default_create_emv_qr_config_gui() -> String {
+    "ID.CO.QRIS.WWW".to_string()
+}
+
+fn default_create_emv_qr_config_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_emv_qr_config_initiation_method() -> String {
+    "11".to_string()
 }
 
 // =============================================================================
@@ -125,8 +143,8 @@ pub struct PatchEmvQrConfigDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "initiation_method")]
     pub initiation_method: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "bank_account_id")]
-    pub bank_account_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "bank_account_id")]
+    pub bank_account_id: Option<Option<Uuid>>,
 }
 
 impl PatchEmvQrConfigDto {
@@ -331,12 +349,4 @@ impl backbone_core::ApplyUpdateDto<UpdateEmvQrConfigDto> for EmvQrConfig {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to EmvQrConfig here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

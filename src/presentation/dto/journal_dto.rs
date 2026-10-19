@@ -37,7 +37,7 @@ pub struct CreateJournalDto {
     pub journal_number: String,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reference_number")]
     pub reference_number: Option<String>,
-    #[serde(alias = "journal_type")]
+    #[serde(default = "default_create_journal_journal_type", alias = "journal_type")]
     pub journal_type: JournalType,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "branch_id")]
     pub branch_id: Option<Uuid>,
@@ -57,14 +57,16 @@ pub struct CreateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_journal_currency")]
     pub currency: String,
-    #[serde(alias = "total_debit")]
+    #[serde(default, alias = "total_debit")]
     pub total_debit: Decimal,
-    #[serde(alias = "total_credit")]
+    #[serde(default, alias = "total_credit")]
     pub total_credit: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "line_count")]
+    #[serde(default, alias = "line_count")]
     pub line_count: i32,
+    #[serde(default = "default_create_journal_source")]
     pub source: JournalSource,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<String>,
@@ -73,7 +75,7 @@ pub struct CreateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reversed")]
+    #[serde(default, alias = "is_reversed")]
     pub is_reversed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
     pub reversed_by_id: Option<Uuid>,
@@ -84,15 +86,15 @@ pub struct CreateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reverses_id")]
     pub reverses_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reversing")]
+    #[serde(default, alias = "is_reversing")]
     pub is_reversing: bool,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "auto_reverse")]
+    #[serde(default, alias = "auto_reverse")]
     pub auto_reverse: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "auto_reverse_date")]
     pub auto_reverse_date: Option<NaiveDate>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "requires_approval")]
+    #[serde(default, alias = "requires_approval")]
     pub requires_approval: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "approval_threshold")]
     pub approval_threshold: Option<Decimal>,
@@ -115,7 +117,7 @@ pub struct CreateJournalDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_by")]
     pub posted_by: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_voided")]
+    #[serde(default, alias = "is_voided")]
     pub is_voided: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "voided_at")]
     pub voided_at: Option<DateTime<Utc>>,
@@ -123,7 +125,24 @@ pub struct CreateJournalDto {
     pub voided_by: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "void_reason")]
     pub void_reason: Option<String>,
+    #[serde(default = "default_create_journal_attachments")]
     pub attachments: serde_json::Value,
+}
+
+fn default_create_journal_journal_type() -> JournalType {
+    JournalType::General
+}
+
+fn default_create_journal_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_journal_source() -> JournalSource {
+    JournalSource::Manual
+}
+
+fn default_create_journal_attachments() -> serde_json::Value {
+    serde_json::json!([])
 }
 
 // =============================================================================
@@ -248,28 +267,28 @@ pub struct PatchJournalDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_number")]
     pub journal_number: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reference_number")]
-    pub reference_number: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reference_number")]
+    pub reference_number: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_type")]
     pub journal_type: Option<JournalType>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
-    pub branch_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "branch_id")]
+    pub branch_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = "2024-01-01"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "transaction_date")]
     pub transaction_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posting_date")]
-    pub posting_date: Option<NaiveDate>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_period_id")]
-    pub fiscal_period_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_year")]
-    pub fiscal_year: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "fiscal_month")]
-    pub fiscal_month: Option<i32>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posting_date")]
+    pub posting_date: Option<Option<NaiveDate>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_period_id")]
+    pub fiscal_period_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_year")]
+    pub fiscal_year: Option<Option<i32>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "fiscal_month")]
+    pub fiscal_month: Option<Option<i32>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
@@ -282,65 +301,65 @@ pub struct PatchJournalDto {
     pub line_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<JournalSource>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
-    pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
-    pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_reference")]
-    pub source_reference: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_type")]
+    pub source_type: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_id")]
+    pub source_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_reference")]
+    pub source_reference: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reversed")]
     pub is_reversed: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reversed_by_id")]
-    pub reversed_by_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reversed_at")]
-    pub reversed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reversal_reason")]
-    pub reversal_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reverses_id")]
-    pub reverses_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reversed_by_id")]
+    pub reversed_by_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reversed_at")]
+    pub reversed_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reversal_reason")]
+    pub reversal_reason: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reverses_id")]
+    pub reverses_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reversing")]
     pub is_reversing: Option<bool>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "auto_reverse")]
     pub auto_reverse: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "auto_reverse_date")]
-    pub auto_reverse_date: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "auto_reverse_date")]
+    pub auto_reverse_date: Option<Option<NaiveDate>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<JournalStatus>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "requires_approval")]
     pub requires_approval: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "approval_threshold")]
-    pub approval_threshold: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "submitted_at")]
-    pub submitted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "submitted_by")]
-    pub submitted_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "approved_at")]
-    pub approved_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "approved_by")]
-    pub approved_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "rejected_at")]
-    pub rejected_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "rejected_by")]
-    pub rejected_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "rejection_reason")]
-    pub rejection_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posted_at")]
-    pub posted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posted_by")]
-    pub posted_by: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "approval_threshold")]
+    pub approval_threshold: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "submitted_at")]
+    pub submitted_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "submitted_by")]
+    pub submitted_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "approved_at")]
+    pub approved_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "approved_by")]
+    pub approved_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "rejected_at")]
+    pub rejected_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "rejected_by")]
+    pub rejected_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "rejection_reason")]
+    pub rejection_reason: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posted_at")]
+    pub posted_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posted_by")]
+    pub posted_by: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_voided")]
     pub is_voided: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "voided_at")]
-    pub voided_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "voided_by")]
-    pub voided_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "void_reason")]
-    pub void_reason: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "voided_at")]
+    pub voided_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "voided_by")]
+    pub voided_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "void_reason")]
+    pub void_reason: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachments: Option<serde_json::Value>,
 }
@@ -714,12 +733,4 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalDto> for Journal {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to Journal here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

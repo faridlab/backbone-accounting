@@ -43,15 +43,16 @@ pub struct CreateAccountingPostDto {
     pub source_reference: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "journal_id")]
     pub journal_id: Option<Uuid>,
-    #[serde(alias = "posting_type")]
+    #[serde(default = "default_create_accounting_post_posting_type", alias = "posting_type")]
     pub posting_type: PostingType,
-    #[serde(alias = "posting_status")]
+    #[serde(default = "default_create_accounting_post_posting_status", alias = "posting_status")]
     pub posting_status: PostingStatus,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_accounting_post_currency")]
     pub currency: String,
-    #[serde(alias = "total_debit")]
+    #[serde(default, alias = "total_debit")]
     pub total_debit: Decimal,
-    #[serde(alias = "total_credit")]
+    #[serde(default, alias = "total_credit")]
     pub total_credit: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "scheduled_at")]
     pub scheduled_at: Option<DateTime<Utc>>,
@@ -60,10 +61,10 @@ pub struct CreateAccountingPostDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "failed_at")]
     pub failed_at: Option<DateTime<Utc>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "retry_count")]
+    #[serde(default, alias = "retry_count")]
     pub retry_count: i32,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
-    #[serde(alias = "max_retries")]
+    #[serde(default = "default_create_accounting_post_max_retries", alias = "max_retries")]
     pub max_retries: i32,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "next_retry_at")]
     pub next_retry_at: Option<DateTime<Utc>>,
@@ -79,6 +80,22 @@ pub struct CreateAccountingPostDto {
     pub posted_by: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+}
+
+fn default_create_accounting_post_posting_type() -> PostingType {
+    PostingType::Original
+}
+
+fn default_create_accounting_post_posting_status() -> PostingStatus {
+    PostingStatus::Pending
+}
+
+fn default_create_accounting_post_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_accounting_post_max_retries() -> i32 {
+    3
 }
 
 // =============================================================================
@@ -154,17 +171,17 @@ pub struct UpdateAccountingPostDto {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct PatchAccountingPostDto {
-    #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
-    pub branch_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "branch_id")]
+    pub branch_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
     pub source_type: Option<PostingSourceType>,
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
     pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_reference")]
-    pub source_reference: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "journal_id")]
-    pub journal_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_reference")]
+    pub source_reference: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "journal_id")]
+    pub journal_id: Option<Option<Uuid>>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "posting_type")]
     pub posting_type: Option<PostingType>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "posting_status")]
@@ -176,32 +193,32 @@ pub struct PatchAccountingPostDto {
     pub total_debit: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "total_credit")]
     pub total_credit: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "scheduled_at")]
-    pub scheduled_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posted_at")]
-    pub posted_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "failed_at")]
-    pub failed_at: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "scheduled_at")]
+    pub scheduled_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posted_at")]
+    pub posted_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "failed_at")]
+    pub failed_at: Option<Option<DateTime<Utc>>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "retry_count")]
     pub retry_count: Option<i32>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "max_retries")]
     pub max_retries: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "next_retry_at")]
-    pub next_retry_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "error_code")]
-    pub error_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "error_message")]
-    pub error_message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reverses_post_id")]
-    pub reverses_post_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reversed_by_post_id")]
-    pub reversed_by_post_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posted_by")]
-    pub posted_by: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notes: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "next_retry_at")]
+    pub next_retry_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "error_code")]
+    pub error_code: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "error_message")]
+    pub error_message: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reverses_post_id")]
+    pub reverses_post_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reversed_by_post_id")]
+    pub reversed_by_post_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posted_by")]
+    pub posted_by: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub notes: Option<Option<String>>,
 }
 
 impl PatchAccountingPostDto {
@@ -457,12 +474,4 @@ impl backbone_core::ApplyUpdateDto<UpdateAccountingPostDto> for AccountingPost {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to AccountingPost here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 

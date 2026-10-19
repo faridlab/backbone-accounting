@@ -50,17 +50,18 @@ pub struct CreateJournalLineDto {
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
     #[serde(alias = "account_name")]
     pub account_name: String,
-    #[serde(alias = "debit_amount")]
+    #[serde(default, alias = "debit_amount")]
     pub debit_amount: Decimal,
-    #[serde(alias = "credit_amount")]
+    #[serde(default, alias = "credit_amount")]
     pub credit_amount: Decimal,
     #[cfg_attr(feature = "openapi", schema(example = "example"))]
+    #[serde(default = "default_create_journal_line_currency")]
     pub currency: String,
-    #[serde(alias = "exchange_rate")]
+    #[serde(default = "default_create_journal_line_exchange_rate", alias = "exchange_rate")]
     pub exchange_rate: Decimal,
-    #[serde(alias = "base_debit_amount")]
+    #[serde(default, alias = "base_debit_amount")]
     pub base_debit_amount: Decimal,
-    #[serde(alias = "base_credit_amount")]
+    #[serde(default, alias = "base_credit_amount")]
     pub base_credit_amount: Decimal,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -79,7 +80,7 @@ pub struct CreateJournalLineDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "source_reference")]
     pub source_reference: Option<String>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_tax_line")]
+    #[serde(default, alias = "is_tax_line")]
     pub is_tax_line: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "tax_rate")]
     pub tax_rate: Option<Decimal>,
@@ -88,7 +89,7 @@ pub struct CreateJournalLineDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "related_line_id")]
     pub related_line_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "has_quantity")]
+    #[serde(default, alias = "has_quantity")]
     pub has_quantity: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quantity: Option<Decimal>,
@@ -97,7 +98,7 @@ pub struct CreateJournalLineDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "unit_price")]
     pub unit_price: Option<Decimal>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_reconciled")]
+    #[serde(default, alias = "is_reconciled")]
     pub is_reconciled: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
     pub reconciliation_id: Option<Uuid>,
@@ -106,14 +107,32 @@ pub struct CreateJournalLineDto {
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
     pub full_reconcile_id: Option<Uuid>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
-    #[serde(alias = "is_posted")]
+    #[serde(default, alias = "is_posted")]
     pub is_posted: bool,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "ledger_id")]
     pub ledger_id: Option<Uuid>,
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "posted_at")]
     pub posted_at: Option<DateTime<Utc>>,
+    #[serde(default = "default_create_journal_line_tags")]
     pub tags: serde_json::Value,
+    #[serde(default = "default_create_journal_line_data")]
     pub data: serde_json::Value,
+}
+
+fn default_create_journal_line_currency() -> String {
+    "IDR".to_string()
+}
+
+fn default_create_journal_line_exchange_rate() -> Decimal {
+    Decimal::from(1_i64)
+}
+
+fn default_create_journal_line_tags() -> serde_json::Value {
+    serde_json::json!([])
+}
+
+fn default_create_journal_line_data() -> serde_json::Value {
+    serde_json::json!({})
 }
 
 // =============================================================================
@@ -230,12 +249,12 @@ pub struct PatchJournalLineDto {
     #[cfg_attr(feature = "openapi", schema(example = "550e8400-e29b-41d4-a716-446655440000"))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "journal_id")]
     pub journal_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "branch_id")]
-    pub branch_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_type")]
-    pub party_type: Option<PartyType>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "party_id")]
-    pub party_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "branch_id")]
+    pub branch_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_type")]
+    pub party_type: Option<Option<PartyType>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "party_id")]
+    pub party_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = 42))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "line_number")]
     pub line_number: Option<i32>,
@@ -261,56 +280,56 @@ pub struct PatchJournalLineDto {
     pub base_debit_amount: Option<Decimal>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "base_credit_amount")]
     pub base_credit_amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "cost_center_id")]
-    pub cost_center_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "project_id")]
-    pub project_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "department_id")]
-    pub department_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dimensions: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_type")]
-    pub source_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_id")]
-    pub source_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "source_reference")]
-    pub source_reference: Option<String>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub description: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "cost_center_id")]
+    pub cost_center_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "project_id")]
+    pub project_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "department_id")]
+    pub department_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub dimensions: Option<Option<serde_json::Value>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_type")]
+    pub source_type: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_id")]
+    pub source_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "source_reference")]
+    pub source_reference: Option<Option<String>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_tax_line")]
     pub is_tax_line: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "tax_rate")]
-    pub tax_rate: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "tax_base_amount")]
-    pub tax_base_amount: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "related_line_id")]
-    pub related_line_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "tax_rate")]
+    pub tax_rate: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "tax_base_amount")]
+    pub tax_base_amount: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "related_line_id")]
+    pub related_line_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "has_quantity")]
     pub has_quantity: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quantity: Option<Decimal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub unit: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "unit_price")]
-    pub unit_price: Option<Decimal>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub quantity: Option<Option<Decimal>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option")]
+    pub unit: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "unit_price")]
+    pub unit_price: Option<Option<Decimal>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_reconciled")]
     pub is_reconciled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reconciliation_id")]
-    pub reconciliation_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "reconciled_at")]
-    pub reconciled_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "full_reconcile_id")]
-    pub full_reconcile_id: Option<Uuid>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reconciliation_id")]
+    pub reconciliation_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "reconciled_at")]
+    pub reconciled_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "full_reconcile_id")]
+    pub full_reconcile_id: Option<Option<Uuid>>,
     #[cfg_attr(feature = "openapi", schema(example = true))]
     #[serde(skip_serializing_if = "Option::is_none", alias = "is_posted")]
     pub is_posted: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "ledger_id")]
-    pub ledger_id: Option<Uuid>,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "posted_at")]
-    pub posted_at: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "ledger_id")]
+    pub ledger_id: Option<Option<Uuid>>,
+    #[serde(default, deserialize_with = "crate::presentation::dto::double_option", alias = "posted_at")]
+    pub posted_at: Option<Option<DateTime<Utc>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -657,12 +676,4 @@ impl backbone_core::ApplyUpdateDto<UpdateJournalLineDto> for JournalLine {
         Ok(self)
     }
 }
-
-// =============================================================================
-// Custom DTOs
-// =============================================================================
-
-// Add custom DTOs specific to JournalLine here.
-// This section will be preserved during regeneration.
-// >>> END CUSTOM DTOs
 
